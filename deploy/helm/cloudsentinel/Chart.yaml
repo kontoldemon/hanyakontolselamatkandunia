@@ -1,0 +1,19 @@
+apiVersion: v2
+name: cloudsentinel
+description: CloudSentinel - Multi-protocol honeypot with SOAR, HASSH fingerprinting, and MITRE ATT&CK mapping
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords:
+  - honeypot
+  - security
+  - ssh
+  - soar
+  - mitre
+  - threat-intelligence
+maintainers:
+  - name: zis3c
+    email: zis3c@github
+home: https://github.com/zis3c/CloudSentinel
+sources:
+  - https://github.com/zis3c/CloudSentinel

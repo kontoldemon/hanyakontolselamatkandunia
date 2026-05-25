@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cloudsentinel.fullname" . }}-config
+  labels: {{- include "cloudsentinel.labels" . | nindent 4 }}
+data:
+  usas-production.yaml: |
+    honeypot:
+      hostname: {{ .Values.config.honeypot.hostname | quote }}
+      os_version: {{ .Values.config.honeypot.osVersion | quote }}
+      ssh_port: {{ .Values.config.honeypot.sshPort }}
+      listen_host: {{ .Values.config.honeypot.listenHost | quote }}
+      server_version: {{ .Values.config.honeypot.serverVersion | quote }}
+      banner: {{ .Values.config.honeypot.banner | quote }}
+      http_enabled: {{ .Values.config.honeypot.httpEnabled }}
+      http_port: {{ .Values.config.honeypot.httpPort }}
+      dns_enabled: {{ .Values.config.honeypot.dnsEnabled }}
+      dns_port: {{ .Values.config.honeypot.dnsPort }}
+    fingerprinting:
+      enable_hassh: {{ .Values.config.fingerprinting.enableHassh }}
+      enable_ja4s: {{ .Values.config.fingerprinting.enableJa4s }}
+    soar:
+      risk_threshold: {{ .Values.config.soar.riskThreshold }}
+      firewall_enabled: {{ .Values.config.soar.firewallEnabled }}
+      firewall_dry_run: {{ .Values.config.soar.firewallDryRun }}
+      block_ttl: {{ .Values.config.soar.blockTtl }}
+      decay_rate: {{ .Values.config.soar.decayRate }}
+      mttb_target_ms: {{ .Values.config.soar.mttbTargetMs }}
+      allowlist: {{ .Values.config.soar.allowlist | toJson }}
+    redis:
+      url: {{ .Values.config.redis.url | quote }}
+      stream: {{ .Values.config.redis.stream | quote }}
+      maxlen: {{ .Values.config.redis.maxlen }}
+    clickhouse:
+      enabled: {{ .Values.config.clickhouse.enabled }}
+      host: {{ .Values.config.clickhouse.host | quote }}
+      port: {{ .Values.config.clickhouse.port }}
+      database: {{ .Values.config.clickhouse.database | quote }}
+      table: {{ .Values.config.clickhouse.table | quote }}
+      username: {{ .Values.config.clickhouse.username | quote }}
+      batch_size: {{ .Values.config.clickhouse.batchSize }}
+      flush_interval_seconds: {{ .Values.config.clickhouse.flushIntervalSeconds }}
+    nats:
+      enabled: {{ .Values.config.nats.enabled }}
+      url: {{ .Values.config.nats.url | quote }}
+    admin:
+      enabled: {{ .Values.config.admin.enabled }}
+      port: {{ .Values.config.admin.port }}
+    stream:
+      enabled: {{ .Values.config.stream.enabled }}
+      port: {{ .Values.config.stream.port }}
+      cors_origin: {{ .Values.config.stream.corsOrigin | quote }}
+    observability:
+      enabled: {{ .Values.config.observability.enabled }}
+      service_name: {{ .Values.config.observability.serviceName | quote }}

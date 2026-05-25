@@ -1,0 +1,22 @@
+/var/log/cloudsentinel/*.log {
+  weekly
+  missingok
+  notifempty
+  rotate 4
+  compress
+  create 640 cloudsentinel cloudsentinel
+  postrotate
+    invoke-rc.d rsyslog rotate > /dev/null
+  endscript
+}
+
+/var/log/cloudsentinel/*.json {
+  weekly
+  missingok
+  notifempty
+  rotate 4
+  compress
+  copytruncate
+  create 640 cloudsentinel cloudsentinel
+  endscript
+}

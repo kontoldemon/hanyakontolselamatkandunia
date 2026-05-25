@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudsentinel.fullname" . }}
+  labels: {{- include "cloudsentinel.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "cloudsentinel.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "cloudsentinel.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "cloudsentinel.serviceAccountName" . }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: cloudsentinel
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: ssh
+              containerPort: {{ .Values.config.honeypot.sshPort }}
+              protocol: TCP
+            - name: admin
+              containerPort: {{ .Values.config.admin.port }}
+              protocol: TCP
+            - name: stream
+              containerPort: {{ .Values.config.stream.port }}
+              protocol: TCP
+            {{- if .Values.config.honeypot.dnsEnabled }}
+            - name: dns
+              containerPort: {{ .Values.config.honeypot.dnsPort }}
+              protocol: UDP
+            {{- end }}
+          env:
+            - name: REDIS_URL
+              value: {{ .Values.config.redis.url | quote }}
+            - name: NATS_URL
+              value: {{ .Values.config.nats.url | quote }}
+            - name: CLICKHOUSE_HOST
+              value: {{ .Values.config.clickhouse.host | quote }}
+            - name: CLICKHOUSE_ENABLED
+              value: {{ .Values.config.clickhouse.enabled | quote }}
+            - name: SOAR_FIREWALL_DRY_RUN
+              value: {{ .Values.config.soar.firewallDryRun | quote }}
+            - name: SOAR_FIREWALL_ENABLED
+              value: {{ .Values.config.soar.firewallEnabled | quote }}
+            - name: CLOUDSENTINEL_FIREWALL_BACKEND
+              value: {{ .Values.config.soar.firewallBackend | quote }}
+            - name: CLOUDSENTINEL_SANDBOX_RUNTIME
+              value: {{ .Values.config.sandbox.runtime | quote }}
+            - name: CLOUDSENTINEL_MISP_URL
+              value: {{ .Values.config.misp.url | quote }}
+            - name: CLOUDSENTINEL_ES_URL
+              value: {{ .Values.config.elasticsearch.url | quote }}
+            - name: STREAM_ENABLED
+              value: {{ .Values.config.stream.enabled | quote }}
+            - name: ADMIN_ENABLED
+              value: {{ .Values.config.admin.enabled | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ include "cloudsentinel.fullname" . }}-secrets
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: admin
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: admin
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: var
+              mountPath: /app/var
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: var
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

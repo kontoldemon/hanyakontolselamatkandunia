@@ -1,0 +1,24 @@
+[Unit]
+Description=A SSH and Telnet honeypot service
+After=network.target
+After=rsyslog.service
+Requires=cloudsentinel.socket
+
+[Service]
+User=cloudsentinel
+Group=cloudsentinel
+
+Restart=always
+RestartSec=5
+
+Environment=PYTHONPATH=/opt/cloudsentinel/src
+WorkingDirectory=/opt/cloudsentinel
+
+ExecStart=/opt/cloudsentinel-env/bin/python /opt/cloudsentinel-env/bin/twistd --umask 0022 --nodaemon --pidfile= -l - cloudsentinel
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=cloudsentinel
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+# CloudSentinel MITRE Coverage
+
+- Catalog techniques: 20
+- Command-mapped techniques: 17
+- Result: PASS
+- T1003: OS Credential Dumping
+- T1021.004: Remote Services: SSH
+- T1033: System Owner/User Discovery
+- T1046: Network Service Discovery
+- T1059.001: Command and Scripting Interpreter: PowerShell
+- T1059.003: Command and Scripting Interpreter: Windows Command Shell
+- T1059.004: Command and Scripting Interpreter: Unix Shell
+- T1082: System Information Discovery
+- T1090: Proxy
+- T1105: Ingress Tool Transfer
+- T1222: File and Directory Permissions Modification
+- T1486: Data Encrypted for Impact
+- T1496: Resource Hijacking
+- T1505.003: Server Software Component: Web Shell
+- T1543.002: Create or Modify System Process: Systemd Service
+- T1555: Credentials from Password Stores
+- T1562: Impair Defenses

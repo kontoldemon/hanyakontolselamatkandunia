@@ -1,0 +1,252 @@
+# SPDX-FileCopyrightText: 2015-2026 Michel Oosterhof <michel@oosterhof.net>
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+from __future__ import annotations
+
+import os
+import sys
+from importlib import import_module
+from typing import TYPE_CHECKING, ClassVar
+
+from twisted._version import __version__ as __twisted_version__
+from twisted.application import service
+from twisted.application.service import IServiceMaker
+from twisted.cred import portal
+from twisted.internet import reactor
+from twisted.logger import ILogObserver, globalLogPublisher
+from twisted.plugin import IPlugin
+from twisted.python import log, usage
+from zope.interface import implementer, provider
+
+import cloudsentinel.core.checkers
+import cloudsentinel.core.uuid
+import cloudsentinel.llm.realm
+import cloudsentinel.shell.realm
+import cloudsentinel.ssh.factory
+import cloudsentinel.telnet.factory
+from backend_pool.pool_server import PoolServerFactory
+from cloudsentinel import __version__ as __cloudsentinel_version__
+from cloudsentinel import core
+from cloudsentinel.core.config import CloudSentinelConfig
+from cloudsentinel.core.utils import (
+    create_endpoint_services,
+    get_endpoints_from_section,
+)
+from cloudsentinel.pool_interface.handler import PoolHandler
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+class Options(usage.Options):
+    """
+    This defines commandline options and flags
+    """
+
+    # The '-c' parameters is currently ignored
+    optParameters: ClassVar[list[str]] = []
+    optFlags: ClassVar[list[list[str]]] = [["help", "h", "Display this help and exit."]]
+
+
+@provider(ILogObserver)
+def importFailureObserver(event: dict) -> None:
+    if "failure" in event and event["failure"].type is ImportError:
+        log.err(
+            "ERROR: {}. Please run `pip install -U -r requirements.txt` "
+            "from CloudSentinel's install directory and virtualenv to install "
+            "the new dependency".format(event["failure"].value.message)
+        )
+
+
+globalLogPublisher.addObserver(importFailureObserver)
+
+
+@implementer(IServiceMaker, IPlugin)
+class CloudSentinelServiceMaker:
+    tapname: ClassVar[str] = "cloudsentinel"
+    description: ClassVar[str] = "CloudSentinel SSH/Telnet defense sensor."
+    options = Options
+    output_plugins: list[Callable]
+    topService: service.Service
+
+    def __init__(self) -> None:
+        self.pool_handler = None
+
+        self.output_plugins = []
+
+        # ssh is enabled by default
+        self.enableSSH: bool = CloudSentinelConfig.getboolean("ssh", "enabled", fallback=True)
+
+        # telnet is disabled by default
+        self.enableTelnet: bool = CloudSentinelConfig.getboolean(
+            "telnet", "enabled", fallback=False
+        )
+
+        # pool is disabled by default, but need to check this setting in case user only wants to run the pool
+        self.pool_only: bool = CloudSentinelConfig.getboolean(
+            "backend_pool", "pool_only", fallback=False
+        )
+
+        self.uuid = core.uuid.get_uuid()
+        CloudSentinelConfig.set("honeypot", "uuid", str(self.uuid))
+
+    def makeService(self, options: dict) -> service.Service:
+        """
+        Construct a TCPServer from a factory defined in CloudSentinel.
+        """
+
+        if options["help"] is True:
+            print(  # noqa: T201
+                """Usage: twistd [options] cloudsentinel [-h]
+Options:
+  -h, --help             print this help message.
+
+Makes a CloudSentinel SSH/Telnet defense sensor.
+"""
+            )
+            sys.exit(1)
+
+        if os.name == "posix" and os.getuid() == 0:
+            print("ERROR: You must not run cloudsentinel as root!")  # noqa: T201
+            sys.exit(1)
+
+        tz: str = CloudSentinelConfig.get("honeypot", "timezone", fallback="UTC")
+        # `system` means use the system time zone
+        if tz != "system":
+            os.environ["TZ"] = tz
+
+        log.msg(f"Python Version {str(sys.version).replace(chr(10), '')}")
+        log.msg(
+            f"Twisted Version {__twisted_version__.major}.{__twisted_version__.minor}.{__twisted_version__.micro}"
+        )
+        log.msg(f"CloudSentinel Sensor Version {__cloudsentinel_version__.__version__}")
+        log.msg(f"Sensor UUID: {self.uuid}")
+
+        # check configurations
+        if not self.enableTelnet and not self.enableSSH and not self.pool_only:
+            print(  # noqa: T201
+                "ERROR: You must at least enable SSH or Telnet, or run the backend pool"
+            )
+            sys.exit(1)
+
+        # Load output modules
+        self.output_plugins = []
+        for x in CloudSentinelConfig.sections():
+            if not x.startswith("output_"):
+                continue
+            if CloudSentinelConfig.getboolean(x, "enabled", fallback=False) is False:
+                continue
+            engine: str = x.split("_")[1]
+            try:
+                output = import_module(f"cloudsentinel.output.{engine}").Output()
+                log.addObserver(output.emit)
+                self.output_plugins.append(output)
+                log.msg(f"Loaded output engine: {engine}")
+            except ImportError as e:
+                log.err(
+                    f"Failed to load output engine: {engine} due to ImportError: {e}"
+                )
+                log.msg(
+                    f"Please install the dependencies for {engine} listed in requirements-output.txt"
+                )
+            except Exception:
+                log.err()
+                log.msg(f"Failed to load output engine: {engine}")
+
+        self.topService = service.MultiService()
+        application = service.Application("cloudsentinel")
+        self.topService.setServiceParent(application)
+
+        # initialise VM pool handling - only if proxy AND pool set to enabled, and pool is to be deployed here
+        # or also enabled if pool_only is true
+        backend_type: str = CloudSentinelConfig.get("honeypot", "backend", fallback="shell")
+        proxy_backend: str = CloudSentinelConfig.get("proxy", "backend", fallback="simple")
+
+        if (backend_type == "proxy" and proxy_backend == "pool") or self.pool_only:
+            # in this case we need to set some kind of pool connection
+
+            local_pool: bool = (
+                CloudSentinelConfig.get("proxy", "pool", fallback="local") == "local"
+            )
+            pool_host: str = CloudSentinelConfig.get(
+                "proxy", "pool_host", fallback="127.0.0.1"
+            )
+            pool_port: int = CloudSentinelConfig.getint("proxy", "pool_port", fallback=6415)
+
+            if local_pool or self.pool_only:
+                # start a pool locally
+                f = PoolServerFactory()
+                f.tac = self  # type: ignore
+
+                listen_endpoints = get_endpoints_from_section(
+                    CloudSentinelConfig, "backend_pool", 6415
+                )
+                create_endpoint_services(reactor, self.topService, listen_endpoints, f)
+
+                pool_host = "127.0.0.1"  # force use of local interface
+
+            # either way (local or remote) we set up a client to the pool
+            # unless this instance has no SSH and Telnet (pool only)
+            if (self.enableTelnet or self.enableSSH) and not self.pool_only:
+                self.pool_handler = PoolHandler(pool_host, pool_port, self)  # type: ignore
+
+        else:
+            # we initialise the services directly
+            self.pool_ready()
+
+        return self.topService
+
+    def pool_ready(self) -> None:
+        backend: str = CloudSentinelConfig.get("honeypot", "backend", fallback="shell")
+
+        # this method is never called if self.pool_only is False,
+        # since we do not start the pool handler that would call it
+        if self.enableSSH:
+            factory = cloudsentinel.ssh.factory.CloudSentinelSSHFactory(backend, self.pool_handler)
+            factory.tac = self  # type: ignore
+
+            if backend in ("shell", "proxy"):
+                factory.portal = portal.Portal(cloudsentinel.shell.realm.HoneyPotRealm())
+            elif backend == "llm":
+                factory.portal = portal.Portal(cloudsentinel.llm.realm.HoneyPotRealm())
+            else:
+                raise ValueError(backend)
+
+            factory.portal.registerChecker(core.checkers.HoneypotPublicKeyChecker())
+            factory.portal.registerChecker(core.checkers.HoneypotPasswordChecker())
+
+            if CloudSentinelConfig.getboolean("ssh", "auth_none_enabled", fallback=False):
+                factory.portal.registerChecker(core.checkers.HoneypotNoneChecker())
+
+            if CloudSentinelConfig.has_section("ssh"):
+                listen_endpoints = get_endpoints_from_section(CloudSentinelConfig, "ssh", 2222)
+            else:
+                listen_endpoints = get_endpoints_from_section(
+                    CloudSentinelConfig, "honeypot", 2222
+                )
+
+            create_endpoint_services(
+                reactor, self.topService, listen_endpoints, factory
+            )
+
+        if self.enableTelnet:
+            f = cloudsentinel.telnet.factory.HoneyPotTelnetFactory(backend, self.pool_handler)
+            f.tac = self
+            if backend in ("shell", "proxy"):
+                f.portal = portal.Portal(cloudsentinel.shell.realm.HoneyPotRealm())
+            elif backend == "llm":
+                f.portal = portal.Portal(cloudsentinel.llm.realm.HoneyPotRealm())
+            else:
+                raise ValueError(backend)
+
+            f.portal.registerChecker(core.checkers.HoneypotPasswordChecker())
+
+            listen_endpoints = get_endpoints_from_section(CloudSentinelConfig, "telnet", 2223)
+            create_endpoint_services(reactor, self.topService, listen_endpoints, f)
+
+
+# Now construct an object which *provides* the relevant interfaces
+# The name of this variable is irrelevant, as long as there is *some*
+# name bound to a provider of IPlugin and IServiceMaker.
+serviceMaker = CloudSentinelServiceMaker()

