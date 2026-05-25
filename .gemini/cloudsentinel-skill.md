@@ -438,7 +438,11 @@ When working on this project, AI assistants **MUST** adhere to the following:
 - **Maps:** react-simple-maps with geoEquirectangular projection.
 - **Animations:** CSS `animate-ping` for live indicators, `animate-pulse` for status dots, custom `@keyframes dash` for attack lines.
 
+### 11.5 Autonomy & Architectural Review
+- **Autonomy in Planning:** The AI assistant **IS ALLOWED and ENCOURAGED** to evaluate, challenge, and propose improvements to development plans or system architecture. If a design decision or implementation approach (whether proposed by the user, a previous plan, or legacy configs) is sub-optimal, insecure, or adds unnecessary complexity, the AI must actively highlight the issue and propose a better alternative rather than executing it blindly.
+
 ---
+
 
 ## 12. Competitive Differentiation
 
