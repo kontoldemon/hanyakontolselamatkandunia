@@ -1,0 +1,14 @@
+# Final Year Project documents / drafts
+*.docx
+*.pdf
+/fyp working paper/
+
+# Next.js / Node.js build files
+node_modules/
+.next/
+out/
+build/
+.env*
+.DS_Store
+dist/
+*.log
