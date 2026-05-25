@@ -463,6 +463,8 @@ When working on this project, AI assistants **MUST** adhere to the following:
 
 ```
 FYP/
+├── .gemini/                                    # AI instructions & directives
+│   └── cloudsentinel-skill.md
 ├── cloudsentinel.docx                          # Project overview document
 ├── fyp working paper/
 │   ├── Pitching/
@@ -488,16 +490,19 @@ FYP/
 │   │   ├── 1st-Proposal FYP.pdf
 │   │   └── PPTX/
 │   └── borang cadangan/
-└── fyp_project/
-    └── mockup/
-        └── cloud_sentinel_ui/                  # Next.js 16 War Room Dashboard
-            ├── src/
-            │   ├── app/                        # App Router pages
-            │   ├── components/                 # Reusable UI components
-            │   └── lib/                        # Mock data & utilities
-            ├── public/                         # Static assets (map, logo)
-            ├── package.json                    # Dependencies manifest
-            └── next.config.ts                  # Next.js configuration
+├── fyp_project/
+│   └── mockup/
+│       └── cloud_sentinel_ui/                  # Next.js 16 War Room Dashboard
+│           ├── src/
+│           │   ├── app/                        # App Router pages
+│           │   ├── components/                 # Reusable UI components
+│           │   └── lib/                        # Mock data & utilities
+│           ├── public/                         # Static assets (map, logo)
+│           ├── package.json                    # Dependencies manifest
+│           └── next.config.ts                  # Next.js configuration
+└── sensor/
+    └── cowrie/
+        └── cowrie-main/                        # Base SSH honeypot source code
 ```
 
 ---
