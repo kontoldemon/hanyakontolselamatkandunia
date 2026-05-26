@@ -8,7 +8,7 @@ WORKDIR /app
 
 # System deps for cryptography + nftables + iptables
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-    iptables nftables netbase ca-certificates && \
+    iptables nftables netbase ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Install gVisor (runsc) for sandbox isolation

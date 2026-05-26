@@ -13,11 +13,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import structlog
+import logging
 import os
 import time
 from pathlib import Path
 from typing import ClassVar
+
+import structlog
 
 logger = structlog.get_logger("stress_test")
 

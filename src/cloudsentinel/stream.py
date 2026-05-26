@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import structlog
+import logging
 import urllib.parse
 from collections import deque
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.socketio")
 

@@ -6,10 +6,11 @@ Supports multiple isolation runtimes for payload detonation.
 from __future__ import annotations
 
 import asyncio
-import structlog
 import os
 import shutil
-from typing import Protocol
+from typing import Any, Protocol
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.sandbox")
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import structlog
+import logging
 import os
 import time
 from collections import deque
@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import redis.asyncio as redis
+import structlog
 
 from .config import ClickHouseSettings, KafkaSettings, NATSSettings, RedisSettings, secret_to_str
 

@@ -58,6 +58,7 @@ class TemporalSOARWorker:
     async def start(self) -> None:
         """Connect to Temporal server and start the worker."""
         try:
+            from temporalio import activity, workflow
             from temporalio.client import Client
             from temporalio.worker import Worker
 
