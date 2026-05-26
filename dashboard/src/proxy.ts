@@ -15,6 +15,7 @@ const publicPaths = [
   "/vercel.svg",
   "/window.svg",
   "/world-atlas.json",
+  "/sw.js",
 ];
 
 function securityHeaders(response: NextResponse) {
