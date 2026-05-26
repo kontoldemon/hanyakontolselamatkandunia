@@ -13,11 +13,17 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
 
 # Install gVisor (runsc) for sandbox isolation
 RUN ARCH=$(dpkg --print-architecture) && \
-    URL="https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}" && \
-    curl -fsSL "${URL}/runsc" -o /usr/local/bin/runsc && \
-    curl -fsSL "${URL}/runsc.sha512" | sha512sum -c --strict - && \
-    chmod 755 /usr/local/bin/runsc && \
-    /usr/local/bin/runsc install || { echo "ERROR: gVisor installation failed"; exit 1; }
+    case "${ARCH}" in \
+        amd64) GVISOR_ARCH="x86_64" ;; \
+        arm64) GVISOR_ARCH="aarch64" ;; \
+        *) echo "Unsupported gVisor arch: ${ARCH}"; exit 1 ;; \
+    esac && \
+    URL="https://storage.googleapis.com/gvisor/releases/release/latest/${GVISOR_ARCH}" && \
+    curl -fsSLO "${URL}/runsc" && \
+    curl -fsSLO "${URL}/runsc.sha512" && \
+    sha512sum -c runsc.sha512 && \
+    install -m 0755 runsc /usr/local/bin/runsc && \
+    rm -f runsc runsc.sha512
 
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt

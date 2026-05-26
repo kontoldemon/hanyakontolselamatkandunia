@@ -61,6 +61,8 @@ jobs:
         env:
           PYTHONPATH: src
           REDIS_URL: redis://localhost:6379/0
+          CLICKHOUSE_ENABLED: "false"
+          SOAR_FIREWALL_DRY_RUN: "true"
 
       - name: Run MTTB benchmark (dry-run)
         run: python -m cloudsentinel.mttb_benchmark --iterations 3 --delay 0.02 --redis-url redis://localhost:6379/0
