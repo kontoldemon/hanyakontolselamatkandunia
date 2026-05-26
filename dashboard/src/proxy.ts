@@ -5,7 +5,6 @@ const publicPaths = [
   "/signin",
   "/api/auth/login",
   "/api/auth/logout",
-  "/offline",
   "/505",
   "/favicon.ico",
   "/logo.svg",
