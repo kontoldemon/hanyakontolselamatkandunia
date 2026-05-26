@@ -5,6 +5,8 @@ const publicPaths = [
   "/signin",
   "/api/auth/login",
   "/api/auth/logout",
+  "/offline",
+  "/505",
   "/favicon.ico",
   "/logo.svg",
   "/file.svg",
@@ -35,6 +37,17 @@ function isPublicPath(pathname: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname === "/signin") {
+    const session = await verifySessionToken(request.cookies.get(sessionCookieName())?.value);
+    if (session) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return securityHeaders(NextResponse.redirect(url));
+    }
+    return securityHeaders(NextResponse.next());
+  }
 
   if (isPublicPath(pathname)) {
     return securityHeaders(NextResponse.next());

@@ -104,8 +104,11 @@ vercel deploy --prod --yes
 
 # Set environment variables in Vercel dashboard:
 # NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL=http://<droplet-ip>:3001
-# NEXT_PUBLIC_CLOUDSENTINEL_ADMIN_API_URL=http://<droplet-ip>:8080
-# NEXT_PUBLIC_CLOUDSENTINEL_WS_TOKEN=<optional-stream-token>
+# CLOUDSENTINEL_ADMIN_API_URL=http://<droplet-ip>:8080
+# CLOUDSENTINEL_ADMIN_TOKEN=<optional-admin-token>
+# DASHBOARD_USERNAME=<dashboard-user>
+# DASHBOARD_PASSWORD=<dashboard-password>
+# DASHBOARD_AUTH_SECRET=<random-64-byte-secret>
 ```
 
 ## Phase 2: AWS Production Migration
