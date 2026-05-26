@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
-import { MOCK_STATS, THREAT_LOGS } from "@/lib/mockData";
 
 export type ThreatLog = {
   id: string;
@@ -18,7 +17,79 @@ export type ThreatLog = {
   mitreTechniques?: string[];
 };
 
-export type DashboardStats = typeof MOCK_STATS;
+export type DashboardStats = {
+  activeSessions: number;
+  blockedIPs: number;
+  credentialsHarvested: number;
+  totalAttacks: number;
+  concurrentConnections: number;
+  mttb: string;
+  mitreCoverage: number;
+  systemUptime: string;
+  source: "live" | "offline";
+};
+
+export type CapturedSession = {
+  id: string;
+  ip: string;
+  country: string;
+  startTime: string;
+  duration: string;
+  client: string;
+  fingerprint: string;
+  input: string[];
+  status: string;
+  sessionCount?: number;
+  riskScore?: number;
+  mitreTechniques?: string[];
+};
+
+type SummaryResponse = {
+  ok: boolean;
+  source: "live" | "fallback";
+  metrics?: {
+    activeSessions?: number;
+    mttbMs?: number;
+    totalConnections?: number;
+    totalAuthFailures?: number;
+    totalCommands?: number;
+    totalBlocks?: number;
+    blockedIpsCurrent?: number;
+    uptimeSeconds?: number;
+  };
+};
+
+type SensorResult<T> = {
+  ok: boolean;
+  data: T | null;
+  error?: string;
+};
+
+export type SensorOperations = {
+  ok: boolean;
+  source: "live" | "offline";
+  sensor: {
+    readiness: SensorResult<Record<string, unknown>>;
+    metrics: SensorResult<Record<string, unknown>>;
+    stats: SensorResult<Record<string, unknown>>;
+    sessions: SensorResult<{ sessions?: CapturedSession[] }>;
+    distribution: SensorResult<Array<{ name: string; value: number; fill: string }>>;
+    attackGraph: SensorResult<{ nodes?: unknown[]; edges?: unknown[] }>;
+    anomaly: SensorResult<Record<string, unknown>>;
+  };
+};
+
+const EMPTY_STATS: DashboardStats = {
+  activeSessions: 0,
+  blockedIPs: 0,
+  credentialsHarvested: 0,
+  totalAttacks: 0,
+  concurrentConnections: 0,
+  mttb: "offline",
+  mitreCoverage: 0,
+  systemUptime: "offline",
+  source: "offline",
+};
 
 type CloudSentinelEvent = {
   eventid?: string;
@@ -113,11 +184,11 @@ export function useLiveThreatLogs() {
     };
   }, [url]);
 
-  return useMemo(() => [...liveLogs, ...(THREAT_LOGS as ThreatLog[])], [liveLogs]);
+  return useMemo(() => liveLogs, [liveLogs]);
 }
 
 export function useDashboardStats() {
-  const [stats, setStats] = useState<DashboardStats>(MOCK_STATS);
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,28 +199,32 @@ export function useDashboardStats() {
         if (!response.ok) {
           return;
         }
-        const data = await response.json();
+        const data = (await response.json()) as SummaryResponse;
         if (cancelled) {
           return;
         }
         const metrics = data.metrics ?? {};
         setStats({
-          ...MOCK_STATS,
-          activeSessions: metrics.activeSessions ?? MOCK_STATS.activeSessions,
-          blockedIPs: metrics.blockedIpsCurrent ?? MOCK_STATS.blockedIPs,
+          ...EMPTY_STATS,
+          activeSessions: metrics.activeSessions ?? 0,
+          blockedIPs: metrics.blockedIpsCurrent ?? 0,
           totalAttacks:
             (metrics.totalAuthFailures ?? 0) +
             (metrics.totalConnections ?? 0) +
             (metrics.totalCommands ?? 0),
-          concurrentConnections: metrics.activeSessions ?? MOCK_STATS.concurrentConnections,
-          mttb: typeof metrics.mttbMs === "number" ? `${metrics.mttbMs.toFixed(2)}ms` : MOCK_STATS.mttb,
+          concurrentConnections: metrics.activeSessions ?? 0,
+          mttb:
+            typeof metrics.mttbMs === "number" && metrics.mttbMs > 0
+              ? `${metrics.mttbMs.toFixed(2)}ms`
+              : "offline",
           systemUptime:
             typeof metrics.uptimeSeconds === "number" && metrics.uptimeSeconds > 0
               ? `${Math.floor(metrics.uptimeSeconds / 3600)}h`
-              : MOCK_STATS.systemUptime,
+              : "offline",
+          source: data.ok ? "live" : "offline",
         });
       } catch {
-        // Mock data remains the offline FYP prototype fallback.
+        // Keep visible offline state instead of pretending traffic exists.
       }
     }
 
@@ -162,4 +237,43 @@ export function useDashboardStats() {
   }, []);
 
   return stats;
+}
+
+export function useSensorOperations() {
+  const [operations, setOperations] = useState<SensorOperations | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOperations() {
+      try {
+        const response = await fetch("/api/cloudsentinel/operations", { cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+        const data = (await response.json()) as SensorOperations;
+        if (!cancelled) {
+          setOperations(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setOperations(null);
+        }
+      }
+    }
+
+    loadOperations();
+    const interval = window.setInterval(loadOperations, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  return operations;
+}
+
+export function useCapturedSessions() {
+  const operations = useSensorOperations();
+  return operations?.sensor.sessions.data?.sessions ?? [];
 }

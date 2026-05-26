@@ -40,6 +40,11 @@ export default function AttackLog({ selectedRegion }: AttackLogProps = {}) {
     return (
         <div className="h-full overflow-y-auto terminal-scrollbar pr-2 min-h-0 scroll-smooth">
             <div className="space-y-2 pb-4">
+                {threatLogs.length === 0 && (
+                    <div className="p-4 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-slate-500 dark:text-slate-400">
+                        No live sensor events yet. Waiting for Socket.IO stream or backend admin API.
+                    </div>
+                )}
                 {threatLogs?.map((log) => {
                     const isSelected = targetCode && log.country === targetCode;
                     const isDimmed = targetCode && log.country !== targetCode;

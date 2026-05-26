@@ -5,6 +5,7 @@ import ThreatMap from "@/components/ThreatMap";
 import AttackLog from "@/components/AttackLog";
 import { useDashboardStats } from "@/lib/liveEvents";
 import { useState } from "react";
+import SensorFunctions from "@/components/SensorFunctions";
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
@@ -12,19 +13,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">War Room</h2>
           <p className="text-slate-600 dark:text-slate-400 text-sm">Real-time Threat Intelligence Monitor</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
+        <div className={`flex items-center gap-2 px-3 py-1 border rounded-full ${stats.source === "live" ? "bg-red-500/10 border-red-500/20" : "bg-amber-500/10 border-amber-500/20"}`}>
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${stats.source === "live" ? "bg-red-400" : "bg-amber-400"}`}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${stats.source === "live" ? "bg-red-500" : "bg-amber-500"}`}></span>
           </span>
-          <span className="text-xs font-bold text-red-500">SYSTEM UNDER ATTACK</span>
+          <span className={`text-xs font-bold ${stats.source === "live" ? "text-red-500" : "text-amber-500"}`}>
+            {stats.source === "live" ? "SYSTEM UNDER ATTACK" : "SENSOR OFFLINE"}
+          </span>
         </div>
-      </div>
+        </div>
+
+        <SensorFunctions />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

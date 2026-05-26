@@ -1,10 +1,10 @@
 "use client";
 
-import { ACTIVE_SESSIONS } from "@/lib/mockData";
 import TerminalReplay from "@/components/TerminalReplay";
 import { Terminal, Clock, Activity, ArrowRight, ShieldAlert, ArrowLeft, Shield, Cpu, Search } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useCapturedSessions } from "@/lib/liveEvents";
 
 function HighlightText({ text, highlight }: { text: string; highlight: string }) {
     if (!highlight.trim() || !text) {
@@ -32,14 +32,15 @@ function HighlightText({ text, highlight }: { text: string; highlight: string })
 export default function SessionsPage() {
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const sessions = useCapturedSessions();
 
-    const selectedSession = selectedSessionId ? ACTIVE_SESSIONS.find(s => s.id === selectedSessionId) : null;
+    const selectedSession = selectedSessionId ? sessions.find(s => s.id === selectedSessionId) : null;
 
-    const filteredSessions = ACTIVE_SESSIONS.filter(session => {
+    const filteredSessions = sessions.filter(session => {
         const query = searchQuery.toLowerCase();
         return session.ip.toLowerCase().includes(query) ||
             session.country.toLowerCase().includes(query) ||
-            (session.fingeprint && session.fingeprint.toLowerCase().includes(query)) ||
+            (session.fingerprint && session.fingerprint.toLowerCase().includes(query)) ||
             (session.client && session.client.toLowerCase().includes(query));
     });
 
@@ -50,7 +51,7 @@ export default function SessionsPage() {
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                     <div>
                         <h2 className="text-2xl font-bold">Captured Sessions</h2>
-                        <p className="text-slate-500 dark:text-slate-400">Total Activities Recorded: <span className="text-blue-500 font-mono">156</span></p>
+                        <p className="text-slate-500 dark:text-slate-400">Total Activities Recorded: <span className="text-blue-500 font-mono">{sessions.length}</span></p>
                     </div>
                     <div className="relative">
                         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -65,6 +66,11 @@ export default function SessionsPage() {
                 </div>
 
                 <div className="grid gap-4">
+                    {filteredSessions.length === 0 && (
+                        <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-xl border border-dashed border-slate-300 dark:border-white/10 text-slate-500 dark:text-slate-400">
+                            No captured sessions from the sensor yet. Check DigitalOcean admin API and token wiring.
+                        </div>
+                    )}
                     {filteredSessions.map((session) => (
                         <div key={session.id} className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-white/5 hover:border-blue-500/50 transition-all group shadow-sm">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -88,9 +94,9 @@ export default function SessionsPage() {
                                         </div>
                                         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
                                             <span className="flex items-center gap-1"><Clock size={14} /> {session.duration}</span>
-                                            <span className="flex items-center gap-1"><Activity size={14} /> {session.input.length} commands</span>
+                                            <span className="flex items-center gap-1"><Activity size={14} /> {(session.input ?? []).length} commands</span>
                                             <span className="flex items-center gap-1 font-mono text-xs"><Cpu size={14} /> <HighlightText text={session.client || 'Unknown'} highlight={searchQuery} /></span>
-                                            <span className="flex items-center gap-1 font-mono text-xs"><ShieldAlert size={14} /> HASSH: <HighlightText text={session.fingeprint || 'N/A'} highlight={searchQuery} /></span>
+                                            <span className="flex items-center gap-1 font-mono text-xs"><ShieldAlert size={14} /> HASSH: <HighlightText text={session.fingerprint || 'N/A'} highlight={searchQuery} /></span>
                                         </div>
                                     </div>
                                 </div>
@@ -127,7 +133,7 @@ export default function SessionsPage() {
                                     <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
                                     Session Replay
                                 </h2>
-                                <TerminalReplay lines={selectedSession.input} />
+                                <TerminalReplay lines={selectedSession.input ?? []} />
                             </div>
 
                             {/* Sidebar: Intelligence */}
@@ -149,7 +155,7 @@ export default function SessionsPage() {
 
                                         <div>
                                             <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Client Fingerprint (HASSH)</p>
-                                            <p className="font-mono text-sm mt-1 text-slate-600 dark:text-slate-300 break-all">{selectedSession.fingeprint}</p>
+                                            <p className="font-mono text-sm mt-1 text-slate-600 dark:text-slate-300 break-all">{selectedSession.fingerprint || "N/A"}</p>
                                             <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
                                                 <Cpu size={12} />
                                                 Identified as: <span className="font-bold">{selectedSession.client}</span>

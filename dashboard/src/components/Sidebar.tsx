@@ -7,11 +7,14 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
+import { useSensorOperations } from "@/lib/liveEvents";
 
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
+    const operations = useSensorOperations();
+    const sensorLive = operations?.source === "live";
 
     const links = [
         { name: "War Room", href: "/", icon: LayoutDashboard },
@@ -81,7 +84,7 @@ export default function Sidebar() {
                     isCollapsed ? "p-0 h-0 opacity-0 border-0 mb-0" : "p-3 mb-1"
                 )}>
                     <span className="text-[10px] font-bold uppercase tracking-wider mb-1">FYP Prototype</span>
-                    <span className="text-[9px] leading-tight opacity-80">Defensive UI Mockup Only.<br/>No Live Connection.</span>
+                    <span className="text-[9px] leading-tight opacity-80">Live API bridge enabled.<br/>Sensor status below.</span>
                 </div>
             </div>
 
@@ -94,10 +97,12 @@ export default function Sidebar() {
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-2 whitespace-nowrap">System Status</p>
                     <div className="flex items-center gap-2 mb-2">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            <span className={clsx("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", sensorLive ? "bg-green-400" : "bg-amber-400")}></span>
+                            <span className={clsx("relative inline-flex rounded-full h-2 w-2", sensorLive ? "bg-green-500" : "bg-amber-500")}></span>
                         </span>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap">Sensor Node Online</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                            {sensorLive ? "Sensor Node Online" : "Sensor API Offline"}
+                        </p>
                     </div>
                 </div>
             </div>

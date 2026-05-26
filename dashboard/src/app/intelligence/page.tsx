@@ -1,18 +1,27 @@
 "use client";
 
-import { ATTACK_TYPES } from "@/lib/mockData";
 import { BrainCircuit, ShieldAlert, Fingerprint } from "lucide-react";
-
-const MITRE_DATA = [
-    { name: 'Initial Access', count: 120 },
-    { name: 'Execution', count: 98 },
-    { name: 'Persistence', count: 45 },
-    { name: 'Privilege Esc', count: 60 },
-    { name: 'Discovery', count: 85 },
-];
+import { useSensorOperations } from "@/lib/liveEvents";
 
 export default function IntelligencePage() {
-    const totalAttacks = ATTACK_TYPES.reduce((acc, item) => acc + item.value, 0);
+    const operations = useSensorOperations();
+    const attackTypes = operations?.sensor.distribution.data ?? [];
+    const totalAttacks = attackTypes.reduce((acc, item) => acc + Number(item.value || 0), 0);
+    const graphNodes = operations?.sensor.attackGraph.data?.nodes ?? [];
+    const mitreData = graphNodes
+        .filter((node) => typeof node === "object" && node !== null && "type" in node && node.type === "technique")
+        .map((node) => {
+            const record = node as { label?: string };
+            return { name: record.label ?? "Technique", count: 1 };
+        });
+    const sessions = operations?.sensor.sessions.data?.sessions ?? [];
+    const fingerprints = sessions
+        .filter((session) => session.fingerprint)
+        .map((session) => ({
+            hash: session.fingerprint,
+            client: session.client || "unknown",
+            count: session.sessionCount ?? 1,
+        }));
 
     return (
         <div className="space-y-8">
@@ -34,11 +43,11 @@ export default function IntelligencePage() {
                         <div className="absolute inset-0 flex items-center justify-center">
                             <div className="relative h-44 w-44 rounded-full"
                                 style={{
-                                    background: `conic-gradient(${ATTACK_TYPES.map((item, index) => {
-                                        const start = ATTACK_TYPES.slice(0, index).reduce((acc, current) => acc + current.value, 0) / totalAttacks * 100;
-                                        const end = start + item.value / totalAttacks * 100;
+                                    background: totalAttacks > 0 ? `conic-gradient(${attackTypes.map((item, index) => {
+                                        const start = attackTypes.slice(0, index).reduce((acc, current) => acc + Number(current.value || 0), 0) / totalAttacks * 100;
+                                        const end = start + Number(item.value || 0) / totalAttacks * 100;
                                         return `${item.fill} ${start}% ${end}%`;
-                                    }).join(", ")})`,
+                                    }).join(", ")})` : "conic-gradient(#334155 0% 100%)",
                                 }}
                             >
                                 <div className="absolute inset-10 rounded-full bg-white dark:bg-[#0a0a0a] flex flex-col items-center justify-center">
@@ -48,7 +57,10 @@ export default function IntelligencePage() {
                             </div>
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 grid grid-cols-2 gap-x-4 gap-y-2">
-                            {ATTACK_TYPES.map((item) => (
+                            {attackTypes.length === 0 && (
+                                <div className="col-span-2 text-xs text-slate-500">No live distribution from sensor.</div>
+                            )}
+                            {attackTypes.map((item) => (
                                 <div key={item.name} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.fill }} />
                                     <span>{item.name}</span>
@@ -65,8 +77,11 @@ export default function IntelligencePage() {
                         MITRE ATT&CK Mapping
                     </h3>
                     <div className="h-[300px] w-full space-y-5 pt-2">
-                        {MITRE_DATA.map((item) => {
-                            const width = `${Math.round((item.count / 120) * 100)}%`;
+                        {mitreData.length === 0 && (
+                            <div className="text-sm text-slate-500 dark:text-slate-400">No live MITRE graph nodes from sensor.</div>
+                        )}
+                        {mitreData.map((item) => {
+                            const width = `${Math.round((item.count / Math.max(1, mitreData.length)) * 100)}%`;
                             return (
                                 <div key={item.name} className="grid grid-cols-[110px_1fr_44px] items-center gap-3 text-sm">
                                     <span className="text-xs text-slate-500 dark:text-slate-400">{item.name}</span>
@@ -99,21 +114,18 @@ export default function IntelligencePage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-white/5 text-sm">
-                            <tr className="hover:bg-slate-50 dark:hover:bg-white/5">
-                                <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">23984723984...</td>
-                                <td className="px-6 py-4 font-medium text-blue-500">Putty Release 0.70</td>
-                                <td className="px-6 py-4">450</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 dark:hover:bg-white/5">
-                                <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">9988776655...</td>
-                                <td className="px-6 py-4 font-medium text-blue-500">OpenSSH_8.2p1 Ubuntu</td>
-                                <td className="px-6 py-4">320</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 dark:hover:bg-white/5">
-                                <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">1122334455...</td>
-                                <td className="px-6 py-4 font-medium text-blue-500">Golang SSH Client</td>
-                                <td className="px-6 py-4">120</td>
-                            </tr>
+                            {fingerprints.length === 0 && (
+                                <tr>
+                                    <td className="px-6 py-4 text-slate-500" colSpan={3}>No live HASSH fingerprints from sensor.</td>
+                                </tr>
+                            )}
+                            {fingerprints.map((item) => (
+                                <tr className="hover:bg-slate-50 dark:hover:bg-white/5" key={item.hash}>
+                                    <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">{item.hash}</td>
+                                    <td className="px-6 py-4 font-medium text-blue-500">{item.client}</td>
+                                    <td className="px-6 py-4">{item.count}</td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>

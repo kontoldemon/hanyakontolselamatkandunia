@@ -38,6 +38,11 @@ export default function TerminalReplay({ lines }: TerminalReplayProps) {
 
             {/* Terminal Content */}
             <div ref={scrollRef} className="h-[400px] overflow-y-auto p-4 text-green-400 terminal-scrollbar">
+                {lines.length === 0 && (
+                    <div className="text-slate-500">
+                        No command replay stored for this session yet.
+                    </div>
+                )}
                 {lines.map((line, i) => (
                     <div key={i} className="mb-1 leading-relaxed break-words">
                         <span className="text-blue-400 select-none mr-2">$</span>
