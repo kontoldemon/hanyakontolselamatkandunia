@@ -1,14 +1,34 @@
 # Final Year Project documents / drafts
 *.docx
 *.pdf
-/fyp working paper/
+/docs/working-paper/
 
 # Next.js / Node.js build files
 node_modules/
 .next/
 out/
 build/
-.env*
+.env
+.env.local
+.env.production
 .DS_Store
 dist/
 *.log
+
+# CloudSentinel runtime artifacts
+/var/
+/src/var/
+src/cloudsentinel/var/
+src/cloudsentinel/artifacts/
+src/cloudsentinel/.pytest_cache/
+src/cloudsentinel/.ruff_cache/
+src/cloudsentinel/__pycache__/
+src/cloudsentinel/**/__pycache__/
+*.pyc
+*.pyo
+
+# Secrets
+*.pem
+*.key
+!*.example.key
+certs/

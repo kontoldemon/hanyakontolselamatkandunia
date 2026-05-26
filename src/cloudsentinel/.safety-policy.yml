@@ -1,0 +1,22 @@
+# CloudSentinel Safety CI configuration
+# Scans dependencies for known CVEs on every CI run.
+# Usage: safety check -r requirements.txt --policy-file .safety-policy.yml
+
+version: 2
+
+security:
+  ignore-cvss-severity-below: 4  # Ignore low-severity issues
+  ignore-cvss-unknown-severity: false
+  continue-on-vulnerability-error: false
+
+  ignore-vulnerabilities:
+    # False positives or accepted risks go here
+    # - id: 12345
+    #   reason: "Accepted risk — not exploitable in our context"
+    #   expires: "2026-12-31"
+
+notifications:
+  slack:
+    enabled: false
+  email:
+    enabled: false

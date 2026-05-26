@@ -1,7 +1,0 @@
-include *.rst
-include etc/cloudsentinel.cfg.dist
-recursive-include src/cloudsentinel/data *
-recursive-include src/twisted *.py
-recursive-include src/cloudsentinel *.py
-graft honeyfs
-graft share/cloudsentinel

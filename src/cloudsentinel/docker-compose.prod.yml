@@ -1,0 +1,81 @@
+# CloudSentinel Production Override — DO Droplet deployment
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# This override exposes port 22 directly, enables TLS, and adds nginx.
+
+services:
+  cloudsentinel:
+    ports:
+      - "22:2222"          # Expose honeypot on real SSH port
+      - "8080:8080"        # Admin API
+      - "3001:3001"        # WebSocket stream
+    environment:
+      SOAR_ACTIVE_PROFILE: production
+      SOAR_FIREWALL_DRY_RUN: "false"
+      CLICKHOUSE_ENABLED: "true"
+      STREAM_ENABLED: "true"
+      ADMIN_ENABLED: "true"
+      OBSERVABILITY_ENABLED: "true"
+      OTEL_CONSOLE_EXPORTER: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ../../deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../../var/lib/cloudsentinel/tls:/etc/nginx/certs:ro
+    depends_on:
+      - cloudsentinel
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  prometheus:
+    image: prom/prometheus:v3.0.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../../deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../deploy/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
+      - cloudsentinel-prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../deploy/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../../deploy/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - cloudsentinel-grafana:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  cloudsentinel-prometheus:
+  cloudsentinel-grafana:

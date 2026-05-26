@@ -1,0 +1,42 @@
+[Unit]
+Description=CloudSentinel Honeypot Sensor
+Documentation=https://github.com/radzi/cloudsentinel
+After=network-online.target redis.service clickhouse.service nats.service
+Wants=network-online.target redis.service clickhouse.service nats.service
+Requires=network-online.target
+
+[Service]
+Type=simple
+User=cloudsentinel
+Group=cloudsentinel
+WorkingDirectory=/opt/cloudsentinel
+EnvironmentFile=-/opt/cloudsentinel/.env
+ExecStart=/opt/cloudsentinel/venv/bin/python -m cloudsentinel.server \
+    --config /opt/cloudsentinel/configs/usas-production.yaml \
+    --env /opt/cloudsentinel/.env
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryHigh=768M
+MemoryMax=1G
+CPUQuota=200%
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/cloudsentinel/var /opt/cloudsentinel/downloads /opt/cloudsentinel/data
+ReadOnlyPaths=/opt/cloudsentinel
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+SystemCallFilter=@system-service ~@privileged ~@resources
+
+SystemCallArchitectures=native
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cloudsentinel
+
+[Install]
+WantedBy=multi-user.target

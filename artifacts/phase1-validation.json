@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "admin_error": "<urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>",
+    "management_ssh": {
+      "error": "[WinError 1225] The remote computer refused the network connection",
+      "latency_ms": 2460.2,
+      "ok": false
+    },
+    "mitre_coverage": {
+      "count": 21,
+      "ok": true
+    },
+    "socketio": {
+      "error": "[WinError 1225] The remote computer refused the network connection",
+      "latency_ms": 2459.74,
+      "ok": false
+    },
+    "ssh_honeypot": {
+      "latency_ms": 83.37,
+      "ok": true
+    }
+  },
+  "generated_at": "2026-05-26T10:20:53Z",
+  "overall_pass": false,
+  "target": "188.166.184.42"
+}

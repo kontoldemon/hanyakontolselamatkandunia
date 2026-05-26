@@ -1,0 +1,81 @@
+groups:
+  - name: cloudsentinel_alerts
+    interval: 30s
+    rules:
+      # ── MTTB Alert ──
+      - alert: HighMTTB
+        expr: cloudsentinel_mttb_ms > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MTTB exceeded 100ms target"
+          description: "Mean Time to Block is {{ $value }}ms (target: <100ms)"
+
+      # ── Connection Spike ──
+      - alert: ConnectionSpike
+        expr: rate(cloudsentinel_connections_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Connection rate spike detected"
+          description: "{{ $value }} connections/sec over last 5 minutes"
+
+      # ── High Block Rate ──
+      - alert: HighBlockRate
+        expr: rate(cloudsentinel_blocks_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High SOAR block rate — possible DDoS"
+          description: "{{ $value }} blocks/sec — investigate immediately"
+
+      # ── Auth Failure Surge ──
+      - alert: AuthFailureSurge
+        expr: rate(cloudsentinel_auth_failures_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Brute force attack detected"
+          description: "{{ $value }} auth failures/sec"
+
+      # ── Sensor Down ──
+      - alert: SensorDown
+        expr: up{job="cloudsentinel"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CloudSentinel sensor is down"
+          description: "Sensor has been unreachable for 2 minutes"
+
+      # ── Redis Down ──
+      - alert: RedisDisconnected
+        expr: cloudsentinel_pipeline_connected == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis pipeline disconnected"
+          description: "Events are buffering to WAL. Redis must be restored."
+
+  - name: cloudsentinel_recording
+    interval: 60s
+    rules:
+      - record: cloudsentinel:block_rate_5m
+        expr: rate(cloudsentinel_blocks_total[5m])
+
+      - record: cloudsentinel:auth_failure_rate_5m
+        expr: rate(cloudsentinel_auth_failures_total[5m])
+
+      - record: cloudsentinel:command_rate_5m
+        expr: rate(cloudsentinel_commands_total[5m])
+
+      - record: cloudsentinel:connection_rate_1h
+        expr: rate(cloudsentinel_connections_total[1h])
+
+      - record: cloudsentinel:mttb_p95_5m
+        expr: histogram_quantile(0.95, rate(cloudsentinel_mttb_ms[5m]))

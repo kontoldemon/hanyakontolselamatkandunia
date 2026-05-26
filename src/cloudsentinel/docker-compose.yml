@@ -1,0 +1,183 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+      - --requirepass
+      - ${REDIS_PASSWORD:-cloudsentinel_redis}
+      - --tls-port
+      - "6380"
+      - --port
+      - "0"
+      - --tls-cert-file
+      - /tls/redis.crt
+      - --tls-key-file
+      - /tls/redis.key
+      - --tls-ca-cert-file
+      - /tls/ca.crt
+    volumes:
+      - cloudsentinel-redis:/data
+      - ./certs:/tls:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/ca.crt", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    profiles: ["full", "redis-tls"]
+
+  redis-plain:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+      - --requirepass
+      - ${REDIS_PASSWORD:-cloudsentinel_redis}
+    volumes:
+      - cloudsentinel-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-cloudsentinel_redis}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    profiles: ["default", "dev"]
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-cloudsentinel}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-cloudsentinel_ch_pass}
+    volumes:
+      - cloudsentinel-clickhouse:/var/lib/clickhouse
+      - ./schema.sql:/docker-entrypoint-initdb.d/001-cloudsentinel.sql:ro
+    healthcheck:
+      test:
+        - CMD
+        - clickhouse-client
+        - --user
+        - ${CLICKHOUSE_USER:-cloudsentinel}
+        - --password
+        - ${CLICKHOUSE_PASSWORD:-cloudsentinel_ch_pass}
+        - --query
+        - SELECT 1
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  nats:
+    image: nats:2-alpine
+    command: ["-js", "-m", "8222"]
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+      - xpack.security.authc.anonymous.roles=monitoring_user
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - cloudsentinel-es:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q green"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    profiles: ["full", "siem"]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["full", "siem"]
+
+  redpanda:
+    image: redpandadata/redpanda:v25.1.1
+    profiles: ["kafka"]
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - 512M
+      - --reserve-memory
+      - 0M
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+    restart: unless-stopped
+
+  cloudsentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      redis-plain:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD:-cloudsentinel_redis}@redis-plain:6379/0
+      NATS_URL: nats://nats:4222
+      CLICKHOUSE_ENABLED: "true"
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-cloudsentinel}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-cloudsentinel_ch_pass}
+      CLOUDSENTINEL_LISTEN_HOST: 0.0.0.0
+      CLOUDSENTINEL_SSH_PORT: 2222
+      CLOUDSENTINEL_FIREWALL_BACKEND: nftables
+      CLOUDSENTINEL_SANDBOX_RUNTIME: gvisor
+      STREAM_ENABLED: "true"
+      ADMIN_ENABLED: "true"
+    ports:
+      - "2222:2222"
+      - "8080:8080"
+      - "3001:3001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    read_only: true
+    volumes:
+      - cloudsentinel-var:/app/var
+      - cloudsentinel-downloads:/app/downloads
+      - cloudsentinel-data:/app/data
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    profiles: ["default", "dev"]
+
+volumes:
+  cloudsentinel-redis:
+  cloudsentinel-clickhouse:
+  cloudsentinel-var:
+  cloudsentinel-downloads:
+  cloudsentinel-data:
+  cloudsentinel-es:

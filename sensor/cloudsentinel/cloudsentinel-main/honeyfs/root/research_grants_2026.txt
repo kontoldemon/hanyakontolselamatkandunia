@@ -1,9 +1,0 @@
-Universiti Sultan Azlan Shah Research Office
-
-Project: Cloud-enabled student retention analytics
-Principal Investigator: Dr. Ahmad Farid
-Storage: /srv/research/student-retention-analytics
-Status: draft data collection plan
-
-Do not email raw CSV exports. Use secure transfer to research-nas.usas.internal.
-

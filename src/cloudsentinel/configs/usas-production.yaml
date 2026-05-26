@@ -1,0 +1,130 @@
+honeypot:
+  hostname: usas-prod-srv-01
+  os_version: Ubuntu 22.04 LTS
+  ssh_port: 2222
+  listen_host: 0.0.0.0
+  server_version: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
+  banner: Ubuntu 22.04 LTS
+  prompt_user: root
+  prompt_path: "~"
+  http_port: 8443
+  http_enabled: false
+  dns_enabled: false
+  dns_port: 53
+  tls_cert_file: ""
+  tls_key_file: ""
+
+llm:
+  provider: litellm
+  endpoint: ""
+  model: gemini/gemini-2.0-flash
+  fallback_models:
+    - groq/llama-3.3-70b-versatile
+    - openai/gpt-4o-mini
+  timeout_seconds: 8
+  max_output_chars: 4000
+
+redis:
+  url: redis://redis:6379/0
+  stream: cloudsentinel.events
+  maxlen: 10000
+
+nats:
+  enabled: true
+  url: nats://nats:4222
+  subject: cloudsentinel.events
+  stream: CLOUDSENTINEL
+
+kafka:
+  enabled: false
+  bootstrap_servers: redpanda:9092
+  topic: cloudsentinel.events
+
+clickhouse:
+  enabled: true
+  host: clickhouse
+  port: 8123
+  database: default
+  table: cloudsentinel_events
+  username: cloudsentinel
+  password: ""
+  batch_size: 100
+  flush_interval_seconds: 5
+
+elasticsearch:
+  enabled: false
+  url: ""
+  index_prefix: cloudsentinel
+  api_key: ""
+
+misp:
+  enabled: false
+  url: ""
+  api_key: ""
+  refresh_seconds: 3600
+
+abuseipdb:
+  enabled: false
+  api_key: ""
+
+fingerprinting:
+  enable_hassh: true
+  enable_ja4s: true
+
+observability:
+  enabled: true
+  service_name: cloudsentinel
+  otlp_endpoint: ""
+  console_exporter: true
+
+soar:
+  risk_threshold: 70
+  firewall_enabled: true
+  firewall_dry_run: false
+  firewall_path: /sbin/iptables
+  firewall_backend: nftables
+  block_ttl: 86400
+  decay_rate: 1.0
+  allowlist:
+    - 127.0.0.1
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 169.254.169.254
+  active_profile: production
+  mttb_target_ms: 100
+
+stream:
+  enabled: true
+  host: 0.0.0.0
+  port: 3001
+  cors_origin: "*"
+  public_read_only: true
+
+admin:
+  enabled: true
+  host: 0.0.0.0
+  port: 8080
+  token: ""
+
+tls:
+  enabled: true
+  cert_file: ""
+  key_file: ""
+  mtls_enabled: false
+  mtls_ca_cert: ""
+
+sandbox:
+  runtime: gvisor
+  memory: 128m
+  cpus: 0.5
+  timeout_seconds: 30
+
+sigma:
+  rules_dir: ""
+  enabled: true
+
+dns:
+  max_queries_per_ip: 60
+  rate_window_seconds: 60
+  max_response_size: 512
