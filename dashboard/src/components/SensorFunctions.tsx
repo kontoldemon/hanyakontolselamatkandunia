@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BrainCircuit, Fingerprint, Network, Shield, Terminal } from "lucide-react";
+import { Activity, Bot, BrainCircuit, Fingerprint, Network, Shield, Terminal } from "lucide-react";
 import { useSensorOperations } from "@/lib/liveEvents";
 import clsx from "clsx";
 
@@ -36,6 +36,12 @@ const functions = [
     icon: Activity,
   },
   {
+    key: "llm",
+    title: "LLM Command VFS",
+    detail: "API-backed terminal replies and AI summaries",
+    icon: Bot,
+  },
+  {
     key: "observability",
     title: "Observability",
     detail: "Prometheus metrics and readiness checks",
@@ -63,6 +69,7 @@ export default function SensorFunctions() {
   const sessions = operations?.sensor.sessions.data?.sessions ?? [];
   const graph = operations?.sensor.attackGraph.data;
   const anomaly = operations?.sensor.anomaly.data;
+  const llm = operations?.sensor.llm.data;
 
   const liveValues: Record<string, unknown> = {
     sessions: sessions.length,
@@ -70,6 +77,7 @@ export default function SensorFunctions() {
     soar: metrics.total_blocks,
     mitre: graph?.nodes?.length,
     anomaly: anomaly?.available,
+    llm: llm?.available ? llm.model : llm?.features ? "fallback" : "",
     observability: operations?.sensor.readiness.ok,
   };
 

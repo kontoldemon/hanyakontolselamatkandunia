@@ -76,6 +76,7 @@ export type SensorOperations = {
     distribution: SensorResult<Array<{ name: string; value: number; fill: string }>>;
     attackGraph: SensorResult<{ nodes?: unknown[]; edges?: unknown[] }>;
     anomaly: SensorResult<Record<string, unknown>>;
+    llm: SensorResult<Record<string, unknown>>;
   };
 };
 

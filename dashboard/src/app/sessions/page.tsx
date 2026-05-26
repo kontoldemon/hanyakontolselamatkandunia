@@ -1,8 +1,8 @@
 "use client";
 
 import TerminalReplay from "@/components/TerminalReplay";
-import { Terminal, Clock, Activity, ArrowRight, ShieldAlert, ArrowLeft, Shield, Cpu, Search } from "lucide-react";
-import { useState } from "react";
+import { Terminal, Clock, Activity, ArrowRight, ShieldAlert, ArrowLeft, Shield, Cpu, Search, Bot, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useCapturedSessions } from "@/lib/liveEvents";
 
@@ -32,9 +32,20 @@ function HighlightText({ text, highlight }: { text: string; highlight: string })
 export default function SessionsPage() {
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [summary, setSummary] = useState<null | {
+        summary?: string;
+        primary_objective?: string;
+        confidence?: number;
+        model_used?: string;
+    }>(null);
+    const [summaryLoading, setSummaryLoading] = useState(false);
     const sessions = useCapturedSessions();
 
     const selectedSession = selectedSessionId ? sessions.find(s => s.id === selectedSessionId) : null;
+
+    useEffect(() => {
+        setSummary(null);
+    }, [selectedSessionId]);
 
     const filteredSessions = sessions.filter(session => {
         const query = searchQuery.toLowerCase();
@@ -43,6 +54,34 @@ export default function SessionsPage() {
             (session.fingerprint && session.fingerprint.toLowerCase().includes(query)) ||
             (session.client && session.client.toLowerCase().includes(query));
     });
+
+    async function generateSummary() {
+        if (!selectedSession) {
+            return;
+        }
+        setSummaryLoading(true);
+        try {
+            const response = await fetch("/api/cloudsentinel/ai-summary", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    session_id: selectedSession.id,
+                    attacker_ip: selectedSession.ip,
+                    country: selectedSession.country,
+                    risk_score: selectedSession.riskScore ?? 0,
+                    mitre_techniques: selectedSession.mitreTechniques ?? [],
+                    hassh: selectedSession.fingerprint,
+                    commands: selectedSession.input ?? [],
+                }),
+            });
+            const data = await response.json();
+            setSummary(data.report ?? { summary: data.error ?? "AI summary unavailable" });
+        } catch {
+            setSummary({ summary: "AI summary unavailable" });
+        } finally {
+            setSummaryLoading(false);
+        }
+    }
 
     return (
         <div className="space-y-6 relative min-h-screen">
@@ -192,6 +231,35 @@ export default function SessionsPage() {
                                             <span className="font-mono text-red-400">System Info Discovery</span>
                                         </li>
                                     </ul>
+                                </div>
+
+                                <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
+                                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                        <Bot className="text-purple-500" size={20} />
+                                        AI Analyst Summary
+                                    </h3>
+                                    <button
+                                        onClick={generateSummary}
+                                        disabled={summaryLoading}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        {summaryLoading ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
+                                        Generate Summary
+                                    </button>
+                                    <div className="mt-4 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-4 text-sm text-slate-600 dark:text-slate-300">
+                                        {summary ? (
+                                            <div className="space-y-3">
+                                                <p>{summary.summary}</p>
+                                                <div className="grid grid-cols-1 gap-2 text-xs font-mono">
+                                                    <span>Objective: {summary.primary_objective ?? "Unknown"}</span>
+                                                    <span>Confidence: {typeof summary.confidence === "number" ? `${Math.round(summary.confidence * 100)}%` : "N/A"}</span>
+                                                    <span>Model: {summary.model_used ?? "unknown"}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p>No AI summary generated for this session yet.</p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

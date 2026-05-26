@@ -232,6 +232,53 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         except Exception:
             return {"available": False}
 
+    @app.get("/llm/status", dependencies=[Depends(require_auth)])
+    async def llm_status() -> dict[str, Any]:
+        api_key = secret_to_str(settings.llm.api_key)
+        return {
+            "available": bool(api_key),
+            "provider": settings.llm.provider,
+            "model": settings.llm.model,
+            "fallback_models": settings.llm.fallback_models,
+            "max_output_chars": settings.llm.max_output_chars,
+            "features": {
+                "command_vfs": True,
+                "threat_summary": True,
+                "deterministic_fallback": not bool(api_key),
+            },
+        }
+
+    @app.post("/threat-summary", dependencies=[Depends(require_auth)])
+    async def threat_summary(body: dict[str, Any]) -> dict[str, Any]:
+        session_id = str(body.get("session_id") or body.get("id") or "latest")
+        try:
+            from .threat_reporter import generate_report
+
+            report = await generate_report(
+                session_id=session_id,
+                redis_url=settings.redis.url,
+                attacker_ip=str(body.get("attacker_ip") or body.get("ip") or ""),
+                country=str(body.get("country") or "Unknown"),
+                city=str(body.get("city") or "Unknown"),
+                risk_score=int(body.get("risk_score") or 0),
+                mitre_techniques=list(body.get("mitre_techniques") or []),
+                hassh=str(body.get("hassh") or body.get("fingerprint") or ""),
+                commands=list(body.get("commands") or body.get("input") or []),
+            )
+            return {"ok": True, "report": report.to_dict()}
+        except Exception as exc:
+            return {
+                "ok": False,
+                "error": str(exc),
+                "report": {
+                    "session_id": session_id,
+                    "summary": "AI summary unavailable on sensor",
+                    "primary_objective": "Unknown",
+                    "confidence": 0,
+                    "model_used": "none",
+                },
+            }
+
     @app.post("/auth/login")
     async def login(body: dict[str, str]) -> dict[str, Any]:
         try:

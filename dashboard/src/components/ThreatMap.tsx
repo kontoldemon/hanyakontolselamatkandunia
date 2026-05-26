@@ -174,7 +174,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion }: ThreatMapPr
                 <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsExpanded(false)} />
             )}
             <div className={isExpanded
-                ? "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[95vw] h-[90vh] z-[100] bg-slate-50 dark:bg-[#050505] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-center animate-in zoom-in-95 duration-200"
+                ? "fixed inset-0 m-auto w-[95vw] h-[90vh] z-[100] origin-center bg-slate-50 dark:bg-[#050505] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-center animate-in zoom-in-95 fade-in duration-200"
                 : "relative w-full aspect-[2/1] bg-slate-50 dark:bg-[#050505] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl group transition-all duration-300"}>
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}

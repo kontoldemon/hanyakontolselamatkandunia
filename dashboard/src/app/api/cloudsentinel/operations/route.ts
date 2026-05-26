@@ -41,7 +41,7 @@ async function fetchAdmin<T>(path: string): Promise<AdminResult<T>> {
 }
 
 export async function GET() {
-  const [readiness, metrics, stats, sessions, distribution, attackGraph, anomaly] =
+  const [readiness, metrics, stats, sessions, distribution, attackGraph, anomaly, llm] =
     await Promise.all([
       fetchAdmin<Record<string, unknown>>("/readiness"),
       fetchAdmin<Record<string, unknown>>("/metrics/json"),
@@ -50,6 +50,7 @@ export async function GET() {
       fetchAdmin<unknown[]>("/attack-distribution"),
       fetchAdmin<{ nodes?: unknown[]; edges?: unknown[] }>("/attack-graph"),
       fetchAdmin<Record<string, unknown>>("/anomaly-stats"),
+      fetchAdmin<Record<string, unknown>>("/llm/status"),
     ]);
 
   const live =
@@ -59,7 +60,8 @@ export async function GET() {
     sessions.ok ||
     distribution.ok ||
     attackGraph.ok ||
-    anomaly.ok;
+    anomaly.ok ||
+    llm.ok;
 
   return NextResponse.json({
     ok: live,
@@ -72,6 +74,7 @@ export async function GET() {
       distribution,
       attackGraph,
       anomaly,
+      llm,
     },
   });
 }
