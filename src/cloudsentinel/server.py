@@ -30,7 +30,7 @@ from .anomaly import CommandAnomalyDetector
 from .auth import get_auth
 from .commands.base import commands as cmd_registry
 from .config import Settings, load_settings
-from .geoip import enrich as geo_enrich, is_public_ip
+from .geoip import enrich as geo_enrich
 from .hassh import HASSHDNA, calculate_hassh
 from .mitre import score_command
 from .observability import setup_observability
@@ -268,6 +268,7 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
         hassh_dna: HASSHDNA,
         limiter: ConnectionLimiter,
         stream: LiveStream | None = None,
+        anomaly_detector: CommandAnomalyDetector | None = None,
     ) -> None:
         self.settings = settings
         self.pipeline = pipeline
@@ -275,6 +276,7 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
         self.hassh_dna = hassh_dna
         self.limiter = limiter
         self.stream = stream
+        self.anomaly_detector = anomaly_detector
         self.session_id = uuid.uuid4().hex[:12]
         self.conn: asyncssh.SSHServerConnection | None = None
         self.src_ip = ""
@@ -572,7 +574,7 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             cwd=server.settings.honeypot.prompt_path,
         )
         self.vfs = VFSAgent(server.settings.llm, context)
-        self._anomaly_detector = None  # Set by server factory
+        self._anomaly_detector = server.anomaly_detector
 
     def connection_made(self, chan: asyncssh.SSHServerChannel) -> None:
         self.chan = chan
@@ -659,11 +661,16 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
         asyncio.create_task(self.vfs.close())
 
     async def _run_exec(self, command: str) -> None:
-        output = await self._execute(command)
-        if output:
-            self._write(output + "\n")
-        if self.chan is not None:
-            self.chan.exit(0)
+        try:
+            output = await self._execute(command)
+            if output:
+                self._write(output + "\n")
+        finally:
+            if self.chan is not None:
+                try:
+                    self.chan.exit(0)
+                except (BrokenPipeError, OSError):
+                    logger.debug("SSH exec channel already closed")
 
     async def _run_interactive(self, command: str) -> None:
         if command in {"exit", "logout"}:
@@ -748,7 +755,7 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                 "mitre_techniques": mitre_annotation.get("mitre_techniques", []),
             })
             # Anomaly scoring
-            if hasattr(self, '_anomaly_detector'):
+            if self._anomaly_detector is not None:
                 anomaly = self._anomaly_detector.score(command)
                 if anomaly["anomaly_score"] > 70:
                     logger.warning("Anomaly detected: score=%.1f cmd=%r", anomaly["anomaly_score"], command[:80])
@@ -767,10 +774,10 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
         return None
 
     def _handle_cd(self, args: list[str]) -> str:
+        target = args[0] if args else "~"
         if not args or args[0] == "-":
             self.vfs.context.cwd = "~"
         else:
-            target = args[0]
             if target == "..":
                 if self.vfs.context.cwd not in ("/", "~"):
                     self.vfs.context.cwd = "/".join(self.vfs.context.cwd.split("/")[:-1]) or "/"
@@ -789,9 +796,14 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
         path = self.vfs.context.cwd
         self._write(f"{user}@{host}:{path}# ")
 
-    def _write(self, text: str) -> None:
+    def _write(self, text: str | bytes) -> None:
         if self.chan is not None:
-            self.chan.write(text)
+            if isinstance(text, bytes):
+                text = text.decode("utf-8", errors="replace")
+            try:
+                self.chan.write(text)
+            except (BrokenPipeError, OSError):
+                logger.debug("SSH channel already closed during write")
 
 
 # ── HTTP Honeypot ────────────────────────────────────────────────────
@@ -861,12 +873,21 @@ async def start_admin_api(
     cert_path: str = "",
     key_path: str = "",
 ) -> None:
-    try:
-        import granian
-        from granian.constants import Interfaces, Loops
-        _USE_GRANIAN = True
-    except ImportError:
+    admin_server = os.getenv("ADMIN_SERVER", "uvicorn").lower()
+    if admin_server == "granian":
+        try:
+            import granian
+            from granian.constants import Interfaces, Loops
+
+            _USE_GRANIAN = True
+        except ImportError:
+            import uvicorn
+
+            logger.warning("Granian requested but unavailable, falling back to uvicorn")
+            _USE_GRANIAN = False
+    else:
         import uvicorn
+
         _USE_GRANIAN = False
 
     # Admin API backend selection: litestar (40% faster) or fastapi (default)
@@ -1084,7 +1105,15 @@ async def main() -> None:
 
     # Create server factory
     def server_factory() -> CloudSentinelSSHServer:
-        return CloudSentinelSSHServer(settings, pipeline, soar, hassh_dna, limiter, stream)
+        return CloudSentinelSSHServer(
+            settings,
+            pipeline,
+            soar,
+            hassh_dna,
+            limiter,
+            stream,
+            anomaly_detector,
+        )
 
     # Start SSH listener
     ssh_server = await asyncssh.create_server(
@@ -1125,6 +1154,8 @@ async def main() -> None:
         admin_task.cancel()
     if http_task:
         http_task.cancel()
+    if dns_task:
+        dns_task.cancel()
     if stream:
         await stream.stop()
 

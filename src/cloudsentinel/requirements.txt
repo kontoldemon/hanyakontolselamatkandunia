@@ -4,6 +4,7 @@ aiokafka>=0.10.0,<1.0
 clickhouse-connect>=0.7.19,<1.0
 cryptography>=42.0.0
 fastapi>=0.115.0,<1.0
+uvicorn[standard]>=0.30.0,<1.0
 geoip2>=4.8.0,<5.0
 httpx>=0.27.0,<1.0
 # ja4plus>=0.4.1  # Package not found on PyPI — verify correct name or implement locally

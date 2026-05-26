@@ -622,8 +622,9 @@ class ClickHouseForwarder:
 
     def _insert_rows(self, rows: list[dict[str, Any]]) -> None:
         assert self._client is not None
+        data = [[row.get(column) for column in self.COLUMNS] for row in rows]
         self._client.insert(
             self.clickhouse_settings.table,
-            rows,
+            data,
             column_names=self.COLUMNS,
         )

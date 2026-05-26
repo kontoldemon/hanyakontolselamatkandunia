@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # CloudSentinel Phase 1 - DigitalOcean Deployment Script
-# Tested on: Ubuntu 24.04 LTS Droplet (1 vCPU, 1 GB RAM)
+# Tested on: Ubuntu 24.04 LTS Droplet (2 vCPU, 2 GB RAM)
 #
 # Usage:
 #   chmod +x deploy.sh
@@ -19,6 +19,9 @@ HONEYPOT_PUBLIC_PORT=22
 MGMT_SSH_PORT=22222
 ADMIN_IP="${ADMIN_IP:-$(printf '%s' "${SSH_CONNECTION:-}" | awk '{print $1}')}"
 SOAR_ALLOWLIST="${SOAR_ALLOWLIST:-${ADMIN_IP:+${ADMIN_IP},}127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
+VERCEL_DASHBOARD_ORIGIN="${VERCEL_DASHBOARD_ORIGIN:-https://cloudsentinel.zis3c.dev}"
+PUBLIC_TLS_HOST="${PUBLIC_TLS_HOST:-188.166.184.42.sslip.io}"
+ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 CLICKHOUSE_VERSION="24.12"
 PYTHON_VERSION="3.12"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,9 +46,31 @@ wait_for_port() {
     return 1
 }
 
+setup_swap() {
+    local swap_path="/swapfile"
+    local swap_size="${CLOUDSENTINEL_SWAP_SIZE:-2G}"
+
+    if ! swapon --show=NAME | grep -qx "${swap_path}"; then
+        if [ ! -f "${swap_path}" ]; then
+            fallocate -l "${swap_size}" "${swap_path}" || dd if=/dev/zero of="${swap_path}" bs=1M count=2048
+            chmod 0600 "${swap_path}"
+            mkswap "${swap_path}"
+        fi
+        swapon "${swap_path}" || true
+    fi
+
+    grep -q "^${swap_path} " /etc/fstab || echo "${swap_path} none swap sw 0 0" >> /etc/fstab
+
+    cat > /etc/sysctl.d/99-cloudsentinel-memory.conf << SYSCTL
+vm.swappiness=20
+vm.vfs_cache_pressure=50
+SYSCTL
+    sysctl --system >/dev/null || true
+}
+
 echo "============================================================"
 echo " CloudSentinel Phase 1 - DigitalOcean Deployment"
-echo " Target: Ubuntu 24.04 LTS (1 vCPU / 1 GB RAM)"
+echo " Target: Ubuntu 24.04 LTS (2 vCPU / 2 GB RAM)"
 echo "============================================================"
 
 # System Dependencies
@@ -54,9 +79,16 @@ apt-get update -qq
 apt-get install -y -qq \
     python${PYTHON_VERSION} python${PYTHON_VERSION}-venv python${PYTHON_VERSION}-dev \
     python3-pip \
-    build-essential libssl-dev libffi-dev \
-    iptables iptables-persistent curl wget unzip \
-    git ca-certificates gnupg redis-server openssh-server ufw
+    build-essential libssl-dev libffi-dev openssl \
+    iptables curl wget unzip \
+    git ca-certificates gnupg redis-server openssh-server ufw caddy
+
+if [ -z "${ADMIN_TOKEN}" ]; then
+    ADMIN_TOKEN="$(openssl rand -hex 32)"
+fi
+
+echo "[1b/7] Configuring memory guardrails..."
+setup_swap
 
 # ClickHouse Installation
 echo "[2/7] Installing ClickHouse ${CLICKHOUSE_VERSION}..."
@@ -69,6 +101,18 @@ if ! command -v clickhouse &>/dev/null; then
     apt-get update -qq
     apt-get install -y -qq clickhouse-server clickhouse-client
 fi
+
+mkdir -p /etc/clickhouse-server/config.d
+cat > /etc/clickhouse-server/config.d/cloudsentinel-memory.xml << CLICKHOUSE_MEMORY
+<clickhouse>
+    <max_server_memory_usage>1073741824</max_server_memory_usage>
+    <mark_cache_size>134217728</mark_cache_size>
+    <uncompressed_cache_size>67108864</uncompressed_cache_size>
+    <query_cache>
+        <max_size_in_bytes>67108864</max_size_in_bytes>
+    </query_cache>
+</clickhouse>
+CLICKHOUSE_MEMORY
 
 systemctl enable clickhouse-server
 systemctl restart clickhouse-server
@@ -134,7 +178,8 @@ iptables -t nat -C PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT
     || iptables -t nat -A PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
 iptables -t nat -C OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT} 2>/dev/null \
     || iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
-iptables-save > /etc/iptables/rules.v4
+mkdir -p /etc/iptables
+iptables-save > /etc/iptables/rules.v4 || true
 
 
 # ── Kernel-Level Rate Limiting (hashlimit) ─────────────────────
@@ -153,19 +198,77 @@ iptables -C INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || 
 
 echo "    Kernel-level DDoS protection active."
 
+cat > /usr/local/sbin/cloudsentinel-netfilter.sh << NETFILTER
+#!/usr/bin/env bash
+set -euo pipefail
+
+iptables -t nat -C PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT} 2>/dev/null \
+    || iptables -t nat -A PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
+iptables -t nat -C OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT} 2>/dev/null \
+    || iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
+iptables -C INPUT -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -m state --state NEW \
+    -m hashlimit --hashlimit-name cloudsentinel_conn --hashlimit-above 60/minute \
+    --hashlimit-burst 10 --hashlimit-mode srcip -j DROP 2>/dev/null || \
+    iptables -A INPUT -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -m state --state NEW \
+    -m hashlimit --hashlimit-name cloudsentinel_conn --hashlimit-above 60/minute \
+    --hashlimit-burst 10 --hashlimit-mode srcip -j DROP
+iptables -C INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
+    iptables -I INPUT 1 -m state --state ESTABLISHED,RELATED -j ACCEPT
+NETFILTER
+chmod 0755 /usr/local/sbin/cloudsentinel-netfilter.sh
+
+cat > /etc/systemd/system/cloudsentinel-netfilter.service << NETFILTER_SERVICE
+[Unit]
+Description=CloudSentinel honeypot netfilter rules
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cloudsentinel-netfilter.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+NETFILTER_SERVICE
+
+systemctl daemon-reload
+systemctl enable --now cloudsentinel-netfilter.service
+
 # Allow SSH on the honeypot public and internal ports.
 ufw allow ${HONEYPOT_PUBLIC_PORT}/tcp comment "CloudSentinel public SSH honeypot"
 ufw allow ${SSH_PORT}/tcp comment "CloudSentinel internal SSH honeypot"
 # Allow ClickHouse (local only by default)
 ufw allow from 127.0.0.1 to any port 8123 comment "ClickHouse HTTP"
-# Allow Socket.io dashboard feed
-ufw allow 3001/tcp comment "CloudSentinel WebSocket"
+# Public HTTPS proxy for admin API and dashboard feed
+ufw allow 80/tcp comment "Caddy ACME HTTP"
+ufw allow 443/tcp comment "CloudSentinel HTTPS proxy"
+ufw delete allow 3001/tcp 2>/dev/null || true
+ufw delete allow 8080/tcp 2>/dev/null || true
 ufw --force enable || true
 systemctl restart ssh || systemctl restart sshd
 echo "Firewall configured."
 
+cat > /etc/caddy/Caddyfile << CADDY
+${PUBLIC_TLS_HOST} {
+    encode gzip zstd
+
+    handle /socket.io/* {
+        reverse_proxy 127.0.0.1:3001
+    }
+
+    reverse_proxy https://127.0.0.1:8080 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+}
+CADDY
+systemctl enable caddy
+systemctl reload caddy || systemctl restart caddy
+
 # systemd Service
-cat > /etc/systemd/system/cloudsentinel.service << 'SERVICE'
+cat > /etc/systemd/system/cloudsentinel.service << SERVICE
 [Unit]
 Description=CloudSentinel SSH Defense Sensor
 After=network.target clickhouse-server.service redis-server.service
@@ -186,6 +289,12 @@ Environment=PYTHONPATH=/opt
 Environment=REDIS_URL=redis://127.0.0.1:6379/0
 Environment=CLICKHOUSE_ENABLED=true
 Environment=CLICKHOUSE_HOST=127.0.0.1
+Environment=CLICKHOUSE_PORT=8123
+Environment=CLICKHOUSE_DATABASE=default
+Environment=CLICKHOUSE_USERNAME=default
+Environment=CLICKHOUSE_PASSWORD=
+Environment=NATS_ENABLED=false
+Environment=KAFKA_ENABLED=false
 Environment=SOAR_FIREWALL_ENABLED=true
 Environment=SOAR_FIREWALL_DRY_RUN=false
 Environment=SOAR_ACTIVE_PROFILE=do
@@ -195,13 +304,15 @@ Environment=SOAR_MTTB_TARGET_MS=100
 Environment=STREAM_ENABLED=true
 Environment=STREAM_HOST=0.0.0.0
 Environment=STREAM_PORT=3001
-Environment=STREAM_CORS_ORIGIN=*
+Environment=STREAM_CORS_ORIGIN=${VERCEL_DASHBOARD_ORIGIN}
 Environment=ADMIN_ENABLED=true
 Environment=ADMIN_PORT=8080
+Environment=ADMIN_SERVER=uvicorn
+Environment=ADMIN_TOKEN=${ADMIN_TOKEN}
 
-# Resource limits (1 vCPU, 1 GB RAM)
-MemoryMax=768M
-CPUQuota=80%
+# Resource limits (2 vCPU, 2 GB RAM)
+MemoryMax=1024M
+CPUQuota=150%
 
 # Service hardening
 NoNewPrivileges=true
@@ -220,8 +331,16 @@ SystemCallArchitectures=native
 WantedBy=multi-user.target
 SERVICE
 
+install -m 0600 /dev/null /root/cloudsentinel-admin-token
+printf '%s\n' "${ADMIN_TOKEN}" > /root/cloudsentinel-admin-token
+
 systemctl daemon-reload
 systemctl enable cloudsentinel
+systemctl restart cloudsentinel
+wait_for_port 127.0.0.1 ${SSH_PORT} "CloudSentinel SSH"
+wait_for_port 127.0.0.1 8080 "CloudSentinel Admin API"
+wait_for_port 127.0.0.1 3001 "CloudSentinel Socket.io"
+wait_for_port 127.0.0.1 443 "CloudSentinel HTTPS proxy"
 
 echo ""
 echo "============================================================"
@@ -243,5 +362,7 @@ echo " Honeypot SSH port: ${SSH_PORT}"
 echo " Public honeypot SSH: ${HONEYPOT_PUBLIC_PORT} -> ${SSH_PORT}"
 echo " Management SSH: ssh -p ${MGMT_SSH_PORT} root@188.166.184.42"
 echo " WebSocket stream:  port 3001"
+echo " HTTPS proxy: https://${PUBLIC_TLS_HOST}"
 echo " SOAR allowlist: ${SOAR_ALLOWLIST}"
+echo " Admin token saved at: /root/cloudsentinel-admin-token"
 echo "============================================================"

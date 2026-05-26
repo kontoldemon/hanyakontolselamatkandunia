@@ -250,7 +250,7 @@ class SOAREngine:
         if _ABUSEIPDB_AVAILABLE:
             try:
                 ab = _get_abuseipdb()
-                report = ab.check(str(event.get("src_ip","")))
+                report = await ab.check(str(event.get("src_ip","")))
                 ab_bonus = ab.soar_bonus(report)
                 if ab_bonus > 0:
                     event_score += ab_bonus

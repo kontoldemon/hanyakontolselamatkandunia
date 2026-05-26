@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import ssl
 import time
 from pathlib import Path
 from typing import Any
@@ -25,10 +26,11 @@ async def tcp_check(host: str, port: int, timeout: float = 3.0) -> dict[str, Any
         return {"ok": False, "error": str(exc), "latency_ms": round((time.perf_counter() - started) * 1000, 2)}
 
 
-def http_json(url: str, token: str = "", timeout: float = 5.0) -> dict[str, Any]:
+def http_json(url: str, token: str = "", timeout: float = 5.0, allow_self_signed: bool = False) -> dict[str, Any]:
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     request = Request(url, headers=headers)
-    with urlopen(request, timeout=timeout) as response:
+    context = ssl._create_unverified_context() if allow_self_signed and url.startswith("https://") else None
+    with urlopen(request, timeout=timeout, context=context) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -67,6 +69,7 @@ async def main() -> None:
     parser.add_argument("--socket-port", type=int, default=3001)
     parser.add_argument("--admin-url", default="http://188.166.184.42:8080")
     parser.add_argument("--admin-token", default="")
+    parser.add_argument("--allow-self-signed", action="store_true")
     parser.add_argument("--artifacts-dir", default="artifacts")
     args = parser.parse_args()
 
@@ -83,8 +86,15 @@ async def main() -> None:
         "mitre_coverage": {"ok": len(MITRE_TECHNIQUES) >= 15, "count": len(MITRE_TECHNIQUES)},
     }
     try:
-        checks["admin_health"] = http_json(f"{args.admin_url.rstrip('/')}/healthz")
-        checks["admin_readiness"] = http_json(f"{args.admin_url.rstrip('/')}/readiness", args.admin_token)
+        checks["admin_health"] = http_json(
+            f"{args.admin_url.rstrip('/')}/healthz",
+            allow_self_signed=args.allow_self_signed,
+        )
+        checks["admin_readiness"] = http_json(
+            f"{args.admin_url.rstrip('/')}/readiness",
+            args.admin_token,
+            allow_self_signed=args.allow_self_signed,
+        )
     except Exception as exc:
         checks["admin_error"] = str(exc)
 

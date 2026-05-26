@@ -1,9 +1,12 @@
 # CloudSentinel Phase 1 Validation
 
-- Generated: 2026-05-26T10:20:53Z
+- Generated: 2026-05-26T14:58:05Z
 - Target: 188.166.184.42
-- Overall: FAIL
+- Overall: PASS
 - SSH honeypot: PASS
-- Management SSH: FAIL
-- Socket.io port: FAIL
+- Management SSH: PASS
+- Socket.io port: PASS
 - MITRE mapped techniques: 21
+- Redis connected: True
+- ClickHouse ok: None
+- Stream enabled: True
