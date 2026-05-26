@@ -10,9 +10,7 @@ type AdminResult<T> = {
 };
 
 async function fetchAdmin<T>(path: string): Promise<AdminResult<T>> {
-  const baseUrl =
-    process.env.CLOUDSENTINEL_ADMIN_API_URL ||
-    process.env.NEXT_PUBLIC_CLOUDSENTINEL_ADMIN_API_URL;
+  const baseUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL;
 
   if (!baseUrl) {
     return { ok: false, data: null, error: "admin api url not configured" };

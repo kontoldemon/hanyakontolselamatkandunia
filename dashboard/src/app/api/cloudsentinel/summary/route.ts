@@ -39,8 +39,7 @@ function toNumber(value: unknown, fallbackValue = 0): number {
 }
 
 export async function GET() {
-  const baseUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL
-    || process.env.NEXT_PUBLIC_CLOUDSENTINEL_ADMIN_API_URL;
+  const baseUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL;
 
   if (!baseUrl) {
     return NextResponse.json(fallback);

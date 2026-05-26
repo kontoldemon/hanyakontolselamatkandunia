@@ -4,9 +4,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const baseUrl =
-    process.env.CLOUDSENTINEL_ADMIN_API_URL ||
-    process.env.NEXT_PUBLIC_CLOUDSENTINEL_ADMIN_API_URL;
+  const baseUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL;
 
   if (!baseUrl) {
     return NextResponse.json(
