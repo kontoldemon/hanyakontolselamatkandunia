@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { LayoutDashboard, Terminal, BrainCircuit, Settings, LogOut, Shield, ChevronLeft } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
@@ -12,6 +12,7 @@ import { useSensorOperations } from "@/lib/liveEvents";
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const pathname = usePathname();
+    const router = useRouter();
     const { theme, setTheme } = useTheme();
     const operations = useSensorOperations();
     const sensorLive = operations?.source === "live";
@@ -22,6 +23,12 @@ export default function Sidebar() {
         { name: "Intelligence", href: "/intelligence", icon: BrainCircuit },
         { name: "Settings", href: "/settings", icon: Settings },
     ];
+
+    async function signOut() {
+        await fetch("/api/auth/logout", { method: "POST" });
+        router.replace("/signin");
+        router.refresh();
+    }
 
     return (
         <aside
@@ -110,7 +117,7 @@ export default function Sidebar() {
             {/* User / Settings Footer */}
             <div className="p-4 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2">
                 <div className={clsx("flex items-center transition-all", isCollapsed ? "justify-center flex-col gap-4" : "justify-between gap-2")}>
-                    <button className={clsx(
+                    <button onClick={signOut} className={clsx(
                         "flex items-center text-slate-500 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-md transition-colors text-xs font-medium",
                         isCollapsed ? "p-2 justify-center" : "px-3 py-2 gap-2 flex-1"
                     )} title="Sign Out">

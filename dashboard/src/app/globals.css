@@ -26,6 +26,7 @@ body {
   background: #ffffff;
   color: #171717;
   font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
 }
 
 .dark body {
@@ -67,6 +68,30 @@ body {
 *:focus {
   outline: none !important;
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body::-webkit-scrollbar,
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.dark body::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
 /* Threat Map attack line animation */
 @keyframes dash {
     to {
