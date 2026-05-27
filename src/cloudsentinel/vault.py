@@ -5,12 +5,11 @@ Provides secure secret retrieval with automatic fallback to env vars.
 
 from __future__ import annotations
 
-import structlog
 import os
 from dataclasses import dataclass, field
-from typing import Any
 
 import httpx
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.vault")
 

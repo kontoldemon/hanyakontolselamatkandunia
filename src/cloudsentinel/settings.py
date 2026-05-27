@@ -13,9 +13,8 @@ Usage:
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any
 
 
 @dataclass(frozen=True)
@@ -100,7 +99,7 @@ class CentralSettings:
     infisical_project_id: str = ""
 
     @classmethod
-    def from_env(cls) -> "CentralSettings":
+    def from_env(cls) -> CentralSettings:
         """Load all settings from environment variables."""
         def _str(key: str, default: str = "") -> str:
             return os.getenv(key, default)

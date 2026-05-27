@@ -9,7 +9,7 @@
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "https://cloudsentinel.vercel.app" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://cloudsentinel.zis3c.dev" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, Authorization" }
       ]

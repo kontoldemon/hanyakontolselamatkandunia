@@ -12,7 +12,14 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, computed_field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    computed_field,
+    field_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
@@ -56,6 +63,27 @@ class LLMSettings(BaseModel):
     timeout_seconds: float = Field(default=8.0, gt=0)
     max_output_chars: int = Field(default=4000, ge=100, le=20000)
     api_key: SecretStr = SecretStr("")
+    response_policy_enabled: bool = True
+    llm_safe_fallback_enabled: bool = True
+    response_template_max_lines: int = Field(default=16, ge=2, le=200)
+    blocked_command_prefixes: list[str] = Field(default_factory=lambda: [
+        "clickhouse-client",
+        "journalctl",
+        "systemctl",
+        "service",
+        "docker",
+        "kubectl",
+        "iptables",
+        "nft",
+        "ufw",
+        "firewall-cmd",
+        "shutdown",
+        "reboot",
+        "poweroff",
+        "chattr",
+        "mount",
+        "umount",
+    ])
 
 
 class RedisSettings(BaseModel):
@@ -265,6 +293,10 @@ class EnvOverrides(BaseSettings):
     llm_endpoint: str | None = None
     llm_model: str | None = None
     llm_fallback_models: str | None = None
+    llm_response_policy_enabled: bool | None = None
+    llm_safe_fallback_enabled: bool | None = None
+    llm_response_template_max_lines: int | None = None
+    llm_blocked_command_prefixes: str | None = None
     redis_url: str | None = None
     nats_enabled: bool | None = None
     nats_url: str | None = None
@@ -320,7 +352,6 @@ def _split_csv(value: str | None) -> list[str] | None:
 
 def validate_settings(settings: Settings) -> Settings:
     """Cross-field validation — ensures logical consistency of the config."""
-    from pathlib import Path
 
     errors: list[str] = []
 
@@ -362,7 +393,7 @@ def validate_settings(settings: Settings) -> Settings:
 
     # MTTB target must be achievable
     if settings.soar.mttb_target_ms < 1:
-        errors.append("MTTB target must be >= 1ms (current: {}ms)".format(settings.soar.mttb_target_ms))
+        errors.append(f"MTTB target must be >= 1ms (current: {settings.soar.mttb_target_ms}ms)")
 
     if errors:
         raise ValueError(
@@ -398,6 +429,10 @@ def load_settings(
     _set_if_present(settings.llm, "endpoint", env.llm_endpoint)
     _set_if_present(settings.llm, "model", env.llm_model)
     _set_if_present(settings.llm, "fallback_models", _split_csv(env.llm_fallback_models))
+    _set_if_present(settings.llm, "response_policy_enabled", env.llm_response_policy_enabled)
+    _set_if_present(settings.llm, "llm_safe_fallback_enabled", env.llm_safe_fallback_enabled)
+    _set_if_present(settings.llm, "response_template_max_lines", env.llm_response_template_max_lines)
+    _set_if_present(settings.llm, "blocked_command_prefixes", _split_csv(env.llm_blocked_command_prefixes))
     _set_if_present(settings.redis, "url", env.redis_url)
     _set_if_present(settings.nats, "enabled", env.nats_enabled)
     _set_if_present(settings.nats, "url", env.nats_url)

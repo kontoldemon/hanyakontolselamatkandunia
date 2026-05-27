@@ -4,24 +4,23 @@ Architecture: AsyncSSH + LLM VFS + Redis Stream Logging
 """
 
 import asyncio
-import structlog
+import hashlib
 import time
 import uuid
-import json
-import hashlib
-from typing import Any, Optional, List
+from typing import Any
 
 import asyncssh
 import redis.asyncio as redis
-from dotenv import load_dotenv
+import structlog
 import yaml
+from dotenv import load_dotenv
 
 # Load configurations
 load_dotenv()
 
 # Safely load YAML if it exists, otherwise provide empty fallback
 try:
-    with open("configs/usas-production.yaml", "r") as f:
+    with open("configs/usas-production.yaml") as f:
         CONFIG = yaml.safe_load(f)
 except FileNotFoundError:
     CONFIG = {}

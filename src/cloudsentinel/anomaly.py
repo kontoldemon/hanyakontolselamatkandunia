@@ -6,16 +6,15 @@ Uses IsolationForest for unsupervised anomaly detection on attacker commands.
 from __future__ import annotations
 
 import json
-import structlog
-import time
 from collections import deque
 from pathlib import Path
 from typing import Any
 
+import structlog
+
 logger = structlog.get_logger("cloudsentinel.anomaly")
 
 # Feature extraction for shell commands
-import re
 
 
 def extract_features(command: str) -> dict[str, float]:
@@ -131,7 +130,6 @@ class CommandAnomalyDetector:
 
     def save(self, path: str = "var/lib/cloudsentinel/anomaly_model.json") -> None:
         """Persist anomaly detection state."""
-        import json
         out = Path(path)
         out.parent.mkdir(parents=True, exist_ok=True)
         data = {

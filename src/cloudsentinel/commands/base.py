@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from typing import ClassVar
 
 from . import Command
 
@@ -288,7 +287,7 @@ class Groups(Command):
     def call(self): self.write("root\n")
 @register("/usr/bin/yes")
 class Yes(Command):
-    def call(self): self.write(("y\n" * 20))
+    def call(self): self.write("y\n" * 20)
 @register("/usr/bin/tee")
 class Tee(Command):
     def call(self): self.write("")

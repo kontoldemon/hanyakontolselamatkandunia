@@ -5,9 +5,10 @@ Creates realistic certificates mimicking target organization on first run.
 
 from __future__ import annotations
 
-import structlog
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.tls")
 
@@ -28,9 +29,9 @@ def generate_self_signed_cert(
     """
     try:
         from cryptography import x509
-        from cryptography.x509.oid import NameOID
         from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
     except ImportError:
         logger.warning("cryptography not available — skipping TLS cert generation")
         return "", ""
@@ -64,8 +65,8 @@ def generate_self_signed_cert(
         .issuer_name(issuer)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
-        .not_valid_after(datetime.now(timezone.utc) + timedelta(days=365))
+        .not_valid_before(datetime.now(UTC) - timedelta(days=1))
+        .not_valid_after(datetime.now(UTC) + timedelta(days=365))
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName(hostname)]),
             critical=False,

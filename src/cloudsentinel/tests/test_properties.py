@@ -11,12 +11,10 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
-from hypothesis import HealthCheck, assume, given, settings, strategies as st
-
 # ── HASSH Properties ────────────────────────────────────────
-
 from cloudsentinel.hassh import calculate_hassh, calculate_hassh_sha256, normalize_algorithm_list
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
 
 SSH_ALGORITHM = st.sampled_from(
     [
@@ -143,7 +141,7 @@ class TestVFSProperties:
 
 # ── MITRE Properties ──────────────────────────────────────
 
-from cloudsentinel.mitre import score_command, match_command, deobfuscate_bash
+from cloudsentinel.mitre import deobfuscate_bash, score_command
 
 
 class TestMITREProperties:
@@ -227,7 +225,6 @@ class TestCodecProperties:
 
 # ── SOAR Properties ───────────────────────────────────────
 
-import asyncio
 from cloudsentinel.soar import SOAREngine
 
 

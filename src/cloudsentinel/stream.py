@@ -11,7 +11,6 @@ Phase 2 (AWS): Migrate to App Runner with IAM auth.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import urllib.parse
 from collections import deque
@@ -35,6 +34,7 @@ class LiveStream:
     DEFAULT_ALLOWED_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "https://cloudsentinel.zis3c.dev",
         "https://cloudsentinel.vercel.app",
         "https://cloudsentinel-dashboard.vercel.app",
     ]

@@ -1,5 +1,5 @@
-import os
 import glob
+import os
 import re
 
 dir_path = r"C:\Users\RADZ\project io\FYP\sensor\cloudsentinel"
@@ -7,11 +7,11 @@ files = glob.glob(os.path.join(dir_path, "*.py"))
 
 for file_path in files:
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
     except UnicodeDecodeError:
         print(f"Skipping {os.path.basename(file_path)} due to encoding.")
-        with open(file_path, "r", encoding="cp1252") as f:
+        with open(file_path, encoding="cp1252") as f:
             content = f.read()
 
     # Skip files that don't import logging unless they use loguru
@@ -31,7 +31,7 @@ for file_path in files:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
             print(f"Updated logging in {os.path.basename(file_path)}")
-        except Exception as e:
+        except Exception:
             # write back with original encoding
             with open(file_path, "w", encoding="cp1252") as f:
                 f.write(content)

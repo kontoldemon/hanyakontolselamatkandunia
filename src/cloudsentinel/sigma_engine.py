@@ -10,11 +10,11 @@ All rules are pure Python with zero external dependencies.
 
 from __future__ import annotations
 
-import json
-import structlog
 import re
 from pathlib import Path
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.sigma")
 

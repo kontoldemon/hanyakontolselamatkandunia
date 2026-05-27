@@ -16,10 +16,8 @@ from __future__ import annotations
 
 import random
 import time
-from typing import Any
 
-from locust import HttpUser, TaskSet, task, between, events
-
+from locust import HttpUser, between, events, task
 
 # ── Realistic botnet SSH command sequences ──
 BOTNET_COMMANDS = [
@@ -98,7 +96,7 @@ class SSHUser(HttpUser):
 @events.init.add_listener
 def on_locust_init(environment, **kwargs):
     """Print test configuration."""
-    print(f"[Locust] CloudSentinel SSH Honeypot Load Test")
+    print("[Locust] CloudSentinel SSH Honeypot Load Test")
     print(f"[Locust] Target: {environment.host}")
     print(f"[Locust] Botnet profiles: {len(BOTNET_COMMANDS)}")
     print(f"[Locust] Countries: {len(COUNTRIES)}")
@@ -112,4 +110,4 @@ def on_test_start(environment, **kwargs):
 
 @events.test_stop.add_listener
 def on_test_stop(environment, **kwargs):
-    print(f"[Locust] Test complete. Check HTML report for MTTB percentiles.")
+    print("[Locust] Test complete. Check HTML report for MTTB percentiles.")

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 type Summary = {
   ok: boolean;
-  source: "live" | "fallback";
+  source: "live" | "offline";
   metrics: {
     activeSessions: number;
     mttbMs: number;
@@ -18,9 +18,9 @@ type Summary = {
   };
 };
 
-const fallback: Summary = {
+const offline: Summary = {
   ok: false,
-  source: "fallback",
+  source: "offline",
   metrics: {
     activeSessions: 0,
     mttbMs: 0,
@@ -39,30 +39,48 @@ function toNumber(value: unknown, fallbackValue = 0): number {
 }
 
 export async function GET() {
-  const baseUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL;
-
-  if (!baseUrl) {
-    return NextResponse.json(fallback);
-  }
+  const envUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim();
+  const baseUrl = envUrl && envUrl !== "http://localhost:8080" ? envUrl : "https://188.166.184.42.sslip.io";
 
   try {
     const token = process.env.CLOUDSENTINEL_ADMIN_TOKEN;
-    const response = await fetch(new URL("/metrics/json", baseUrl), {
-      cache: "no-store",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: AbortSignal.timeout(3500),
-    });
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const [metricsResponse, sessionsResponse] = await Promise.all([
+      fetch(new URL("/metrics/json", baseUrl), {
+        cache: "no-store",
+        headers,
+        signal: AbortSignal.timeout(8000),
+      }),
+      fetch(new URL("/sessions", baseUrl), {
+        cache: "no-store",
+        headers,
+        signal: AbortSignal.timeout(8000),
+      }),
+    ]);
 
-    if (!response.ok) {
-      return NextResponse.json(fallback, { status: 200 });
+    if (!metricsResponse.ok) {
+      return NextResponse.json(offline, { status: 200 });
     }
 
-    const data = await response.json();
+    const data = await metricsResponse.json();
+    let activeFromSessions = 0;
+    if (sessionsResponse.ok) {
+      try {
+        const sessionPayload = (await sessionsResponse.json()) as { sessions?: Array<{ status?: string }> };
+        activeFromSessions = (sessionPayload.sessions ?? []).filter(
+          (session) => (session.status ?? "").toLowerCase() === "active",
+        ).length;
+      } catch {
+        activeFromSessions = 0;
+      }
+    }
+    const activeSessions = Math.max(toNumber(data.active_sessions), activeFromSessions);
+
     return NextResponse.json({
       ok: true,
       source: "live",
       metrics: {
-        activeSessions: toNumber(data.active_sessions),
+        activeSessions,
         mttbMs: toNumber(data.mttb_ms),
         totalConnections: toNumber(data.total_connections),
         totalAuthFailures: toNumber(data.total_auth_failures),
@@ -73,6 +91,6 @@ export async function GET() {
       },
     } satisfies Summary);
   } catch {
-    return NextResponse.json(fallback, { status: 200 });
+    return NextResponse.json(offline, { status: 200 });
   }
 }

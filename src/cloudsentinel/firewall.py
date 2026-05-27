@@ -6,10 +6,11 @@ Auto-detects available firewall backend at runtime.
 from __future__ import annotations
 
 import asyncio
-import structlog
 import os
 import shutil
 from typing import Protocol
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.firewall")
 
@@ -174,16 +175,15 @@ def create_firewall(backend: str = FIREWALL_BACKEND) -> FirewallBackend:
     """Auto-detect and return the best available firewall backend."""
     if backend == "nftables":
         return NFTablesBackend()
-    elif backend == "iptables":
+    if backend == "iptables":
         return IPTablesBackend()
 
     # Auto-detect: prefer nftables
     if shutil.which("nft"):
         logger.info("Firewall: nftables selected (auto-detected)")
         return NFTablesBackend()
-    elif shutil.which("iptables"):
+    if shutil.which("iptables"):
         logger.info("Firewall: iptables selected (auto-detected)")
         return IPTablesBackend()
-    else:
-        logger.warning("No firewall backend found! SOAR blocks will be dry-run only.")
-        return IPTablesBackend()  # Return iptables stub; _run_firewall will fail gracefully
+    logger.warning("No firewall backend found! SOAR blocks will be dry-run only.")
+    return IPTablesBackend()  # Return iptables stub; _run_firewall will fail gracefully

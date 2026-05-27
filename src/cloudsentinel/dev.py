@@ -11,7 +11,6 @@ Requires: pip install watchfiles
 from __future__ import annotations
 
 import asyncio
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -20,7 +19,7 @@ from pathlib import Path
 async def dev_server():
     """Start sensor with hot-reload on code changes."""
     try:
-        from watchfiles import awatch, Change
+        from watchfiles import Change, awatch
     except ImportError:
         print("watchfiles not installed. Install with: pip install watchfiles")
         return

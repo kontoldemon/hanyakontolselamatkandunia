@@ -9,11 +9,12 @@ response size caps to comply with EDNS0 best practices.
 from __future__ import annotations
 
 import asyncio
-import structlog
 import socket
 import struct
 import time
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.dns")
 
@@ -87,7 +88,7 @@ class DNSHoneypot:
                 self._blocked_ips.discard(ip)
 
     class Protocol(asyncio.DatagramProtocol):
-        def __init__(self, honeypot: "DNSHoneypot") -> None:
+        def __init__(self, honeypot: DNSHoneypot) -> None:
             self.hp = honeypot
             self.transport: asyncio.DatagramTransport | None = None
 

@@ -63,6 +63,7 @@ MITRE_TECHNIQUES: dict[str, dict[str, str | int]] = {
     "T1496": {"name": "Resource Hijacking", "tactic": "Impact", "severity": "high"},
     "T1486": {"name": "Data Encrypted for Impact", "tactic": "Impact", "severity": "critical"},
     "T1555": {"name": "Credentials from Password Stores", "tactic": "Credential Access", "severity": "high"},
+    "T1098": {"name": "Account Manipulation", "tactic": "Persistence, Privilege Escalation", "severity": "critical"},
     "T1090": {"name": "Proxy", "tactic": "Command and Control", "severity": "medium"},
     "T1571": {"name": "Non-Standard Port", "tactic": "Command and Control", "severity": "low"},
 }
@@ -94,6 +95,13 @@ COMMAND_PATTERNS: ClassVar[list[tuple[re.Pattern, int, str]]] = [
     (re.compile(r"\b(?:gpg|openssl)\b.*(?:-c\b|\benc\b)"), 25, "T1486"),
     (re.compile(r"\bcat\s+(?:~|/root)/(?:\.aws/credentials|\.docker/config\.json|\.ssh/id_rsa)\b"), 25, "T1555"),
     (re.compile(r"\b(?:nc|ncat|socat)\b.*(?:-l\b|-p\b|\blisten\b).*\b[0-9]{4,5}\b"), 10, "T1571"),
+    (
+        re.compile(
+            r"(?:authorized_keys|\.ssh(?:/|$).*(?:rm\s+-rf|chattr|chmod|echo\s+['\"]?ssh-rsa|mkdir\s+\.ssh))"
+        ),
+        45,
+        "T1098",
+    ),
 ]
 
 

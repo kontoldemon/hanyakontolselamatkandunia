@@ -6,14 +6,13 @@ Sends high-severity threat alerts when SOAR risk threshold is breached.
 from __future__ import annotations
 
 import asyncio
-import json
-import structlog
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.webhook")
 
@@ -114,7 +113,7 @@ class WebhookNotifier:
             "password": event.get("password", ""),
             "hassh": (event.get("hassh_md5", "")[:16] + "...") if event.get("hassh_md5") else "N/A",
             "session": event.get("session", "?")[:12],
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
             # Sanitize to prevent markdown/code-block injection across all platforms
             "input": str(event.get("input", ""))[:200].replace("```", "'").replace("`", "'"),
         }
@@ -169,7 +168,7 @@ class WebhookNotifier:
                 {"name": "HASSH", "value": f"`{p['hassh']}`", "inline": True},
                 {"name": "MITRE TTPs", "value": p["techniques"], "inline": False},
             ],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "footer": {"text": f"CloudSentinel - Session {p['session']}"},
         }
         if p["input"]:

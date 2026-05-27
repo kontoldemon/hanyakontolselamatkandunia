@@ -42,7 +42,7 @@ except ModuleNotFoundError:
             if registry is not None:
                 registry.metrics.append(self)
 
-        def labels(self, **_labels: str) -> "_Metric":
+        def labels(self, **_labels: str) -> _Metric:
             return self
 
     class Gauge(_Metric):

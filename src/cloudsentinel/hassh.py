@@ -9,10 +9,10 @@ SSH client algorithm negotiations (KEX;ENC;MAC;COMP format).
 from __future__ import annotations
 
 import hashlib
+import re
 import time
 from collections.abc import Iterable
 from typing import ClassVar
-
 
 AlgorithmValue = str | bytes
 
@@ -58,6 +58,41 @@ def calculate_hassh(
     hassh_algorithms = f"{ckex};{cenc};{cmac};{ccomp}"
     hassh = hashlib.md5(hassh_algorithms.encode("utf-8")).hexdigest()
     return hassh, hassh_algorithms
+
+
+def fallback_hassh_from_version(client_version: str, server_version: str = "") -> tuple[str, str]:
+    client = client_version.strip() or "unknown-client"
+    server = server_version.strip() or "unknown-server"
+    algorithms = f"client:{client};server:{server};unknown;none"
+    return hashlib.md5(algorithms.encode("utf-8")).hexdigest(), algorithms
+
+
+def infer_client_software(version: str, hassh: str = "") -> str:
+    normalized = (version or "").strip()
+    lowered = normalized.lower()
+    if hassh:
+        intel = HASSHDNA().lookup(hassh)
+        software = str(intel.get("client_software", "unknown")).strip()
+        if software and software.lower() != "unknown":
+            return software
+
+    if "paramiko" in lowered:
+        return "Paramiko"
+    if "libssh_" in lowered:
+        return "libssh"
+    if "libssh2" in lowered:
+        return "libssh2"
+    if "dropbear" in lowered:
+        return "Dropbear SSH"
+    if "openssh" in lowered:
+        return "OpenSSH"
+    if "putty" in lowered:
+        return "PuTTY"
+    if re.search(r"\bssh-2\.0-go\b", lowered):
+        return "Go crypto/ssh"
+    if normalized:
+        return normalized
+    return "unknown"
 
 
 

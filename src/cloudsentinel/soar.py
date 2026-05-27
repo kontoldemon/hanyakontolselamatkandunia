@@ -1,10 +1,18 @@
 """CloudSentinel SOAR - decay, thresholds, auto-unblock, cross-session with Redis state."""
 from __future__ import annotations
-import asyncio, ipaddress, logging, time, json
+
+import asyncio
+import ipaddress
+import json
+import logging
+import time
 from collections import defaultdict
-from typing import ClassVar, Any
-from . import geoip, mitre
+from datetime import UTC
+from typing import Any, ClassVar
+
 import redis.asyncio as aioredis
+
+from . import geoip, mitre
 
 # Optional integrations (graceful if not configured)
 try:
@@ -286,8 +294,9 @@ class SOAREngine:
         event["cloudsentinel_soar_action"]="none"
 
         threshold=COUNTRY_THRESHOLDS.get(country,self.risk_threshold)
+        persistence_override = "T1098" in techniques and event.get("eventid") in ("cloudsentinel.command.input", "cloudsentinel.command.failed")
 
-        if current_score>=threshold:
+        if current_score>=threshold or persistence_override:
             block_result=await self._block_ip(event)
             event["cloudsentinel_soar_action"]=block_result
             self._block_timings.append(time.perf_counter()-t_start)
@@ -349,19 +358,17 @@ class SOAREngine:
                 await self._mark_blocked(ip)
                 event["block_command"]="redis.publish cloudsentinel:soar:blocks"
                 return finish("event_published")
-            else:
-                # Fallback to local execution if no redis (tests)
-                exists=await self._run_firewall(["-C","INPUT","-s",ip,"-j","DROP"],event)
-                if exists[0]==0:
-                    await self._mark_blocked(ip)
-                    return finish("already_blocked")
-                result=await self._run_firewall(["-A","INPUT","-s",ip,"-j","DROP"],event)
-                if result[0]==0:
-                    await self._mark_blocked(ip)
-                    logger.warning("iptables DROP: %s",ip); return finish("iptables_block")
-                else:
-                    logger.error("iptables failed: %s",event.get("block_stderr") or "?"); return finish("block_failed")
-        except asyncio.TimeoutError:
+            # Fallback to local execution if no redis (tests)
+            exists=await self._run_firewall(["-C","INPUT","-s",ip,"-j","DROP"],event)
+            if exists[0]==0:
+                await self._mark_blocked(ip)
+                return finish("already_blocked")
+            result=await self._run_firewall(["-A","INPUT","-s",ip,"-j","DROP"],event)
+            if result[0]==0:
+                await self._mark_blocked(ip)
+                logger.warning("iptables DROP: %s",ip); return finish("iptables_block")
+            logger.error("iptables failed: %s",event.get("block_stderr") or "?"); return finish("block_failed")
+        except TimeoutError:
             logger.error("iptables timeout: %s",ip); return finish("block_timeout")
         except Exception as exc:
             logger.error("iptables error: %s",exc); return finish("block_error")
@@ -429,10 +436,11 @@ class SOARScheduler:
     def add_cron_task(self, cron_expr: str, name: str, callback) -> bool:
         """Add a cron-scheduled task. Returns True if expression is valid."""
         try:
-            from croniter import croniter
             from datetime import datetime, timezone
+
+            from croniter import croniter
             # Validate the cron expression
-            base = datetime.now(timezone.utc)
+            base = datetime.now(UTC)
             cron = croniter(cron_expr, base)
             next_run = cron.get_next(datetime)
             self._tasks.append({

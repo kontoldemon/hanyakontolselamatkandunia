@@ -12,9 +12,7 @@ Provides:
 from __future__ import annotations
 
 import asyncio
-import tempfile
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -50,7 +48,7 @@ def temp_vfs():
     vfs.mkdir("/tmp")
     vfs.mkdir("/etc")
     vfs.mkdir("/root")
-    yield vfs
+    return vfs
 
 
 @pytest.fixture

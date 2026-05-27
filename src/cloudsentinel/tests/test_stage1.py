@@ -9,17 +9,21 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-from cloudsentinel.admin_api import create_admin_app
+from cloudsentinel.admin_api import _is_noise_event, _is_noise_text, create_admin_app
 from cloudsentinel.commands import CommandAdapter
 from cloudsentinel.commands.base import commands as cmd_registry
-from cloudsentinel.config import LLMSettings, Settings, load_settings
+from cloudsentinel.config import load_settings
 from cloudsentinel.event_codec import dumps_text, loads_text
 from cloudsentinel.geoip import is_public_ip
-from cloudsentinel.hassh import HASSHDNA, calculate_hassh, normalize_algorithm_list
+from cloudsentinel.hassh import (
+    HASSHDNA,
+    calculate_hassh,
+    fallback_hassh_from_version,
+    infer_client_software,
+    normalize_algorithm_list,
+)
 from cloudsentinel.mitre import MITRE_TECHNIQUES, deobfuscate_bash, match_command, score_command
 from cloudsentinel.pipeline import ClickHouseForwarder, EventEnvelope, EventPipeline
 from cloudsentinel.soar import SOAREngine
@@ -27,8 +31,8 @@ from cloudsentinel.stream import LiveStream
 from cloudsentinel.vfs import VirtualFileSystem
 from cloudsentinel.vfs_agent import VFSAgent, VFSContext
 from cloudsentinel.webhook import WebhookConfig, WebhookNotifier
+from fastapi.testclient import TestClient
 from pydantic import SecretStr
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Config Tests
@@ -67,6 +71,10 @@ def test_config_soar_defaults_to_dry_run() -> None:
     assert settings.soar.risk_threshold == 70
     assert "169.254.169.254" in settings.soar.allowlist
     assert settings.stream.port == 3001
+    assert settings.llm.response_policy_enabled is True
+    assert settings.llm.llm_safe_fallback_enabled is True
+    assert settings.llm.response_template_max_lines >= 2
+    assert "clickhouse-client" in settings.llm.blocked_command_prefixes
 
 
 def test_admin_api_token_protects_stats_and_metrics() -> None:
@@ -89,6 +97,60 @@ def test_admin_api_token_protects_stats_and_metrics() -> None:
     readiness = client.get("/readiness", headers=headers)
     assert readiness.status_code == 200
     assert readiness.json()["clickhouse_enabled"] is False
+
+
+def test_admin_api_manual_block_rejects_private_ip() -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+
+    response = client.post(
+        "/admin/block-ip",
+        headers={"Authorization": "Bearer test-token"},
+        json={"ip": "10.0.0.1", "ttl": 3600, "reason": "test"},
+    )
+    assert response.status_code == 400
+
+
+def test_admin_api_noise_classifiers() -> None:
+    assert _is_noise_event("cloudsentinel.session.connect") is True
+    assert _is_noise_event("cloudsentinel.command.input") is False
+    assert _is_noise_text("cloudsentinel.session.closed") is True
+    assert _is_noise_text("root / [redacted]") is True
+    assert _is_noise_text("whoami") is False
+
+
+def test_admin_api_exposure_uses_honeypot_ports(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    async def fake_run_command(args: list[str], timeout: float = 5.0) -> tuple[int, str, str]:
+        calls.append(args)
+        return (1 if args[1] == "-C" else 0, "", "")
+
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+    monkeypatch.setattr("cloudsentinel.admin_api._run_command", fake_run_command)
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+
+    response = client.post(
+        "/admin/exposure",
+        headers={"Authorization": "Bearer test-token"},
+        json={"enabled": False},
+    )
+    assert response.status_code == 200
+    assert response.json()["paused"] is True
+    assert any(call[1:4] == ["-I", "INPUT", "1"] for call in calls)
+    assert {"22", str(settings.honeypot.ssh_port)}.issubset({part for call in calls for part in call})
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -168,6 +230,20 @@ def test_hassh_dna_add_intel() -> None:
     assert intel["threat_level"] == "high"
 
 
+def test_hassh_fallback_from_version_is_stable() -> None:
+    h1, a1 = fallback_hassh_from_version("SSH-2.0-libssh_0.9.6", "SSH-2.0-OpenSSH_8.9p1")
+    h2, a2 = fallback_hassh_from_version("SSH-2.0-libssh_0.9.6", "SSH-2.0-OpenSSH_8.9p1")
+    assert h1 == h2
+    assert a1 == a2
+    assert len(h1) == 32
+
+
+def test_infer_client_software_from_version() -> None:
+    assert infer_client_software("SSH-2.0-paramiko_3.4.0") == "Paramiko"
+    assert infer_client_software("SSH-2.0-libssh_0.9.6") == "libssh"
+    assert infer_client_software("SSH-2.0-Go") == "Go crypto/ssh"
+
+
 # ═══════════════════════════════════════════════════════════════════
 # MITRE Tests
 # ═══════════════════════════════════════════════════════════════════
@@ -194,6 +270,14 @@ def test_mitre_scores_iptables_flush() -> None:
 def test_mitre_scores_crypto_miner() -> None:
     annotation = score_command("./xmrig --config config.json &")
     assert "T1496" in annotation["mitre_techniques"]
+
+
+def test_mitre_scores_authorized_keys_persistence() -> None:
+    annotation = score_command(
+        "rm -rf .ssh && mkdir .ssh && echo 'ssh-rsa AAAAB3Nza...' >> .ssh/authorized_keys && chmod 600 .ssh/authorized_keys"
+    )
+    assert "T1098" in annotation["mitre_techniques"]
+    assert annotation["risk_score"] >= 40
 
 
 def test_mitre_deobfuscate_bash() -> None:
@@ -405,6 +489,21 @@ async def test_soar_active_block_uses_duplicate_check(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
+async def test_soar_forces_block_on_persistence_attempt() -> None:
+    soar = SOAREngine(risk_threshold=95, firewall_enabled=True, firewall_dry_run=True)
+    event = {
+        "eventid": "cloudsentinel.command.input",
+        "session": "persist1",
+        "src_ip": "8.8.4.4",
+        "country_code": "XX",
+        "input": "rm -rf .ssh && mkdir .ssh && echo 'ssh-rsa AAAAB3Nza...' >> .ssh/authorized_keys && chmod 600 .ssh/authorized_keys",
+    }
+    result = await soar.process_event("persist1", event)
+    assert "T1098" in result["cloudsentinel_mitre_techniques"]
+    assert result["cloudsentinel_soar_action"] == "dry_run_block"
+
+
+@pytest.mark.asyncio
 async def test_stream_emits_sanitized_event_without_password() -> None:
     emitted: list[dict] = []
 
@@ -569,6 +668,46 @@ async def test_vfs_mock_cat_honeytoken() -> None:
         await agent.close()
 
 
+@pytest.mark.asyncio
+async def test_vfs_response_policy_blocks_risky_commands() -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.llm.provider = "mock"
+    settings.llm.response_policy_enabled = True
+    agent = VFSAgent(
+        settings.llm,
+        VFSContext(settings.honeypot.hostname, settings.honeypot.os_version),
+    )
+    try:
+        output, mode = await agent.run_command_with_mode("clickhouse-client --query 'select 1'")
+        assert "command not found" in output
+        assert mode == "blocked"
+    finally:
+        await agent.close()
+
+
+@pytest.mark.asyncio
+async def test_vfs_response_policy_templates_medium_commands() -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.llm.provider = "mock"
+    settings.llm.response_policy_enabled = True
+    agent = VFSAgent(
+        settings.llm,
+        VFSContext(settings.honeypot.hostname, settings.honeypot.os_version),
+    )
+    try:
+        output, mode = await agent.run_command_with_mode("ps aux")
+        assert "PID" in output
+        assert mode == "templated"
+    finally:
+        await agent.close()
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Webhook Tests
 # ═══════════════════════════════════════════════════════════════════
@@ -658,7 +797,6 @@ async def test_pipeline_enriches_command_with_mitre() -> None:
 
 @pytest.mark.asyncio
 async def test_pipeline_wal_persistence() -> None:
-    import tempfile
     settings = load_settings(
         Path("src/cloudsentinel/configs/usas-production.yaml"),
         Path("src/cloudsentinel/.env"),
@@ -779,7 +917,80 @@ def test_metrics_counters() -> None:
     m.record_command()
     m.record_block("iptables_block")
     m.record_block("dry_run_block")
+    m.set_mttb(12.34)
     assert m.total_auth_failures >= 1
     assert m.total_commands >= 1
     assert m.total_blocks_iptables >= 1
     assert m.total_blocks >= 2
+    assert m.mttb_ms == 12.34
+
+
+def test_admin_api_exposure_parses_boolean_string(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    async def fake_run_command(args: list[str], timeout: float = 5.0) -> tuple[int, str, str]:
+        calls.append(args)
+        return (1 if args[1] == "-C" else 0, "", "")
+
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+    monkeypatch.setattr("cloudsentinel.admin_api._run_command", fake_run_command)
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+
+    response = client.post(
+        "/admin/exposure",
+        headers={"Authorization": "Bearer test-token"},
+        json={"enabled": "false"},
+    )
+    assert response.status_code == 200
+    assert response.json()["paused"] is True
+    assert any(call[1] == "-I" for call in calls)
+
+
+def test_admin_api_sessions_fallback_enriches_ip(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+
+    class SoarStub:
+        _mem_ip_sessions = {"8.8.8.8": {"sess-1"}}
+
+        @staticmethod
+        def get_ip_profile(_: str) -> dict[str, object]:
+            return {"first_seen": time.time() - 30, "cumulative_risk": 70, "techniques": ["T1110"]}
+
+    monkeypatch.setattr("cloudsentinel.admin_api._load_recent_sessions_from_clickhouse", lambda _settings: [])
+    monkeypatch.setattr(
+        "cloudsentinel.admin_api._enrichment_for_ip",
+        lambda _ip, _country_code="", _country_name="": {
+            "country_code": "US",
+            "country_name": "United States",
+            "asn": "15169",
+            "isp": "Google",
+            "org": "Google LLC",
+            "services": "Data Center/Transit",
+            "region": "California",
+            "city": "Mountain View",
+            "latitude": "37.4056",
+            "longitude": "-122.0775",
+            "timezone": "America/Los_Angeles",
+        },
+    )
+    app = create_admin_app(settings, pipeline, soar=SoarStub())
+    client = TestClient(app)
+
+    response = client.get("/sessions", headers={"Authorization": "Bearer test-token"})
+    assert response.status_code == 200
+    sessions = response.json()["sessions"]
+    assert len(sessions) == 1
+    assert sessions[0]["countryCode"] == "US"
+    assert sessions[0]["isp"] == "Google"
+    assert sessions[0]["city"] == "Mountain View"

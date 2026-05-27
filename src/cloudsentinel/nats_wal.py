@@ -6,14 +6,13 @@ with automatic replay on consumer reconnect.
 
 from __future__ import annotations
 
-import asyncio
 import json
-import structlog
 import os
 from dataclasses import dataclass
 from typing import Any
 
 import nats
+import structlog
 from nats.js.api import ConsumerConfig, StorageType
 
 logger = structlog.get_logger("cloudsentinel.nats_wal")
@@ -101,7 +100,7 @@ class JetStreamWAL:
                         except Exception as exc:
                             logger.warning("WAL replay handler failed: %s", exc)
                             await msg.nak()
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
         except Exception as exc:
             logger.warning("JetStream replay error: %s", exc)

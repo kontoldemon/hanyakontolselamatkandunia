@@ -8,16 +8,15 @@ from __future__ import annotations
 
 import asyncio
 import json
-import structlog
 import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import quote
 
 import httpx
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.elastic")
 
@@ -99,7 +98,7 @@ class ElasticSink:
         batch_size = min(len(self._buffer), self.batch_size)
         batch = [self._buffer.popleft() for _ in range(batch_size)]
 
-        today = datetime.now(timezone.utc).strftime("%Y.%m.%d")
+        today = datetime.now(UTC).strftime("%Y.%m.%d")
         index = f"{self.index_prefix}-{today}"
         lines: list[str] = []
         for doc in batch:
@@ -137,7 +136,7 @@ def _to_ecs(event: dict[str, Any]) -> dict[str, Any]:
     """Convert CloudSentinel event to Elastic Common Schema (ECS) 8.x."""
     ts = event.get("timestamp", time.time())
     if isinstance(ts, (int, float)):
-        ts = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+        ts = datetime.fromtimestamp(ts, tz=UTC).isoformat()
 
     ecs: dict[str, Any] = {
         "@timestamp": ts,

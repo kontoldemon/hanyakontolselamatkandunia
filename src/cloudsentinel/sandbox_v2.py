@@ -61,7 +61,7 @@ class DockerSandbox:
                 proc.communicate(), timeout=self.timeout
             )
             return proc.returncode or 0, stdout.decode("utf-8", errors="replace")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if proc:
                 try:
                     proc.kill()
@@ -112,7 +112,7 @@ class GVisorSandbox:
                 proc.communicate(), timeout=self.timeout
             )
             return proc.returncode or 0, stdout.decode("utf-8", errors="replace")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if proc:
                 try:
                     proc.kill()
@@ -173,7 +173,7 @@ class DockerSDKSandbox:
                 logs = await asyncio.to_thread(container.logs)
                 exit_code = result.get("StatusCode", 0)
                 return exit_code, logs.decode("utf-8", errors="replace")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await asyncio.to_thread(container.kill)
                 return 124, "Sandbox timeout exceeded."
 
@@ -212,7 +212,6 @@ def create_sandbox(runtime: str = RUNTIME) -> SandboxExecutor:
     """Factory: return the appropriate sandbox for the configured runtime."""
     if runtime == "gvisor":
         return GVisorSandbox()
-    elif runtime == "firecracker":
+    if runtime == "firecracker":
         return FirecrackerSandbox()
-    else:
-        return DockerSandbox()
+    return DockerSandbox()

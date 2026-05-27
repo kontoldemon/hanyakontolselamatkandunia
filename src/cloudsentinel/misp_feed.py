@@ -6,15 +6,13 @@ Pulls IOCs from MISP instances and enriches SOAR scoring.
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import structlog
 import os
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
-import httpx
 import hishel
+import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = structlog.get_logger("cloudsentinel.misp")

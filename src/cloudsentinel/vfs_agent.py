@@ -10,7 +10,6 @@ local responses when no API key is configured. No local models, no GPU.
 from __future__ import annotations
 
 import asyncio
-import structlog
 import random
 import time
 from collections import OrderedDict
@@ -18,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
+import structlog
 
 from .config import LLMSettings, secret_to_str
 from .sandbox_v2 import create_sandbox
@@ -60,31 +60,80 @@ class VFSAgent:
             return True
         return False
 
+    def _is_blocked_command(self, command: str) -> bool:
+        c = command.strip().lower()
+        if not c:
+            return False
+        for prefix in self.settings.blocked_command_prefixes:
+            if c.startswith(prefix.strip().lower()):
+                return True
+        return False
+
+    def _is_templated_command(self, command: str) -> bool:
+        c = command.strip().lower()
+        return (
+            c.startswith("ps ")
+            or c == "ps"
+            or c.startswith("free ")
+            or c == "free"
+            or c.startswith("df ")
+            or c == "df"
+            or c.startswith("netstat")
+            or c.startswith("ss ")
+            or c == "ss"
+            or c.startswith("find ")
+            or c.startswith("history")
+            or c.startswith("env")
+        )
+
+    def _bounded(self, text: str) -> str:
+        lines = text.splitlines()
+        max_lines = max(1, int(self.settings.response_template_max_lines))
+        clipped = "\n".join(lines[:max_lines])
+        return clipped[: self.settings.max_output_chars].rstrip("\n")
+
     async def run_command(self, command: str) -> str:
+        output, _mode = await self.run_command_with_mode(command)
+        return output
+
+    async def run_command_with_mode(self, command: str) -> tuple[str, str]:
         """Return exact terminal output for a command with realistic latency jitter."""
         start_time = time.monotonic()
 
         command = command.strip()
         if not command:
-            return ""
+            return "", "deterministic"
         command = command[:1000]
 
         output = ""
+        response_mode = "deterministic"
         local_output = self._handle_local_state(command)
 
         if local_output is not None:
             output = local_output
+            response_mode = "deterministic"
+        elif self.settings.response_policy_enabled and self._is_blocked_command(command):
+            output = "bash: command not found\n"
+            response_mode = "blocked"
+        elif self.settings.response_policy_enabled and self._is_templated_command(command):
+            output = self._mock_response(command)
+            output = self._bounded(output)
+            response_mode = "templated"
         elif self._is_complex_or_binary(command):
             _, output = await self._sandbox.execute(command, self.context.cwd)
+            output = self._bounded(output)
+            response_mode = "templated"
         else:
             cached = self._get_cache(command)
             if cached is not None:
                 output = cached
+                response_mode = "deterministic"
             else:
                 api_key = secret_to_str(self.settings.api_key)
-                if not api_key or self.settings.provider.lower() == "mock":
+                if not api_key or self.settings.provider.lower() == "mock" or (self.settings.response_policy_enabled and not self.settings.llm_safe_fallback_enabled):
                     output = self._mock_response(command)
                     self._set_cache(command, output)
+                    response_mode = "deterministic"
                 else:
                     prompt = (
                         f"You are a terminal for {self.context.os_version}. "
@@ -105,11 +154,13 @@ class VFSAgent:
                                 output = await self._call_gemini(prompt)
                             else:
                                 output = await self._call_openai_compatible(prompt)
-                        output = output[: self.settings.max_output_chars].rstrip("\n")
+                        output = self._bounded(output)
                         self._set_cache(command, output)
+                        response_mode = "llm"
                     except Exception as exc:
                         logger.warning("LLM VFS failed for command %r: %s", command, exc)
                         output = self._mock_response(command)
+                        response_mode = "deterministic"
 
         # Apply realistic latency jitter to prevent LLM API fingerprinting
         elapsed = time.monotonic() - start_time
@@ -118,7 +169,7 @@ class VFSAgent:
         if sleep_time > 0:
             await asyncio.sleep(sleep_time)
 
-        return output
+        return output, response_mode
 
     async def _call_openai_compatible(self, prompt: str) -> str:
         endpoint = self.settings.endpoint or "https://api.openai.com/v1/chat/completions"

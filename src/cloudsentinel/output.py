@@ -8,6 +8,7 @@ This module is retained for backward compatibility.
 from __future__ import annotations
 
 import asyncio
+
 try:
     from msgspec import json as _msgspec_json
     def _fast_dumps(obj, **kw):
@@ -18,10 +19,11 @@ except ImportError:
     def _fast_dumps(obj, **kw):
         return _json.dumps(obj, **kw)
     _USE_MSGSPEC = False
-import structlog
 from collections import deque
 from typing import Any
 from urllib.parse import quote
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.output")
 
@@ -122,7 +124,7 @@ class ClickHouseOutput:
                     text = await resp.text()
                     logger.error("ClickHouse HTTP %d: %s", resp.status, text[:200])
                     self._requeue_front(batch)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("ClickHouse timeout after %.1fs", self.timeout)
             self._requeue_front(batch)
         except Exception as exc:

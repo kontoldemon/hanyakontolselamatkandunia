@@ -15,10 +15,11 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import structlog
 import os
 from abc import ABC, abstractmethod
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.secrets")
 
@@ -38,15 +39,14 @@ class SecretsProvider(ABC):
     async def close(self) -> None: ...
 
     @staticmethod
-    def create(provider: str | None = None) -> "SecretsProvider":
+    def create(provider: str | None = None) -> SecretsProvider:
         """Factory: return the configured secrets backend."""
         backend = (provider or SECRETS_PROVIDER).lower()
         if backend == "infisical":
             return InfisicalProvider()
-        elif backend == "vault":
+        if backend == "vault":
             return VaultProvider()
-        else:
-            return EnvProvider()
+        return EnvProvider()
 
 
 class EnvProvider(SecretsProvider):

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import structlog
 from typing import Protocol
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.sandbox")
 
@@ -52,7 +53,7 @@ class DockerSandbox:
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30.0)
             return proc.returncode or 0, stdout.decode("utf-8", errors="replace")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if proc:
                 try:
                     proc.kill()

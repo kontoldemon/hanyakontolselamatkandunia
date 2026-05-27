@@ -9,8 +9,9 @@ Requires: pip install arq
 from __future__ import annotations
 
 import asyncio
-import structlog
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.arq")
 
@@ -33,7 +34,6 @@ class SOARWorker:
             @func
             async def block_ip(ctx: dict, ip: str, reason: str = "", ttl: int = 86400) -> dict:
                 """Durable IP blocking — survives sensor restarts."""
-                import subprocess
                 try:
                     proc = await asyncio.create_subprocess_exec(
                         "/sbin/iptables", "-A", "INPUT", "-s", ip, "-j", "DROP",
@@ -52,7 +52,6 @@ class SOARWorker:
 
             @func
             async def unblock_ip(ctx: dict, ip: str) -> dict:
-                import subprocess
                 try:
                     proc = await asyncio.create_subprocess_exec(
                         "/sbin/iptables", "-D", "INPUT", "-s", ip, "-j", "DROP",

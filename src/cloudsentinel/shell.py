@@ -1,12 +1,16 @@
 """CloudSentinel Interactive Shell - exec, pipe, redirect, TAB, TTY-logging."""
 from __future__ import annotations
-import asyncio, logging, shlex, time, uuid
+
+import asyncio
+import logging
+import shlex
+import time
+import uuid
 from pathlib import Path
-from typing import Any
+
 from . import geoip
-from .commands import Command
 from .commands.base import commands as cmd_registry
-from .vfs import VirtualFileSystem
+
 logger = logging.getLogger("cloudsentinel.shell")
 
 class HoneyPotInteractiveProtocol:

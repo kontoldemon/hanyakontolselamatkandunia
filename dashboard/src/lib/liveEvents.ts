@@ -1,20 +1,35 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
 export type ThreatLog = {
   id: string;
   timestamp: string;
+  epochMs: number;
   ip: string;
   country: string;
+  countryName?: string;
+  asn?: string;
+  isp?: string;
+  org?: string;
+  services?: string;
+  region?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  timezone?: string;
   type: string;
   payload: string;
   mitreId: string;
   action: string;
   timeToBlock: string | null;
   hassh?: string;
+  client?: string;
+  ja4s?: string;
   mitreTechniques?: string[];
+  role?: "attacker" | "honeypot";
+  responseMode?: string;
 };
 
 export type DashboardStats = {
@@ -26,6 +41,7 @@ export type DashboardStats = {
   mttb: string;
   mitreCoverage: number;
   systemUptime: string;
+  attackActive: boolean;
   source: "live" | "offline";
 };
 
@@ -33,20 +49,38 @@ export type CapturedSession = {
   id: string;
   ip: string;
   country: string;
+  countryCode?: string;
+  countryName?: string;
+  asn?: string;
+  isp?: string;
+  org?: string;
+  services?: string;
+  region?: string;
+  city?: string;
+  latitude?: string;
+  longitude?: string;
+  timezone?: string;
   startTime: string;
   duration: string;
+  startedAtEpochMs?: number;
+  firstSeenEpochMs?: number;
+  lastSeenEpochMs?: number;
   client: string;
   fingerprint: string;
   input: string[];
   status: string;
   sessionCount?: number;
   riskScore?: number;
+  soarAction?: string;
+  mttbMs?: number;
+  blockEffective?: boolean;
   mitreTechniques?: string[];
+  replay?: Array<{ role: "attacker" | "honeypot"; text: string; timestamp?: string }>;
 };
 
 type SummaryResponse = {
   ok: boolean;
-  source: "live" | "fallback";
+  source: "live" | "offline";
   metrics?: {
     activeSessions?: number;
     mttbMs?: number;
@@ -68,6 +102,20 @@ type SensorResult<T> = {
 export type SensorOperations = {
   ok: boolean;
   source: "live" | "offline";
+  telemetry?: {
+    upstreamLatencyMs?: {
+      readiness?: number;
+      metrics?: number;
+      stats?: number;
+      sessions?: number;
+      distribution?: number;
+      attackGraph?: number;
+      anomaly?: number;
+      llm?: number;
+    };
+    maxLatencyMs?: number;
+    sampledAt?: string;
+  };
   sensor: {
     readiness: SensorResult<Record<string, unknown>>;
     metrics: SensorResult<Record<string, unknown>>;
@@ -80,6 +128,23 @@ export type SensorOperations = {
   };
 };
 
+export type SocketTelemetryEvent = {
+  timestamp: string;
+  level: "info" | "warn" | "error";
+  event: string;
+  detail?: string;
+};
+
+export type SocketTelemetrySnapshot = {
+  socketUrl: string;
+  connected: boolean;
+  reconnectAttempts: number;
+  connectCount: number;
+  disconnectCount: number;
+  lastError: string;
+  recent: SocketTelemetryEvent[];
+};
+
 const EMPTY_STATS: DashboardStats = {
   activeSessions: 0,
   blockedIPs: 0,
@@ -89,14 +154,43 @@ const EMPTY_STATS: DashboardStats = {
   mttb: "offline",
   mitreCoverage: 0,
   systemUptime: "offline",
+  attackActive: false,
   source: "offline",
 };
+
+const socketTelemetryState: SocketTelemetrySnapshot = {
+  socketUrl: "",
+  connected: false,
+  reconnectAttempts: 0,
+  connectCount: 0,
+  disconnectCount: 0,
+  lastError: "",
+  recent: [],
+};
+
+function pushSocketTelemetry(
+  event: string,
+  level: "info" | "warn" | "error",
+  detail?: string,
+) {
+  const timestamp = new Date().toISOString();
+  socketTelemetryState.recent = [{ timestamp, level, event, detail }, ...socketTelemetryState.recent].slice(0, 120);
+}
+
+function snapshotSocketTelemetry(): SocketTelemetrySnapshot {
+  return {
+    ...socketTelemetryState,
+    recent: [...socketTelemetryState.recent],
+  };
+}
 
 type CloudSentinelEvent = {
   eventid?: string;
   timestamp?: string;
+  id?: string;
   src_ip?: string;
   country_code?: string;
+  country?: string;
   input?: string;
   username?: string;
   password?: string;
@@ -104,14 +198,32 @@ type CloudSentinelEvent = {
   hassh_md5?: string;
   ja4s?: string;
   country_name?: string;
+  asn?: string;
+  isp?: string;
+  org?: string;
+  services?: string;
+  region?: string;
+  city?: string;
+  latitude?: string | number;
+  longitude?: string | number;
+  timezone?: string;
   mttb_ms?: number;
   block_command?: string;
   cloudsentinel_mitre_techniques?: string[];
   cloudsentinel_soar_action?: string;
   cloudsentinel_risk_score?: number;
+  version?: string;
+  client?: string;
+  output?: string;
+  reason?: string;
+  hassh_algorithms?: string;
+  response_mode?: string;
 };
 
 function eventType(eventid = "") {
+  if (eventid.includes("command.output")) {
+    return "HONEYPOT_RESPONSE";
+  }
   if (eventid.includes("login.failed")) {
     return "SSH_AUTH_FAIL";
   }
@@ -125,11 +237,17 @@ function eventType(eventid = "") {
 }
 
 function payloadFor(event: CloudSentinelEvent) {
+  if (event.eventid?.includes("command.output")) {
+    const response = (event.output || event.reason || "").trim();
+    if (response) {
+      return response;
+    }
+  }
   if (event.input) {
     return event.input;
   }
   if (event.username || event.password) {
-    return `${event.username ?? ""} / [redacted]`;
+    return "auth-attempt";
   }
   const hassh = event.hassh_md5 ?? event.hassh;
   if (hassh) {
@@ -138,58 +256,276 @@ function payloadFor(event: CloudSentinelEvent) {
   return event.eventid ?? "cloudsentinel.event";
 }
 
+function deriveFallbackFingerprint(hasshAlgorithms?: string): string {
+  const input = (hasshAlgorithms ?? "").trim();
+  if (!input) {
+    return "";
+  }
+  let a = 0x811c9dc5;
+  let b = 0x01000193;
+  for (let i = 0; i < input.length; i += 1) {
+    const code = input.charCodeAt(i);
+    a ^= code;
+    a = Math.imul(a, 16777619);
+    b ^= code;
+    b = Math.imul(b, 1099511627);
+  }
+  const hex = `${(a >>> 0).toString(16).padStart(8, "0")}${(b >>> 0).toString(16).padStart(8, "0")}`;
+  return `${hex}${hex}`;
+}
+
+function resolveFingerprint(event: CloudSentinelEvent): string {
+  const direct = (event.hassh_md5 ?? event.hassh ?? "").trim();
+  if (direct) {
+    return direct;
+  }
+  return deriveFallbackFingerprint(event.hassh_algorithms);
+}
+
+function resolveClientLabel(event: CloudSentinelEvent, fingerprint: string): string {
+  const normalizeVersion = (raw: string): string => {
+    const value = raw.trim();
+    if (!value || value.toLowerCase().includes("unknown")) {
+      return "";
+    }
+    const lower = value.toLowerCase();
+    if (lower.includes("paramiko")) return "Paramiko";
+    if (lower.includes("libssh2")) return "libssh2";
+    if (lower.includes("libssh")) return "libssh";
+    if (lower.includes("dropbear")) return "Dropbear";
+    if (lower.includes("openssh")) return "OpenSSH";
+    if (lower.includes("putty")) return "PuTTY";
+    if (lower.includes("ssh-2.0-go")) return "Go crypto/ssh";
+    return value;
+  };
+
+  const explicitClient = (event.client ?? "").trim();
+  if (explicitClient && explicitClient.toLowerCase() !== "unknown") {
+    return explicitClient;
+  }
+  const normalizedVersion = normalizeVersion(event.version ?? "");
+  if (normalizedVersion) {
+    return normalizedVersion;
+  }
+  if (fingerprint) {
+    return `hassh:${fingerprint.slice(0, 8)}`;
+  }
+  return "unknown";
+}
+
+function normalizeCountryCode(
+  countryCode?: string,
+  countryName?: string,
+  fallback?: string,
+): { code: string; name: string | undefined } {
+  const raw = (countryCode ?? fallback ?? "").trim().toUpperCase();
+  if (raw && raw !== "UNKNOWN" && raw !== "??") {
+    if (raw.length === 2) {
+      return { code: raw, name: countryName };
+    }
+    if (raw.length > 2 && raw !== "XX") {
+      return { code: "XX", name: raw };
+    }
+  }
+  const name = (countryName ?? "").trim();
+  if (name && name.toLowerCase() !== "unknown") {
+    return { code: "XX", name };
+  }
+  return { code: "XX", name: undefined };
+}
+
 function toThreatLog(event: CloudSentinelEvent): ThreatLog {
+  const ts = parseEventTime(event.timestamp);
+  const country = normalizeCountryCode(event.country_code, event.country_name, event.country);
   const blocked = ["iptables_block", "dry_run_block", "detect_only"].includes(
     event.cloudsentinel_soar_action ?? "",
   );
-  const time = event.timestamp
-    ? new Date(event.timestamp).toLocaleTimeString("en-GB", { hour12: false })
-    : new Date().toLocaleTimeString("en-GB", { hour12: false });
+  const dt = new Date(ts);
+  const time = `${dt.toLocaleTimeString("en-GB", { hour12: false })}.${String(dt.getMilliseconds()).padStart(3, "0")}`;
   const mttb = typeof event.mttb_ms === "number" ? `${event.mttb_ms.toFixed(1)}ms` : null;
+  const stableId =
+    event.id ??
+    `${event.eventid ?? "evt"}-${event.src_ip ?? "0.0.0.0"}-${ts}-${event.input ?? ""}-${event.username ?? ""}`;
 
+  const fingerprint = resolveFingerprint(event);
+  const client = resolveClientLabel(event, fingerprint);
   return {
-    id: `${event.eventid ?? "evt"}-${Date.now()}`,
+    id: stableId,
     timestamp: time,
+    epochMs: ts,
     ip: event.src_ip ?? "0.0.0.0",
-    country: event.country_code ?? "??",
+    country: country.code,
+    countryName: country.name,
+    asn: event.asn,
+    isp: event.isp,
+    org: event.org,
+    services: event.services,
+    region: event.region,
+    city: event.city,
+    latitude: numberOrUndefined(event.latitude),
+    longitude: numberOrUndefined(event.longitude),
+    timezone: event.timezone,
     type: eventType(event.eventid),
     payload: payloadFor(event),
     mitreId: event.cloudsentinel_mitre_techniques?.[0] ?? "",
     action: blocked ? "Blocked" : "Active",
     timeToBlock: blocked ? (mttb ?? "<100ms") : null,
-    hassh: event.hassh_md5 ?? event.hassh,
+    hassh: fingerprint,
+    client,
+    ja4s: event.ja4s,
     mitreTechniques: event.cloudsentinel_mitre_techniques ?? [],
+    role: event.eventid?.includes("command.output") ? "honeypot" : "attacker",
+    responseMode: event.response_mode,
   };
 }
 
 function socketUrl() {
-  return process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL ?? "http://localhost:3001";
+  const configured = process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL?.trim();
+  if (configured && configured !== "http://localhost:3001") {
+    return configured;
+  }
+  return "https://188.166.184.42.sslip.io";
 }
 
-export function useLiveThreatLogs() {
+function numberOrUndefined(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed !== 0 ? parsed : undefined;
+}
+
+function parseEventTime(raw: unknown): number {
+  if (typeof raw === "number") {
+    return raw > 1_000_000_000_000 ? raw : raw * 1000;
+  }
+  if (typeof raw === "string" && raw.trim()) {
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric)) {
+      return numeric > 1_000_000_000_000 ? numeric : numeric * 1000;
+    }
+    const parsed = Date.parse(raw);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return Date.now();
+}
+
+function formatUptime(seconds: number): string {
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m`;
+  }
+  return `${totalSeconds}s`;
+}
+
+export function useLiveThreatLogs(enabled = true) {
   const [liveLogs, setLiveLogs] = useState<ThreatLog[]>([]);
   const url = socketUrl();
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+    let cancelled = false;
+    const mergeLogs = (items: ThreatLog[]) => {
+      if (items.length === 0) {
+        return;
+      }
+      setLiveLogs((current) => {
+        const merged = [...items, ...current];
+        const seen = new Set<string>();
+        const unique: ThreatLog[] = [];
+        for (const item of merged) {
+          if (seen.has(item.id)) {
+            continue;
+          }
+          seen.add(item.id);
+          unique.push(item);
+        }
+        return unique.sort((a, b) => b.epochMs - a.epochMs).slice(0, 150);
+      });
+    };
+
+    async function loadRecentEvents() {
+      try {
+        const response = await fetch("/api/cloudsentinel/events", { cache: "no-store" });
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const payload = (await response.json()) as { events?: CloudSentinelEvent[] };
+        const mapped = (payload.events ?? []).map(toThreatLog);
+        mergeLogs(mapped);
+      } catch {
+        // Socket stream remains primary path.
+      }
+    }
+
+    loadRecentEvents();
     const socket = io(url, {
-      transports: ["websocket"],
+      transports: ["polling", "websocket"],
       reconnection: true,
+      withCredentials: false,
+    });
+    socketTelemetryState.socketUrl = url;
+
+    socket.on("connect", () => {
+      socketTelemetryState.connected = true;
+      socketTelemetryState.connectCount += 1;
+      pushSocketTelemetry("connect", "info");
+    });
+
+    socket.on("disconnect", (reason: string) => {
+      socketTelemetryState.connected = false;
+      socketTelemetryState.disconnectCount += 1;
+      pushSocketTelemetry("disconnect", "warn", reason);
+    });
+
+    socket.on("connect_error", (error: Error) => {
+      socketTelemetryState.lastError = error.message;
+      pushSocketTelemetry("connect_error", "error", error.message);
+    });
+
+    socket.io.on("reconnect_attempt", (attempt: number) => {
+      socketTelemetryState.reconnectAttempts = attempt;
+      pushSocketTelemetry("reconnect_attempt", "warn", `attempt=${attempt}`);
+    });
+
+    socket.io.on("reconnect", (attempt: number) => {
+      socketTelemetryState.reconnectAttempts = 0;
+      pushSocketTelemetry("reconnect", "info", `attempt=${attempt}`);
+    });
+
+    socket.io.on("reconnect_error", (error: Error) => {
+      socketTelemetryState.lastError = error.message;
+      pushSocketTelemetry("reconnect_error", "error", error.message);
     });
 
     socket.on("cloudsentinel:event", (event: CloudSentinelEvent) => {
-      setLiveLogs((current) => [toThreatLog(event), ...current].slice(0, 100));
+      mergeLogs([toThreatLog(event)]);
     });
 
+    const poll = window.setInterval(loadRecentEvents, 12000);
+
     return () => {
+      cancelled = true;
+      window.clearInterval(poll);
       socket.close();
+      socketTelemetryState.connected = false;
     };
-  }, [url]);
+  }, [enabled, url]);
 
   return useMemo(() => liveLogs, [liveLogs]);
 }
 
 export function useDashboardStats() {
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
+  const lastTotalsRef = useRef({ auth: 0, commands: 0, blocks: 0, conns: 0 });
+  const initializedRef = useRef(false);
+  const activeUntilRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,23 +541,47 @@ export function useDashboardStats() {
           return;
         }
         const metrics = data.metrics ?? {};
+        const totalAuthFailures = metrics.totalAuthFailures ?? 0;
+        const totalConnections = metrics.totalConnections ?? 0;
+        const totalCommands = metrics.totalCommands ?? 0;
+        const totalBlocks = metrics.totalBlocks ?? 0;
+        const hasIncrease =
+          initializedRef.current &&
+          (
+            totalAuthFailures > lastTotalsRef.current.auth ||
+            totalCommands > lastTotalsRef.current.commands ||
+            totalBlocks > lastTotalsRef.current.blocks ||
+            totalConnections > lastTotalsRef.current.conns
+          );
+        if (hasIncrease) {
+          activeUntilRef.current = Date.now() + 20_000;
+        }
+        initializedRef.current = true;
+        lastTotalsRef.current = {
+          auth: totalAuthFailures,
+          commands: totalCommands,
+          blocks: totalBlocks,
+          conns: totalConnections,
+        };
+        const activeSessions = metrics.activeSessions ?? 0;
         setStats({
           ...EMPTY_STATS,
-          activeSessions: metrics.activeSessions ?? 0,
+          activeSessions,
           blockedIPs: metrics.blockedIpsCurrent ?? 0,
           totalAttacks:
-            (metrics.totalAuthFailures ?? 0) +
-            (metrics.totalConnections ?? 0) +
-            (metrics.totalCommands ?? 0),
-          concurrentConnections: metrics.activeSessions ?? 0,
+            totalAuthFailures +
+            totalConnections +
+            totalCommands,
+          concurrentConnections: activeSessions,
           mttb:
             typeof metrics.mttbMs === "number" && metrics.mttbMs > 0
               ? `${metrics.mttbMs.toFixed(2)}ms`
-              : "offline",
+              : "No blocks yet",
           systemUptime:
             typeof metrics.uptimeSeconds === "number" && metrics.uptimeSeconds > 0
-              ? `${Math.floor(metrics.uptimeSeconds / 3600)}h`
+              ? formatUptime(metrics.uptimeSeconds)
               : "offline",
+          attackActive: data.ok && (activeSessions > 0 || Date.now() < activeUntilRef.current),
           source: data.ok ? "live" : "offline",
         });
       } catch {
@@ -230,7 +590,7 @@ export function useDashboardStats() {
     }
 
     loadStats();
-    const interval = window.setInterval(loadStats, 5000);
+    const interval = window.setInterval(loadStats, 4000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
@@ -276,5 +636,233 @@ export function useSensorOperations() {
 
 export function useCapturedSessions() {
   const operations = useSensorOperations();
-  return operations?.sensor.sessions.data?.sessions ?? [];
+  const liveLogs = useLiveThreatLogs();
+
+  return useMemo(() => {
+    const isReplayNoise = (text: string) => {
+      const value = (text || "").trim().toLowerCase();
+      return (
+        !value ||
+        value.startsWith("cloudsentinel.session.connect") ||
+        value.startsWith("cloudsentinel.session.closed") ||
+        value.startsWith("cloudsentinel.client.version") ||
+        value === "auth-attempt" ||
+        value.includes("[redacted]")
+      );
+    };
+
+    const normalizeReplay = (session: CapturedSession) => {
+      const cleaned: Array<{ role: "attacker" | "honeypot"; text: string; timestamp?: string }> = [];
+      const seen = new Set<string>();
+      let lastAttacker = "";
+
+      for (const entry of session.replay ?? []) {
+        const text = (entry.text || "").trim();
+        if (isReplayNoise(text)) {
+          continue;
+        }
+        if (entry.role === "attacker") {
+          lastAttacker = text;
+        } else if (entry.role === "honeypot" && lastAttacker && text === lastAttacker) {
+          continue;
+        }
+        const key = `${entry.role}|${text}|${entry.timestamp ?? ""}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        cleaned.push({ role: entry.role, text, timestamp: entry.timestamp });
+      }
+
+      session.replay = cleaned.slice(-600);
+    };
+
+    const grouped = new Map<string, CapturedSession>();
+    const latestSessionByIp = new Map<string, string>();
+    const sessions = operations?.sensor.sessions.data?.sessions ?? [];
+
+    for (const session of sessions) {
+      if (!session.ip) {
+        continue;
+      }
+      const key = session.id || `sess-${session.ip}-${session.startedAtEpochMs ?? session.startTime}`;
+      grouped.set(key, {
+        ...session,
+        input: [...(session.input ?? [])].slice(-300),
+        replay: [...(session.replay ?? [])].slice(-600),
+      });
+      const prepared = grouped.get(key);
+      if (prepared) {
+        normalizeReplay(prepared);
+        const lastSeen = prepared.lastSeenEpochMs ?? prepared.firstSeenEpochMs ?? 0;
+        const currentKey = latestSessionByIp.get(prepared.ip);
+        if (!currentKey) {
+          latestSessionByIp.set(prepared.ip, key);
+        } else {
+          const current = grouped.get(currentKey);
+          const currentSeen = current?.lastSeenEpochMs ?? current?.firstSeenEpochMs ?? 0;
+          if (lastSeen >= currentSeen) {
+            latestSessionByIp.set(prepared.ip, key);
+          }
+        }
+      }
+    }
+
+    for (const log of liveLogs) {
+      const targetId = latestSessionByIp.get(log.ip);
+      const existing = targetId ? grouped.get(targetId) : undefined;
+      if (!existing) {
+        const syntheticId = `sess-live-${log.ip}`;
+        grouped.set(syntheticId, {
+          id: syntheticId,
+          ip: log.ip,
+          country: log.country,
+          countryCode: log.country,
+          countryName: log.countryName ?? log.country,
+          asn: log.asn ?? "",
+          isp: log.isp ?? "",
+          org: log.org ?? "",
+          services: log.services ?? "",
+          region: log.region ?? "",
+          city: log.city ?? "",
+          latitude: log.latitude ? String(log.latitude) : "0",
+          longitude: log.longitude ? String(log.longitude) : "0",
+          timezone: log.timezone ?? "UTC",
+          startTime: log.timestamp,
+          duration: "live",
+          startedAtEpochMs: log.epochMs,
+          firstSeenEpochMs: log.epochMs,
+          lastSeenEpochMs: log.epochMs,
+          client: log.client ?? "unknown",
+          fingerprint: log.hassh ?? "",
+          input: [],
+          status: "Active",
+          sessionCount: 1,
+          riskScore: 0,
+          soarAction: log.action === "Blocked" ? "detect_only" : "none",
+          mttbMs: 0,
+          blockEffective: log.action === "Blocked",
+          mitreTechniques: log.mitreTechniques ?? [],
+          replay: [],
+        });
+        latestSessionByIp.set(log.ip, syntheticId);
+      }
+      const resolvedId = latestSessionByIp.get(log.ip);
+      const current = resolvedId ? grouped.get(resolvedId) : undefined;
+      if (!current) {
+        continue;
+      }
+      if ((!current.asn || current.asn === "N/A") && log.asn) {
+        current.asn = log.asn;
+      }
+      if ((!current.isp || current.isp === "N/A") && log.isp) {
+        current.isp = log.isp;
+      }
+      if ((!current.org || current.org === "N/A") && log.org) {
+        current.org = log.org;
+      }
+      if ((!current.services || current.services === "N/A") && log.services) {
+        current.services = log.services;
+      }
+      if ((!current.region || current.region === "Unknown") && log.region) {
+        current.region = log.region;
+      }
+      if ((!current.city || current.city === "Unknown") && log.city) {
+        current.city = log.city;
+      }
+      if ((!current.latitude || current.latitude === "0") && typeof log.latitude === "number") {
+        current.latitude = String(log.latitude);
+      }
+      if ((!current.longitude || current.longitude === "0") && typeof log.longitude === "number") {
+        current.longitude = String(log.longitude);
+      }
+      if ((!current.timezone || current.timezone === "UTC") && log.timezone) {
+        current.timezone = log.timezone;
+      }
+      if (log.hassh && !current.fingerprint) {
+        current.fingerprint = log.hassh;
+      }
+      if (
+        (!current.client || current.client === "unknown") &&
+        log.client &&
+        log.client !== "unknown"
+      ) {
+        current.client = log.client;
+      }
+      // Append live events to replay so the terminal updates instantly without waiting for backend sync
+      if (log.payload && (log.type === "COMMAND_EXEC" || log.type === "HONEYPOT_RESPONSE")) {
+        const role = log.role ?? (log.type === "HONEYPOT_RESPONSE" ? "honeypot" : "attacker");
+        current.replay = current.replay ?? [];
+        current.replay.push({
+          role,
+          text: log.payload,
+          timestamp: log.timestamp
+        });
+      }
+
+      if (log.mitreTechniques?.length) {
+        current.mitreTechniques = Array.from(
+          new Set([...(current.mitreTechniques ?? []), ...log.mitreTechniques]),
+        );
+      }
+      current.status = "Active";
+      current.startTime = current.startTime || log.timestamp;
+      current.startedAtEpochMs = current.startedAtEpochMs ?? log.epochMs;
+      current.firstSeenEpochMs = current.firstSeenEpochMs ?? log.epochMs;
+      current.lastSeenEpochMs = Math.max(current.lastSeenEpochMs ?? 0, log.epochMs);
+      current.country = current.country || log.country;
+      current.countryCode = current.countryCode || log.country;
+      current.countryName = current.countryName || log.countryName || log.country;
+      current.riskScore = Math.max(current.riskScore ?? 0, log.action === "Blocked" ? 70 : 0);
+      if (!current.soarAction || current.soarAction === "none") {
+        current.soarAction = log.action === "Blocked" ? "detect_only" : "none";
+      }
+      if (log.action === "Blocked") {
+        current.blockEffective = true;
+      }
+      if (current.blockEffective !== true && current.soarAction === "iptables_block") {
+        current.blockEffective = true;
+      }
+      if ((current.mttbMs ?? 0) <= 0 && log.timeToBlock) {
+        const parsed = Number(log.timeToBlock.replace("ms", ""));
+        if (Number.isFinite(parsed) && parsed > 0) {
+          current.mttbMs = parsed;
+        }
+      }
+      current.sessionCount = Math.max(current.sessionCount ?? 1, 1);
+      const replaySeen = new Set<string>();
+      current.replay = (current.replay ?? [])
+        .filter((entry) => {
+          if (isReplayNoise(entry.text)) {
+            return false;
+          }
+          const key = `${entry.role}|${entry.text}|${entry.timestamp ?? ""}`;
+          if (replaySeen.has(key)) {
+            return false;
+          }
+          replaySeen.add(key);
+          return true;
+        })
+        .slice(-600);
+      normalizeReplay(current);
+      current.input = Array.from(new Set(current.input)).slice(-300);
+    }
+
+    return [...grouped.values()]
+      .sort((a, b) => (b.lastSeenEpochMs ?? 0) - (a.lastSeenEpochMs ?? 0))
+      .slice(0, 100);
+  }, [operations, liveLogs]);
+}
+
+export function useSocketTelemetry() {
+  const [snapshot, setSnapshot] = useState<SocketTelemetrySnapshot>(snapshotSocketTelemetry);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setSnapshot(snapshotSocketTelemetry());
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  return snapshot;
 }

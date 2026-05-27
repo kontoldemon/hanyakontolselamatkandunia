@@ -11,12 +11,13 @@ Uses NetworkX (BSD-3-Clause) for graph algorithms; pure-Python fallback.
 from __future__ import annotations
 
 import json
-import structlog
 import time
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.attack_graph")
 
@@ -231,7 +232,7 @@ class AttackGraph:
                 "lateral_moves": self._lateral_moves,
                 "node_count": len(self._nodes),
                 "edge_count": len(self._edges),
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             },
         }
 
@@ -259,7 +260,7 @@ class AttackGraph:
                 G.add_edge(src, dst, weight=edge.get("weight", 1))
             return nx.betweenness_centrality(G, weight="weight")
         except ImportError:
-            return {n: 0.0 for n in self._nodes}
+            return dict.fromkeys(self._nodes, 0.0)
 
     def detect_communities(self) -> list[set[str]]:
         """Detect botnet clusters by IP co-occurrence and HASSH similarity."""

@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import socket
@@ -73,7 +72,6 @@ class E2ETestHarness:
     async def start_sensor(self) -> None:
         """Start a CloudSentinel sensor in the background."""
         from cloudsentinel.config import load_settings
-        from cloudsentinel.server import CloudSentinelSSHServer, ConnectionLimiter, main as server_main
 
         # Load config and override port
         self.settings = load_settings(

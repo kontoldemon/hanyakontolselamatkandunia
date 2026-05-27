@@ -10,12 +10,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import structlog
-import os
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.stix")
 
@@ -211,7 +210,7 @@ def _generate_manual(
     session_id: str, iocs: list[dict[str, Any]], source_name: str,
 ) -> dict[str, Any]:
     """Generate STIX 2.1 bundle manually without external dependencies."""
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     objects: list[dict[str, Any]] = [
         {

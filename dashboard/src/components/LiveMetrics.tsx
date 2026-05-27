@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type Summary = {
   ok: boolean;
-  source: "live" | "fallback";
+  source: "live" | "offline";
   metrics: {
     activeSessions: number;
     mttbMs: number;
@@ -18,15 +18,15 @@ type Summary = {
 
 const initialSummary: Summary = {
   ok: false,
-  source: "fallback",
+  source: "offline",
   metrics: {
-    activeSessions: 24,
-    mttbMs: 0.96,
-    totalConnections: 1248,
-    totalAuthFailures: 884,
-    totalCommands: 312,
-    totalBlocks: 138,
-    blockedIpsCurrent: 18,
+    activeSessions: 0,
+    mttbMs: 0,
+    totalConnections: 0,
+    totalAuthFailures: 0,
+    totalCommands: 0,
+    totalBlocks: 0,
+    blockedIpsCurrent: 0,
   },
 };
 
@@ -72,7 +72,7 @@ export function LiveMetrics() {
   const items = useMemo(
     () => [
       { label: "Live Sessions", value: formatNumber(summary.metrics.activeSessions), tone: "cyan" },
-      { label: "Median MTTB", value: `${summary.metrics.mttbMs.toFixed(2)} ms`, tone: "green" },
+      { label: "Median MTTB", value: summary.metrics.mttbMs > 0 ? `${summary.metrics.mttbMs.toFixed(2)} ms` : "No blocks yet", tone: "green" },
       { label: "Commands", value: formatNumber(summary.metrics.totalCommands), tone: "violet" },
       { label: "Blocked IPs", value: formatNumber(summary.metrics.totalBlocks), tone: "red" },
     ],

@@ -1,107 +1,152 @@
 "use client";
 
-import { Users, Activity, Globe, Zap, Target, Server } from "lucide-react";
+import { Users, Activity, Globe, Zap, Target, Server, Download } from "lucide-react";
 import ThreatMap from "@/components/ThreatMap";
 import AttackLog from "@/components/AttackLog";
-import { useDashboardStats } from "@/lib/liveEvents";
-import { useState } from "react";
+import { useDashboardStats, useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
+import { useMemo, useState } from "react";
 import SensorFunctions from "@/components/SensorFunctions";
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const stats = useDashboardStats();
+  const threatLogs = useLiveThreatLogs();
+  const operations = useSensorOperations();
+  const liveConnectionCount = useMemo(() => {
+    const ips = new Set<string>();
+    for (const log of threatLogs) {
+      if (log.ip && log.ip !== "0.0.0.0") {
+        ips.add(log.ip);
+      }
+    }
+    return ips.size;
+  }, [threatLogs]);
+  const underAttack = stats.source === "live" && stats.attackActive;
+  const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
+    if (!node || typeof node !== "object") {
+      return false;
+    }
+    const nodeType = (node as { type?: string }).type ?? "";
+    return nodeType === "technique";
+  }).length;
+  const mappedFromSessions = (() => {
+    const sessions = operations?.sensor.sessions.data?.sessions ?? [];
+    const unique = new Set<string>();
+    for (const session of sessions) {
+      for (const technique of session.mitreTechniques ?? []) {
+        if (technique) {
+          unique.add(technique);
+        }
+      }
+    }
+    return unique.size;
+  })();
+  const mappedMitreCount = Math.max(stats.mitreCoverage, mappedFromGraph, mappedFromSessions);
+
+  function downloadSensorJson() {
+    if (!operations) {
+      return;
+    }
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      source: operations.source,
+      sensor: operations.sensor,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cloudsentinel-export-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 
   return (
-    <div className="space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="h-full flex flex-col gap-4">
+      {/* Header & Compact Stats */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">War Room</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm">Real-time Threat Intelligence Monitor</p>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">War Room</h2>
+          <p className="text-slate-500 text-xs mt-0.5">Real-time Threat Intelligence Monitor</p>
         </div>
-        <div className={`flex items-center gap-2 px-3 py-1 border rounded-full ${stats.source === "live" ? "bg-red-500/10 border-red-500/20" : "bg-amber-500/10 border-amber-500/20"}`}>
-          <span className="relative flex h-2 w-2">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${stats.source === "live" ? "bg-red-400" : "bg-amber-400"}`}></span>
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${stats.source === "live" ? "bg-red-500" : "bg-amber-500"}`}></span>
-          </span>
-          <span className={`text-xs font-bold ${stats.source === "live" ? "text-red-500" : "text-amber-500"}`}>
-            {stats.source === "live" ? "SYSTEM UNDER ATTACK" : "SENSOR OFFLINE"}
-          </span>
-        </div>
-        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-lg shadow-sm text-sm overflow-hidden">
+            <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
+              <span className="text-slate-500 text-xs mr-2">Connections</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{liveConnectionCount.toLocaleString()}</span>
+            </div>
+            <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
+              <span className="text-slate-500 text-xs mr-2">MTTB</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{stats.mttb}</span>
+            </div>
+            <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
+              <span className="text-slate-500 text-xs mr-2">MITRE TTPs</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{mappedMitreCount}</span>
+            </div>
+            <div className="px-3 py-1.5 hidden lg:block">
+              <span className="text-slate-500 text-xs mr-2">Uptime</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{stats.systemUptime}</span>
+            </div>
+          </div>
 
-        <SensorFunctions />
+          <button
+            onClick={downloadSensorJson}
+            disabled={!operations}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0a0a0a] hover:bg-slate-50 dark:hover:bg-white/5 text-xs font-medium text-slate-700 dark:text-slate-300 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            <Download size={14} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Connections</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.concurrentConnections.toLocaleString()}</h3>
-            </div>
-            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500"><Users size={20} /></div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">MTTB</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.mttb}</h3>
-            </div>
-            <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500"><Zap size={20} /></div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">MITRE TTPs</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.mitreCoverage} mapped</h3>
-            </div>
-            <div className="p-2 bg-red-500/10 rounded-lg text-red-500"><Target size={20} /></div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-[#0a0a0a] p-5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">System Uptime</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.systemUptime}</h3>
-            </div>
-            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500"><Server size={20} /></div>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm ${stats.source !== "live" ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-500" : underAttack ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500"}`}>
+            <span className="relative flex h-2 w-2">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${stats.source !== "live" ? "bg-amber-400" : underAttack ? "bg-red-400" : "bg-emerald-400"}`}></span>
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${stats.source !== "live" ? "bg-amber-500" : underAttack ? "bg-red-500" : "bg-emerald-500"}`}></span>
+            </span>
+            <span className="text-xs font-semibold tracking-wide">
+              {stats.source !== "live" ? "OFFLINE" : underAttack ? "UNDER ATTACK" : "LIVE"}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content Grid - Flex-1 to fill remaining height */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
         {/* Map Section */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                <Globe size={18} className="text-blue-500" />
-                Global Threat Map
-              </h3>
-              <div className="flex gap-2">
-                <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>Auth Fail</span>
-                <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>Command</span>
-              </div>
+        <div className="lg:col-span-2 flex flex-col bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
+          <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 dark:border-white/5 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
+            <h3 className="font-medium text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <Globe size={16} className="text-blue-500" />
+              Global Threat Map
+            </h3>
+            <div className="flex gap-3">
+              <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>Auth Fail</span>
+              <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></span>Command</span>
             </div>
-            <ThreatMap onRegionClick={setSelectedRegion} selectedRegion={selectedRegion} />
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            <ThreatMap
+              onRegionClick={setSelectedRegion}
+              selectedRegion={selectedRegion}
+              underAttack={underAttack}
+              threatLogs={threatLogs}
+            />
           </div>
         </div>
 
         {/* Live Feed Section */}
-        <div className="lg:col-span-1 lg:relative min-h-[400px] lg:min-h-0">
-          <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm h-full flex flex-col lg:absolute lg:inset-0">
-            <div className="p-4 border-b border-slate-200 dark:border-white/5">
-              <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                <Activity size={18} className="text-green-500" />
-                Live Activity
-              </h3>
-            </div>
-            <div className="p-2 flex-1 min-h-0">
-              <AttackLog selectedRegion={selectedRegion} />
-            </div>
+        <div className="lg:col-span-1 flex flex-col bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-white/5 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
+            <h3 className="font-medium text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <Activity size={16} className="text-emerald-500" />
+              Live Activity
+            </h3>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto p-2">
+            <AttackLog selectedRegion={selectedRegion} underAttack={underAttack} threatLogs={threatLogs} />
           </div>
         </div>
       </div>

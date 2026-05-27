@@ -5,7 +5,7 @@ import { MouseEvent, useEffect, useMemo, useState } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { geoEqualEarth, geoGraticule, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
-import { useLiveThreatLogs } from "@/lib/liveEvents";
+import { ThreatLog, useLiveThreatLogs } from "@/lib/liveEvents";
 
 const TARGET = {
     name: "CloudSentinel HQ",
@@ -16,6 +16,8 @@ const TARGET = {
 interface ThreatMapProps {
     onRegionClick?: (region: string | null) => void;
     selectedRegion?: string | null;
+    underAttack?: boolean;
+    threatLogs?: ThreatLog[];
 }
 
 type TooltipDetails = {
@@ -78,12 +80,13 @@ function tooltipFor(source: Source, event: MouseEvent<SVGElement>): TooltipState
     };
 }
 
-export default function ThreatMap({ onRegionClick, selectedRegion }: ThreatMapProps = {}) {
+export default function ThreatMap({ onRegionClick, selectedRegion, underAttack = false, threatLogs: externalLogs }: ThreatMapProps = {}) {
     const { theme } = useTheme();
     const [isExpanded, setIsExpanded] = useState(false);
     const [tooltipContent, setTooltipContent] = useState<TooltipState | null>(null);
     const [countries, setCountries] = useState<CountryFeature[]>([]);
-    const threatLogs = useLiveThreatLogs();
+    const liveLogs = useLiveThreatLogs(!externalLogs);
+    const threatLogs = externalLogs ?? liveLogs;
 
     useEffect(() => {
         let cancelled = false;
@@ -129,18 +132,32 @@ export default function ThreatMap({ onRegionClick, selectedRegion }: ThreatMapPr
     const mapData = useMemo<Source[]>(() => {
         const grouped = new Map<string, Source>();
         for (const log of threatLogs) {
-            const meta = COUNTRY_COORDS[log.country];
-            if (!meta) {
+            if (!log.country || log.country === "XX") {
                 continue;
             }
+            const meta = COUNTRY_COORDS[log.country];
+            const hasCoordinates = typeof log.latitude === "number" && typeof log.longitude === "number";
+            if (!meta && !hasCoordinates) {
+                continue;
+            }
+            const countryMeta = meta ?? {
+                name: log.countryName ?? log.country,
+                lat: log.latitude as number,
+                lng: log.longitude as number,
+                color: "#38bdf8",
+            };
             const current = grouped.get(log.country) ?? {
-                ...meta,
+                ...countryMeta,
                 count: 0,
                 topIp: log.ip,
                 dominantTtp: log.mitreId || log.type,
                 topHassh: log.hassh || "unknown",
             };
             current.count += 1;
+            if (hasCoordinates) {
+                current.lat = log.latitude as number;
+                current.lng = log.longitude as number;
+            }
             if (!current.topIp || current.topIp === "0.0.0.0") {
                 current.topIp = log.ip;
             }
@@ -218,7 +235,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion }: ThreatMapPr
                             })}
                         </g>
 
-                        {sources.map((source, index) => {
+                        {underAttack && sources.map((source, index) => {
                             const isDimmed = selectedRegion && selectedRegion !== source.name;
                             return (
                                 <g key={source.name} opacity={isDimmed ? 0.25 : 1}>
@@ -275,8 +292,8 @@ export default function ThreatMap({ onRegionClick, selectedRegion }: ThreatMapPr
                     <div className={`absolute left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded border border-white/10 flex flex-col gap-1 z-[60] pointer-events-none ${isExpanded ? "top-8 md:top-12 md:left-12" : "top-4"}`}>
                         <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Global Defcon</span>
                         <span className="text-xl font-bold font-mono text-white flex items-center gap-2">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                            ACTIVE
+                            <span className={`w-2 h-2 rounded-full ${underAttack ? "bg-red-500 animate-pulse" : "bg-emerald-500"}`}></span>
+                            {underAttack ? "UNDER ATTACK" : "MONITORING"}
                         </span>
                     </div>
 

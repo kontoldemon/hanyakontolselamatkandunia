@@ -5,15 +5,14 @@ Enriches SOAR scoring with community-driven threat intelligence.
 
 from __future__ import annotations
 
-import asyncio
-import structlog
 import os
 import time
 from typing import Any
 
-import httpx
 import hishel
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import httpx
+import structlog
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = structlog.get_logger("cloudsentinel.abuseipdb")
 

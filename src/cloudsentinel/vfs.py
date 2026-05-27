@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import json
-import os
 import pickle
 import time
 from pathlib import Path
 from typing import Any
-
 
 DEFAULT_PROFILES = {
     "ubuntu-22.04": {
@@ -116,7 +113,7 @@ class VirtualFileSystem:
 
 
     @classmethod
-    def generate_realistic_files(cls, os_profile_name: str = "ubuntu-22.04") -> "VirtualFileSystem":
+    def generate_realistic_files(cls, os_profile_name: str = "ubuntu-22.04") -> VirtualFileSystem:
         """Generate a VFS with Faker-backed realistic file contents.
 
         Uses the Faker library to produce credible-looking system files,
@@ -143,10 +140,10 @@ class VirtualFileSystem:
             vfs.mkfile("/etc/resolv.conf", f"nameserver {fake.ipv4_private()}\nsearch {fake.domain_name()}\n".encode())
             vfs.mkfile("/etc/motd", f"Welcome to {fake.company()} Production Server\n\n".encode())
             vfs.mkfile("/etc/issue", f"{fake.linux_platform_token()} \\n \\l\n".encode())
-            vfs.mkfile("/etc/crontab", f"SHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n17 * * * * root cd / && run-parts --report /etc/cron.hourly\n25 6 * * * root test -x /usr/sbin/anacron || {{ cd / && run-parts --report /etc/cron.daily; }}\n".encode())
+            vfs.mkfile("/etc/crontab", b"SHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n17 * * * * root cd / && run-parts --report /etc/cron.hourly\n25 6 * * * root test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.daily; }\n")
             vfs.mkfile("/etc/ssh/sshd_config", b"Port 22\nPermitRootLogin yes\nPasswordAuthentication yes\nPubkeyAuthentication yes\n")
             vfs.mkfile("/etc/passwd", f"root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\nsys:x:3:3:sys:/dev:/usr/sbin/nologin\n{fake.user_name()}:x:1000:1000:{fake.name()},,,:/home/{fake.user_name()}:/bin/bash\n".encode())
-            vfs.mkfile("/etc/shadow", f"root:*:19000:0:99999:7:::\ndaemon:*:19000:0:99999:7:::\nbin:*:19000:0:99999:7:::\nsys:*:19000:0:99999:7:::\n".encode())
+            vfs.mkfile("/etc/shadow", b"root:*:19000:0:99999:7:::\ndaemon:*:19000:0:99999:7:::\nbin:*:19000:0:99999:7:::\nsys:*:19000:0:99999:7:::\n")
         else:
             vfs.mkfile("/etc/hostname", b"usas-prod-srv-01\n")
             vfs.mkfile("/etc/hosts", b"127.0.0.1 localhost\n10.0.0.4 usas-prod-srv-01\n")

@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import time
 
-
 # ── MTTB: Must stay under 100ms ───────────────────────────
 
 def test_mttb_under_100ms(benchmark):

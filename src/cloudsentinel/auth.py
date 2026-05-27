@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import structlog
 import os
 import time
 from dataclasses import dataclass
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.auth")
 

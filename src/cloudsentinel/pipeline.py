@@ -27,11 +27,11 @@ from .config import ClickHouseSettings, KafkaSettings, NATSSettings, RedisSettin
 
 try:
     from tenacity import (
+        before_sleep_log,
         retry,
+        retry_if_exception_type,
         stop_after_attempt,
         wait_exponential,
-        retry_if_exception_type,
-        before_sleep_log,
     )
     _TENACITY = True
 except ImportError:
@@ -105,7 +105,7 @@ class LocalWAL:
 
     def _read_clear(self) -> list[str]:
         try:
-            with open(self.path, "r", encoding="utf-8") as f:
+            with open(self.path, encoding="utf-8") as f:
                 lines = f.readlines()
             with open(self.path, "w", encoding="utf-8") as f:
                 f.truncate(0)
@@ -564,11 +564,16 @@ class ClickHouseForwarder:
     @staticmethod
     def envelope_to_row(envelope: EventEnvelope) -> dict[str, Any]:
         payload = envelope.payload
+        event_id = str(payload.get("eventid", envelope.event_type))
+        reason = str(payload.get("reason", ""))
+        if not reason and event_id == "cloudsentinel.command.output":
+            reason = str(payload.get("output", ""))[:2000]
+
         def as_datetime(value: Any) -> datetime:
             return datetime.fromtimestamp(float(value or 0), tz=UTC)
 
         return {
-            "eventid": str(payload.get("eventid", envelope.event_type)),
+            "eventid": event_id,
             "session": str(payload.get("session", envelope.session_id)),
             "sensor": str(payload.get("sensor", "CloudSentinel")),
             "src_ip": str(payload.get("src_ip", envelope.src_ip)),
@@ -595,7 +600,7 @@ class ClickHouseForwarder:
             "version": str(payload.get("version", "")),
             "key_type": str(payload.get("key_type", "")),
             "input": str(payload.get("input", payload.get("command", ""))),
-            "reason": str(payload.get("reason", "")),
+            "reason": reason,
             "cloudsentinel_risk_score": int(
                 payload.get("cloudsentinel_risk_score", payload.get("risk_score", 0)) or 0
             ),

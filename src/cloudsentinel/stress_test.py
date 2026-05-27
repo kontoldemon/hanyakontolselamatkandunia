@@ -83,7 +83,7 @@ class StressTest:
                                 await asyncio.wait_for(
                                     process.stdout.read(4096), timeout=5.0
                                 )
-                            except asyncio.TimeoutError:
+                            except TimeoutError:
                                 pass
                         process.stdin.write(b"exit\n")
             except Exception as exc:

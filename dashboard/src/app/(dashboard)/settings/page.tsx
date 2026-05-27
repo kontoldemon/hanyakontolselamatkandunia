@@ -1,7 +1,8 @@
 "use client";
 
-import { Shield, Zap, Fingerprint, Database, Save, Activity, ChevronDown, Check } from "lucide-react";
+import { Shield, Zap, Fingerprint, Database, Save, Activity, ChevronDown, Check, Power } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useSensorOperations, useSocketTelemetry } from "@/lib/liveEvents";
 
 function CustomDropdown({ options, defaultValue }: { options: string[], defaultValue: string }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -52,118 +53,226 @@ function CustomDropdown({ options, defaultValue }: { options: string[], defaultV
 }
 
 export default function SettingsPage() {
+    const operations = useSensorOperations();
+    const socketTelemetry = useSocketTelemetry();
+    const [exposurePaused, setExposurePaused] = useState(false);
+    const [exposureBusy, setExposureBusy] = useState(false);
+    const upstreamLatency = operations?.telemetry?.upstreamLatencyMs ?? {};
+    const latencyRows = [
+        { name: "Readiness", value: Number(upstreamLatency.readiness ?? 0) },
+        { name: "Metrics", value: Number(upstreamLatency.metrics ?? 0) },
+        { name: "Stats", value: Number(upstreamLatency.stats ?? 0) },
+        { name: "Sessions", value: Number(upstreamLatency.sessions ?? 0) },
+        { name: "Distribution", value: Number(upstreamLatency.distribution ?? 0) },
+        { name: "Attack Graph", value: Number(upstreamLatency.attackGraph ?? 0) },
+        { name: "Anomaly", value: Number(upstreamLatency.anomaly ?? 0) },
+        { name: "LLM", value: Number(upstreamLatency.llm ?? 0) },
+    ];
+
+    async function toggleExposure() {
+        const nextPaused = !exposurePaused;
+        const confirmed = window.confirm(nextPaused
+            ? "Pause public honeypot exposure? Admin dashboard will stay online."
+            : "Resume public honeypot exposure?");
+        if (!confirmed) {
+            return;
+        }
+        setExposureBusy(true);
+        try {
+            const response = await fetch("/api/cloudsentinel/exposure", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enabled: !nextPaused }),
+            });
+            const data = await response.json();
+            if (data.ok) {
+                setExposurePaused(Boolean(data.paused));
+            } else {
+                window.alert(data.error ?? "Exposure update failed");
+            }
+        } catch {
+            window.alert("Exposure update failed");
+        } finally {
+            setExposureBusy(false);
+        }
+    }
+
     return (
-        <div className="max-w-5xl mx-auto space-y-6 pb-12">
-            <div>
-                <h2 className="text-2xl font-bold font-mono">System Configuration</h2>
-                <p className="text-slate-500 text-sm mt-1">Manage CloudSentinel&apos;s event-driven deception and automated SOAR response.</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Deception Sensor (AsyncSSH) */}
-                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col">
-                    <div className="p-5 border-b border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] rounded-t-xl">
-                        <h3 className="font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                            <Database size={18} />
-                            Sensor Node (AsyncSSH)
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1">Configure the AWS EC2 trap environment properties.</p>
-                    </div>
-                    <div className="p-5 space-y-5 flex-1">
-                        <div>
-                            <label className="block text-sm font-medium mb-2 opacity-80">Deception Level (VFS)</label>
-                            <CustomDropdown 
-                                options={["High Interaction (Full Ubuntu 22.04 VFS)", "Medium Interaction (Restricted Sandbox)", "Low Interaction (Port listener only)"]}
-                                defaultValue="High Interaction (Full Ubuntu 22.04 VFS)"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 opacity-80 flex justify-between">
-                                <span>Honey-token Deployment</span>
-                                <span className="text-[10px] bg-green-500/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Active</span>
-                            </label>
-                            <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 p-3.5 border border-slate-200 dark:border-white/10 rounded-lg">
-                                <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 bg-white" />
-                                <span className="text-sm font-medium">Inject Fake AWS API Keys into bash_history</span>
-                            </div>
-                        </div>
-                    </div>
+        <div className="max-w-6xl mx-auto flex flex-col h-full gap-6 pb-6">
+            <div className="flex justify-between items-end shrink-0">
+                <div>
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">System Configuration</h2>
+                    <p className="text-slate-500 text-xs mt-0.5">Manage CloudSentinel&apos;s event-driven deception and automated SOAR response.</p>
                 </div>
-
-                {/* Identity-Centric Engine (HASSH) */}
-                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col">
-                    <div className="p-5 border-b border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] rounded-t-xl">
-                        <h3 className="font-bold flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                            <Fingerprint size={18} />
-                            Identity-Centric Engine (HASSH)
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1">Manage cryptographic botnet fingerprinting and DNA profiling.</p>
-                    </div>
-                    <div className="p-5 space-y-5 flex-1">
-                        <div>
-                            <label className="block text-sm font-medium mb-2 opacity-80">Action on Known Malicious HASSH</label>
-                            <CustomDropdown 
-                                options={["Immediate Drop (Pre-Auth)", "Allow & Monitor (Intelligence Gathering)", "Tarpit (Slow response)"]}
-                                defaultValue="Immediate Drop (Pre-Auth)"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 opacity-80">False Positive Mitigation</label>
-                            <div className="flex items-center gap-4 bg-slate-100 dark:bg-white/5 p-3 border border-slate-200 dark:border-white/10 rounded-lg">
-                                <input type="range" min="0" max="100" defaultValue="85" className="w-full accent-blue-600" />
-                                <span className="text-sm font-mono font-bold w-12 text-right">85%</span>
-                            </div>
-                            <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Minimum confidence score required to auto-ban a new HASSH.</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Event-Driven SOAR */}
-                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm lg:col-span-2">
-                    <div className="p-5 border-b border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] rounded-t-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                            <h3 className="font-bold flex items-center gap-2 text-rose-600 dark:text-rose-500">
-                                <Zap size={18} />
-                                Automated SOAR Response (AWS Lambda)
-                            </h3>
-                            <p className="text-xs text-slate-500 mt-1">Configure event boundaries and auto-blocking thresholds (Target MTTB: &lt;0.86s).</p>
-                        </div>
-                        <div className="flex items-center w-fit gap-2 px-3 py-1 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full text-xs font-bold border border-rose-500/20">
-                            <Activity size={12} className="animate-pulse" /> Live Execution
-                        </div>
-                    </div>
-                    <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium mb-2 opacity-80">Event Trigger (EventBridge)</label>
-                            <CustomDropdown 
-                                options={["MITRE TTP Matched (>1)", "Failed Auth Spike (>10/min)", "Any Interaction"]}
-                                defaultValue="MITRE TTP Matched (>1)"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 opacity-80">Execution Pathway</label>
-                            <CustomDropdown 
-                                options={["Lambda (Provisioned Concurrency)", "Lambda (Standard Cold Start)", "Local Docker Container"]}
-                                defaultValue="Lambda (Provisioned Concurrency)"
-                            />
-                            <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Provisioned Concurrency ensures MTTB translates to under 1s.</p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 opacity-80">Response Action</label>
-                            <div className="border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 rounded-lg p-2.5 flex items-center gap-2 h-11">
-                                <Shield size={16} className="text-slate-400" />
-                                <span className="text-sm font-mono font-medium truncate">Revoke IP via Security Group</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-end pt-4">
-                <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
-                    <Save size={18} />
-                    Apply Configuration
+                <button className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <Save size={14} />
+                    Apply Changes
                 </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-y-auto pr-1 terminal-scrollbar">
+                
+                {/* Left Column: Telemetry & Controls */}
+                <div className="space-y-6 flex flex-col">
+                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="font-semibold text-sm flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                                    <Power size={16} />
+                                    Exposure Control
+                                </h3>
+                                <p className="text-[10px] text-slate-500 mt-1">
+                                    {operations?.source === "live" ? "Admin API connected. Toggle public honeypot traffic." : "Sensor API offline."}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={exposureBusy || operations?.source !== "live"}
+                                onClick={toggleExposure}
+                                className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
+                            >
+                                <Power size={12} />
+                                {exposurePaused ? "Resume" : "Pause"}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 flex flex-col overflow-hidden">
+                        <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] shrink-0">
+                            <h3 className="font-semibold text-sm flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                <Activity size={16} className="text-blue-500" />
+                                Pipeline Latency
+                            </h3>
+                        </div>
+                        <div className="p-4 flex-1 overflow-y-auto space-y-2">
+                            {latencyRows.map((row) => (
+                                <div key={row.name} className="flex items-center justify-between text-[11px] rounded bg-slate-50 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 px-3 py-1.5">
+                                    <span className="text-slate-600 dark:text-slate-400">{row.name}</span>
+                                    <span className="font-mono text-slate-900 dark:text-slate-300 font-medium">{row.value}ms</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="p-3 border-t border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] shrink-0 text-[10px] text-slate-500 flex justify-between">
+                            <span>Max: <span className="font-mono">{Number(operations?.telemetry?.maxLatencyMs ?? 0)}ms</span></span>
+                            <span className="truncate ml-2">Sync: {operations?.telemetry?.sampledAt ?? "n/a"}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column (Span 2): Configurations & Socket Logs */}
+                <div className="lg:col-span-2 space-y-6 flex flex-col">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
+                        {/* Deception Sensor */}
+                        <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
+                            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                                <h3 className="font-semibold text-sm flex items-center gap-2 text-indigo-500">
+                                    <Database size={16} /> Sensor Node (AsyncSSH)
+                                </h3>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Deception Level</label>
+                                    <CustomDropdown 
+                                        options={["High (Full VFS)", "Medium (Restricted)", "Low (Port listener)"]}
+                                        defaultValue="High (Full VFS)"
+                                    />
+                                </div>
+                                <div className="pt-2">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <div className="relative flex items-center justify-center w-4 h-4 rounded border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[#0f0f0f] group-hover:border-indigo-500 transition-colors">
+                                            <input type="checkbox" defaultChecked className="opacity-0 absolute inset-0 cursor-pointer" />
+                                            <Check size={12} className="text-indigo-500 opacity-100" />
+                                        </div>
+                                        <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Inject Fake AWS API Keys (bash_history)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* HASSH Engine */}
+                        <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
+                            <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                                <h3 className="font-semibold text-sm flex items-center gap-2 text-purple-500">
+                                    <Fingerprint size={16} /> Identity Engine (HASSH)
+                                </h3>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Malicious HASSH Action</label>
+                                    <CustomDropdown 
+                                        options={["Immediate Drop", "Allow & Monitor", "Tarpit"]}
+                                        defaultValue="Immediate Drop"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Confidence Threshold</label>
+                                    <div className="flex items-center gap-3">
+                                        <input type="range" min="0" max="100" defaultValue="85" className="flex-1 accent-purple-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none outline-none" />
+                                        <span className="text-[11px] font-mono font-bold w-8 text-right text-slate-700 dark:text-slate-300">85%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* SOAR Config */}
+                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm shrink-0">
+                        <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center">
+                            <h3 className="font-semibold text-sm flex items-center gap-2 text-rose-500">
+                                <Zap size={16} /> Automated SOAR Response
+                            </h3>
+                            <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold uppercase tracking-wider border border-rose-500/20">Active</span>
+                        </div>
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Trigger Condition</label>
+                                <CustomDropdown options={["MITRE Match (>1)", "Auth Spike (>10/m)", "Any Input"]} defaultValue="MITRE Match (>1)" />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Execution Path</label>
+                                <CustomDropdown options={["Lambda (Warm)", "Lambda (Cold)", "Local Docker"]} defaultValue="Lambda (Warm)" />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Action Applied</label>
+                                <div className="border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0f0f0f] rounded-lg px-3 py-2 flex items-center gap-2">
+                                    <Shield size={14} className="text-slate-400 shrink-0" />
+                                    <span className="text-xs font-mono text-slate-700 dark:text-slate-300 truncate">Revoke IP (Security Group)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Socket Logs */}
+                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 flex flex-col min-h-[200px] overflow-hidden">
+                        <div className="p-3 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center shrink-0">
+                            <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Socket Telemetry</h3>
+                            <div className="flex gap-3 text-[10px] font-mono text-slate-500">
+                                <span>Conn: {socketTelemetry.connectCount}</span>
+                                <span>Drop: {socketTelemetry.disconnectCount}</span>
+                                <span className={socketTelemetry.connected ? "text-emerald-500 font-bold" : "text-amber-500 font-bold"}>
+                                    {socketTelemetry.connected ? "ONLINE" : "OFFLINE"}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-3 space-y-1 terminal-scrollbar bg-slate-50/30 dark:bg-[#050505]">
+                            {socketTelemetry.recent.length === 0 && (
+                                <div className="text-[11px] text-slate-500 text-center py-4">No socket events captured yet.</div>
+                            )}
+                            {socketTelemetry.recent.map((entry, index) => (
+                                <div key={`${entry.timestamp}-${index}`} className="flex items-start gap-2 text-[10px] font-mono border-b border-slate-100 dark:border-white/5 py-1.5 last:border-0">
+                                    <span className="text-slate-400 shrink-0">{entry.timestamp.split('T')[1]?.replace('Z', '')}</span>
+                                    <span className={`shrink-0 w-12 font-bold ${entry.level === "error" ? "text-red-500" : entry.level === "warn" ? "text-amber-500" : "text-emerald-500"}`}>
+                                        [{entry.level}]
+                                    </span>
+                                    <span className="text-slate-700 dark:text-slate-300 font-semibold">{entry.event}</span>
+                                    {entry.detail && <span className="text-slate-500 break-all">{entry.detail}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     );

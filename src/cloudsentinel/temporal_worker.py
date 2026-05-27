@@ -15,11 +15,12 @@ Requires: temporalio (already in requirements.txt)
 from __future__ import annotations
 
 import asyncio
-import structlog
 import os
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
+
+import structlog
 
 logger = structlog.get_logger("cloudsentinel.temporal")
 
@@ -71,7 +72,6 @@ class TemporalSOARWorker:
             @activity.defn
             async def block_ip_activity(ip: str, reason: str, ttl: int) -> dict:
                 """Durable iptables block — replayed on crash."""
-                import subprocess
                 proc = await asyncio.create_subprocess_exec(
                     self.firewall_path, "-A", "INPUT", "-s", ip, "-j", "DROP",
                     stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
@@ -86,7 +86,6 @@ class TemporalSOARWorker:
 
             @activity.defn
             async def unblock_ip_activity(ip: str) -> dict:
-                import subprocess
                 proc = await asyncio.create_subprocess_exec(
                     self.firewall_path, "-D", "INPUT", "-s", ip, "-j", "DROP",
                     stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,

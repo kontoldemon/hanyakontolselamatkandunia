@@ -64,7 +64,7 @@ export async function proxy(request: NextRequest) {
 
   const url = request.nextUrl.clone();
   url.pathname = "/signin";
-  url.searchParams.set("next", pathname);
+  url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
   return securityHeaders(NextResponse.redirect(url));
 }
 

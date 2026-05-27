@@ -16,7 +16,6 @@ import hashlib
 import logging
 import os
 import signal
-import structlog
 import time
 import uuid
 from collections import defaultdict
@@ -24,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import asyncssh
+import structlog
 
 from .admin_api import create_admin_app
 from .anomaly import CommandAnomalyDetector
@@ -31,7 +31,7 @@ from .auth import get_auth
 from .commands.base import commands as cmd_registry
 from .config import Settings, load_settings
 from .geoip import enrich as geo_enrich
-from .hassh import HASSHDNA, calculate_hassh
+from .hassh import HASSHDNA, calculate_hassh, fallback_hassh_from_version, infer_client_software
 from .mitre import score_command
 from .observability import setup_observability
 from .pipeline import ClickHouseForwarder, EventPipeline
@@ -99,8 +99,48 @@ def _split_algorithms(value: Any) -> list[str]:
     return [str(value)]
 
 
+def _decode_alg_list(values: Any) -> list[str]:
+    items: list[str] = []
+    for value in (values or []):
+        if isinstance(value, bytes):
+            try:
+                items.append(value.decode("ascii"))
+            except Exception:
+                items.append(value.decode("utf-8", "ignore"))
+        else:
+            items.append(str(value))
+    return [item for item in items if item]
+
+
 def extract_hassh(conn: asyncssh.SSHServerConnection) -> tuple[str | None, str | None]:
     """Best-effort HASSH extraction from AsyncSSH connection metadata."""
+
+    # Primary path: parse AsyncSSH's cached client KEXINIT payload.
+    # This contains the real client-offered algorithm lists required by HASSH.
+    try:
+        raw = getattr(conn, "_client_kexinit", b"")
+        if isinstance(raw, bytes) and raw:
+            from asyncssh.packet import SSHPacket
+
+            pkt = SSHPacket(raw)
+            _ = pkt.get_bytes(16)  # cookie
+            client_kex = _decode_alg_list(pkt.get_namelist())
+            _ = pkt.get_namelist()  # host key algs
+            enc_cs = _decode_alg_list(pkt.get_namelist())
+            _ = pkt.get_namelist()  # enc sc
+            mac_cs = _decode_alg_list(pkt.get_namelist())
+            _ = pkt.get_namelist()  # mac sc
+            cmp_cs = _decode_alg_list(pkt.get_namelist())
+            _ = pkt.get_namelist()  # cmp sc
+            if client_kex:
+                return calculate_hassh(
+                    client_kex,
+                    enc_cs or ["unknown"],
+                    mac_cs or ["unknown"],
+                    cmp_cs or ["none"],
+                )
+    except Exception:
+        pass
 
     lookup_names = {
         "kex": ("kex_algs", "client_kex_algs", "kex_algorithms"),
@@ -122,6 +162,42 @@ def extract_hassh(conn: asyncssh.SSHServerConnection) -> tuple[str | None, str |
         found[key] = values
 
     if not found["kex"]:
+        # Fallback: build stable fingerprint from negotiated values if client
+        # algorithm lists are unavailable.
+        negotiated = [
+            _split_algorithms(conn.get_extra_info("recv_cipher")),
+            _split_algorithms(conn.get_extra_info("recv_mac")),
+            _split_algorithms(conn.get_extra_info("recv_compression")),
+        ]
+        if any(negotiated):
+            kex_name = "unknown-kex"
+            try:
+                kex_obj = getattr(conn, "_kex", None)
+                algorithm = getattr(kex_obj, "algorithm", b"")
+                if isinstance(algorithm, bytes):
+                    kex_name = algorithm.decode("ascii", "ignore") or kex_name
+                elif algorithm:
+                    kex_name = str(algorithm)
+            except Exception:
+                pass
+            return calculate_hassh(
+                [kex_name],
+                negotiated[0] or ["unknown"],
+                negotiated[1] or ["unknown"],
+                negotiated[2] or ["none"],
+            )
+        # Last-resort deterministic surrogate so dashboard never loses identity.
+        try:
+            client_version = str(conn.get_extra_info("client_version", "") or "unknown-client")
+            server_version = str(conn.get_extra_info("server_version", "") or "unknown-server")
+            return calculate_hassh(
+                [f"client:{client_version}"],
+                [f"server:{server_version}"],
+                ["unknown"],
+                ["none"],
+            )
+        except Exception:
+            pass
         return None, None
 
     return calculate_hassh(
@@ -389,8 +465,17 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
             try:
                 self.client_version = str(self.conn.get_extra_info("client_version", ""))
                 if self.client_version:
+                    if not self.hassh:
+                        self.hassh, self.hassh_algorithms = fallback_hassh_from_version(
+                            self.client_version,
+                            self.settings.honeypot.server_version,
+                        )
+                        self.hassh_dna.record_sighting(self.hassh, self.src_ip)
                     asyncio.create_task(self._emit_event("cloudsentinel.client.version", {
                         "version": self.client_version,
+                        "hassh_md5": self.hassh or "",
+                        "hassh_algorithms": self.hassh_algorithms or "",
+                        "client": infer_client_software(self.client_version, self.hassh or ""),
                     }))
             except Exception:
                 pass
@@ -505,8 +590,14 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
             metrics = get_metrics()
             if action not in ("none", "detect_only"):
                 metrics.record_block(str(action))
-                metrics.mttb_ms = self.soar.mttb_ms
-                metrics.blocked_ips = set(getattr(self.soar, "_blocked_ips", set()))
+                metrics.set_mttb(self.soar.mttb_ms)
+                blocked_ips = set(getattr(self.soar, "_mem_blocked_ips", set()))
+                if action not in ("skip_allowlisted_ip", "skip_private_ip", "skip_no_ip", "block_failed"):
+                    ip = str(soar_result.get("src_ip") or "")
+                    if ip:
+                        blocked_ips.add(ip)
+                metrics.blocked_ips = blocked_ips
+                metrics.set_blocked_count(len(blocked_ips))
         except Exception:
             pass
         if action not in ("none", "detect_only", "dry_run_block"):
@@ -733,24 +824,41 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                     cmd_instance.start()
                     output = adapter.flush()
 
+                    # Some registry commands can resolve but still produce no text in this
+                    # adapter flow. Fall back to VFS policy to avoid blank replay/output.
+                    if not str(output).strip():
+                        output, response_mode = await self.vfs.run_command_with_mode(command)
+                        mitre_annotation = score_command(command)
+                        await self.server._emit_event("cloudsentinel.command.output", {
+                            "input": command,
+                            "output": str(output)[:2000],
+                            "source": "vfs_agent",
+                            "response_mode": response_mode,
+                            "risk_score": mitre_annotation.get("risk_score", 0),
+                            "mitre_techniques": mitre_annotation.get("mitre_techniques", []),
+                        })
+                        return str(output)
+
                     await self.server._emit_event("cloudsentinel.command.output", {
                         "input": command,
-                        "output": output[:2000],
+                        "output": str(output)[:2000],
                         "source": "command_registry",
+                        "response_mode": "command_registry",
                     })
-                    return output
+                    return str(output)
                 except Exception as exc:
                     logger.debug("Command registry failed for %r: %s", command, exc)
 
         # 2. Fall back to VFS agent (LLM-backed or deterministic mock)
         try:
-            output = await self.vfs.run_command(command)
+            output, response_mode = await self.vfs.run_command_with_mode(command)
             mitre_annotation = score_command(command)
 
             await self.server._emit_event("cloudsentinel.command.output", {
                 "input": command,
                 "output": output[:2000],
                 "source": "vfs_agent",
+                "response_mode": response_mode,
                 "risk_score": mitre_annotation.get("risk_score", 0),
                 "mitre_techniques": mitre_annotation.get("mitre_techniques", []),
             })
@@ -763,6 +871,12 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             return output
         except Exception as exc:
             logger.warning("Command handling failed for %r: %s", command, exc)
+            await self.server._emit_event("cloudsentinel.command.output", {
+                "input": command,
+                "output": "bash: command execution error",
+                "source": "vfs_agent",
+                "response_mode": "blocked",
+            })
             return "bash: command execution error"
 
     def _resolve_command(self, name: str) -> type | None:
@@ -816,7 +930,8 @@ async def start_http_honeypot(
 ) -> None:
     try:
         import granian as _granian_http
-        from granian.constants import Interfaces, Loops as GranianLoops
+        from granian.constants import Interfaces
+        from granian.constants import Loops as GranianLoops
         _USE_GRANIAN_HTTP = True
     except ImportError:
         import uvicorn as _uvicorn_http

@@ -4,14 +4,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const baseUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL;
-
-  if (!baseUrl) {
-    return NextResponse.json(
-      { ok: false, error: "admin api url not configured" },
-      { status: 200 },
-    );
-  }
+  const envUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim();
+  const baseUrl = envUrl && envUrl !== "http://localhost:8080" ? envUrl : "https://188.166.184.42.sslip.io";
 
   try {
     const body = await request.json();
