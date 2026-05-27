@@ -413,11 +413,12 @@ function formatUptime(seconds: number): string {
   const totalSeconds = Math.max(0, Math.floor(seconds));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
   if (hours > 0) {
-    return `${hours}h`;
+    return `${hours}h ${minutes}m ${secs}s`;
   }
   if (minutes > 0) {
-    return `${minutes}m`;
+    return `${minutes}m ${secs}s`;
   }
   return `${totalSeconds}s`;
 }
@@ -684,6 +685,10 @@ export function useCapturedSessions() {
     for (const session of sessions) {
       if (!session.ip) {
         continue;
+      }
+      const syntheticId = `sess-live-${session.ip}`;
+      if (grouped.has(syntheticId) && session.id !== syntheticId) {
+        grouped.delete(syntheticId);
       }
       const key = session.id || `sess-${session.ip}-${session.startedAtEpochMs ?? session.startTime}`;
       grouped.set(key, {

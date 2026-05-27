@@ -21,7 +21,7 @@ export default function Dashboard() {
     }
     return ips.size;
   }, [threatLogs]);
-  const underAttack = stats.source === "live" && stats.attackActive;
+  const underAttack = stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && Date.now() - threatLogs[0].epochMs < 20000));
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;

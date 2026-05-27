@@ -1025,6 +1025,17 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 },
             }
 
+    @app.post("/llm/chat", dependencies=[Depends(require_auth)])
+    async def llm_chat(body: dict[str, Any]) -> dict[str, Any]:
+        prompt = str(body.get("prompt") or "")
+        context = str(body.get("context") or "")
+        try:
+            from .threat_reporter import chat_with_agent
+            response_text = await chat_with_agent(prompt, context)
+            return {"ok": True, "response": response_text}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
     @app.post("/auth/login")
     async def login(body: dict[str, str]) -> dict[str, Any]:
         try:

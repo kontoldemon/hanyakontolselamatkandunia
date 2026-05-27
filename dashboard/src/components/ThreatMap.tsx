@@ -192,7 +192,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
             )}
             <div className={isExpanded
                 ? "fixed inset-0 m-auto w-[95vw] h-[90vh] z-[100] origin-center bg-slate-50 dark:bg-[#050505] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-center animate-in zoom-in-95 fade-in duration-200"
-                : "relative w-full aspect-[2/1] bg-slate-50 dark:bg-[#050505] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl group transition-all duration-300"}>
+                : "relative w-full aspect-[2/1] bg-slate-50 dark:bg-[#050505] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl group"}>
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className={`absolute top-4 right-4 z-[80] bg-black/60 hover:bg-black p-2 rounded-lg text-white backdrop-blur border border-white/10 transition-all ${isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"}`}

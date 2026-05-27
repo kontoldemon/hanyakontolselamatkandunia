@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Copy, Terminal as TerminalIcon } from "lucide-react";
 
+import CustomDropdown from "@/components/CustomDropdown";
+
 type ReplayEntry = {
     role: "attacker" | "honeypot";
     text: string;
@@ -19,12 +21,21 @@ interface TerminalReplayProps {
 export default function TerminalReplay({ lines, replay, mode = "both", onModeChange }: TerminalReplayProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const stickToBottomRef = useRef(true);
+    
     const entries = useMemo(() => {
         if (replay && replay.length > 0) {
-            return replay.filter((item) => item.role === "attacker" || item.role === "honeypot");
+            const valid = replay.filter((item) => item.role === "attacker" || item.role === "honeypot");
+            return valid.sort((a, b) => {
+                if (!a.timestamp || !b.timestamp) return 0;
+                if (a.timestamp === b.timestamp) {
+                    return a.role === "attacker" ? -1 : 1;
+                }
+                return a.timestamp.localeCompare(b.timestamp);
+            });
         }
         return lines.map((line) => ({ role: "attacker" as const, text: line, timestamp: undefined }));
     }, [lines, replay]);
+    
     const visibleEntries = useMemo(
         () => (mode === "attacker" ? entries.filter((item) => item.role === "attacker") : entries),
         [entries, mode],
@@ -47,57 +58,58 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
     }
 
     return (
-        <div className="w-full bg-[#0a0a0a] rounded-lg border border-slate-800 overflow-hidden font-mono text-sm shadow-2xl">
+        <div className="w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-sm shadow-sm flex flex-col h-full min-h-[300px]">
             {/* Terminal Header */}
-            <div className="bg-[#1a1a1a] px-4 py-2 flex items-center justify-between border-b border-slate-800">
+            <div className="bg-slate-100 dark:bg-white/[0.02] px-4 py-2.5 flex items-center justify-between border-b border-slate-200 dark:border-white/5 shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                        <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                        <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                        <div className="w-3 h-3 rounded-full bg-red-400 dark:bg-red-500/80"></div>
+                        <div className="w-3 h-3 rounded-full bg-amber-400 dark:bg-yellow-500/80"></div>
+                        <div className="w-3 h-3 rounded-full bg-emerald-400 dark:bg-green-500/80"></div>
                     </div>
-                    <span className="ml-3 text-slate-400 text-xs flex items-center gap-2">
+                    <span className="ml-3 text-slate-500 dark:text-slate-400 text-xs flex items-center gap-2">
                         <TerminalIcon size={12} />
                         root@cloudsentinel:~
                     </span>
                 </div>
-                <button className="text-slate-500 hover:text-slate-300 transition-colors">
+                <button className="text-slate-400 hover:text-slate-600 dark:text-slate-50 dark:hover:text-slate-300 transition-colors">
                     <Copy size={14} />
                 </button>
             </div>
-            <div className="bg-[#151515] px-4 py-2 border-b border-slate-800 flex items-center justify-between gap-3">
-                <span className="text-[11px] uppercase tracking-wide text-slate-400">Replay Filter</span>
-                <select
+            <div className="bg-slate-50 dark:bg-[#0f0f0f] px-4 py-2 border-b border-slate-200 dark:border-white/5 flex items-center justify-between gap-3 shrink-0">
+                <span className="text-[10px] uppercase tracking-wide text-slate-500 font-bold">Replay Filter</span>
+                <CustomDropdown
+                    options={[
+                        { label: "Attacker Only", value: "attacker" },
+                        { label: "Both", value: "both" }
+                    ]}
                     value={mode}
-                    onChange={(event) => onModeChange?.(event.target.value as "attacker" | "both")}
-                    className="rounded-md border border-slate-700 bg-[#0f0f0f] text-slate-200 text-xs px-2 py-1"
-                >
-                    <option value="attacker">Attacker Only</option>
-                    <option value="both">Attacker + Honeypot Response</option>
-                </select>
+                    onChange={(val) => onModeChange?.(val as "attacker" | "both")}
+                    className="w-32"
+                />
             </div>
 
             {/* Terminal Content */}
             <div
                 ref={scrollRef}
                 onScroll={handleScroll}
-                className="h-[400px] overflow-y-auto p-4 text-green-400 terminal-scrollbar"
+                className="flex-1 overflow-y-auto p-4 text-slate-800 dark:text-green-400 terminal-scrollbar"
             >
                 {visibleEntries.length === 0 && (
-                    <div className="text-slate-500">
+                    <div className="text-slate-400 dark:text-slate-500">
                         No command replay stored for this session yet.
                     </div>
                 )}
                 {visibleEntries.map((entry, i) => (
-                    <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="mb-1 leading-relaxed break-words">
-                        <span className={`select-none mr-2 ${entry.role === "honeypot" ? "text-amber-400" : "text-blue-400"}`}>
+                    <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="mb-1.5 leading-relaxed break-words">
+                        <span className={`select-none mr-2 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`}>
                             {entry.role === "honeypot" ? "#" : "$"}
                         </span>
                         <span className="typing-effect whitespace-pre-wrap">{entry.text}</span>
-                        {entry.timestamp && <span className="ml-2 text-[10px] text-slate-500">{entry.timestamp}</span>}
+                        {entry.timestamp && <span className="ml-3 text-[10px] text-slate-400 dark:text-slate-500">{entry.timestamp}</span>}
                     </div>
                 ))}
-                <div className="animate-pulse inline-block w-2 h-4 bg-green-400 align-middle ml-1"></div>
+                <div className="animate-pulse inline-block w-2 h-4 bg-slate-400 dark:bg-green-400 align-middle ml-1"></div>
             </div>
         </div>
     );

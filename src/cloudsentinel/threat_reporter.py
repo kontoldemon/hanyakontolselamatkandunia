@@ -188,6 +188,36 @@ async def _call_litellm(prompt: str) -> dict[str, Any]:
         }
 
 
+async def _call_litellm_raw(prompt: str) -> str:
+    try:
+        from litellm import acompletion
+    except ImportError:
+        return "Error: litellm not installed on sensor."
+    model = os.getenv("LLM_MODEL", "gemini/gemini-2.0-flash")
+    fallback_raw = os.getenv("LLM_FALLBACK_MODELS", "groq/llama-3.3-70b-versatile,openai/gpt-4o-mini")
+    fallbacks = [{"model": m.strip()} for m in fallback_raw.split(",") if m.strip()]
+    try:
+        response = await acompletion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            max_tokens=1024,
+            fallbacks=fallbacks or None,
+        )
+        return str(response.choices[0].message.content or "")
+    except Exception as exc:
+        logger.warning("litellm chat failed: %s", exc)
+        return "I am currently offline or cannot reach the LLM provider."
+
+async def chat_with_agent(prompt: str, context: str) -> str:
+    full_prompt = (
+        "You are CloudSentinel AI, an expert cybersecurity agent embedded in a live dashboard.\n"
+        "You help the user understand honeypot telemetry, attacker behavior, and dashboard stats.\n\n"
+        f"Current Dashboard Context:\n{context}\n\n"
+        f"User Query: {prompt}"
+    )
+    return await _call_litellm_raw(full_prompt)
+
 async def generate_report(
     session_id: str,
     redis_url: str = "",

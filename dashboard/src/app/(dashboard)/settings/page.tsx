@@ -4,53 +4,7 @@ import { Shield, Zap, Fingerprint, Database, Save, Activity, ChevronDown, Check,
 import { useState, useRef, useEffect } from "react";
 import { useSensorOperations, useSocketTelemetry } from "@/lib/liveEvents";
 
-function CustomDropdown({ options, defaultValue }: { options: string[], defaultValue: string }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [selected, setSelected] = useState(defaultValue);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    return (
-        <div className={`relative ${isOpen ? 'z-50' : 'z-10'}`} ref={dropdownRef}>
-            <button 
-                type="button"
-                className="w-full bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50 flex justify-between items-center text-sm shadow-sm transition-all text-slate-700 dark:text-slate-200"
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <span className="truncate pr-4">{selected}</span>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {isOpen && (
-                <div className="absolute z-50 w-full mt-1.5 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <ul className="max-h-60 overflow-y-auto py-1">
-                        {options.map((opt) => (
-                            <li 
-                                key={opt}
-                                className={`px-4 py-2.5 text-sm cursor-pointer flex justify-between items-center transition-colors ${selected === opt ? 'bg-indigo-50/50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium' : 'hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300'}`}
-                                onClick={() => {
-                                    setSelected(opt);
-                                    setIsOpen(false);
-                                }}
-                            >
-                                <span className="truncate">{opt}</span>
-                                {selected === opt && <Check size={16} />}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-        </div>
-    );
-}
+import CustomDropdown from "@/components/CustomDropdown";
 
 export default function SettingsPage() {
     const operations = useSensorOperations();
@@ -174,8 +128,13 @@ export default function SettingsPage() {
                                 <div>
                                     <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Deception Level</label>
                                     <CustomDropdown 
-                                        options={["High (Full VFS)", "Medium (Restricted)", "Low (Port listener)"]}
-                                        defaultValue="High (Full VFS)"
+                                        options={[
+                                            { label: "High (Full VFS)", value: "High (Full VFS)" },
+                                            { label: "Medium (Restricted)", value: "Medium (Restricted)" },
+                                            { label: "Low (Port listener)", value: "Low (Port listener)" }
+                                        ]}
+                                        value="High (Full VFS)"
+                                        onChange={() => {}}
                                     />
                                 </div>
                                 <div className="pt-2">
@@ -201,8 +160,13 @@ export default function SettingsPage() {
                                 <div>
                                     <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Malicious HASSH Action</label>
                                     <CustomDropdown 
-                                        options={["Immediate Drop", "Allow & Monitor", "Tarpit"]}
-                                        defaultValue="Immediate Drop"
+                                        options={[
+                                            { label: "Immediate Drop", value: "Immediate Drop" },
+                                            { label: "Allow & Monitor", value: "Allow & Monitor" },
+                                            { label: "Tarpit", value: "Tarpit" }
+                                        ]}
+                                        value="Immediate Drop"
+                                        onChange={() => {}}
                                     />
                                 </div>
                                 <div>
@@ -227,11 +191,19 @@ export default function SettingsPage() {
                         <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Trigger Condition</label>
-                                <CustomDropdown options={["MITRE Match (>1)", "Auth Spike (>10/m)", "Any Input"]} defaultValue="MITRE Match (>1)" />
+                                <CustomDropdown options={[
+                                    { label: "MITRE Match (>1)", value: "MITRE Match (>1)" },
+                                    { label: "Auth Spike (>10/m)", value: "Auth Spike (>10/m)" },
+                                    { label: "Any Input", value: "Any Input" }
+                                ]} value="MITRE Match (>1)" onChange={() => {}} />
                             </div>
                             <div>
                                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Execution Path</label>
-                                <CustomDropdown options={["Lambda (Warm)", "Lambda (Cold)", "Local Docker"]} defaultValue="Lambda (Warm)" />
+                                <CustomDropdown options={[
+                                    { label: "Lambda (Warm)", value: "Lambda (Warm)" },
+                                    { label: "Lambda (Cold)", value: "Lambda (Cold)" },
+                                    { label: "Local Docker", value: "Local Docker" }
+                                ]} value="Lambda (Warm)" onChange={() => {}} />
                             </div>
                             <div>
                                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Action Applied</label>

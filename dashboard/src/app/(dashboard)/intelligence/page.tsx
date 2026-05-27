@@ -4,6 +4,8 @@ import { BrainCircuit, ShieldAlert, Fingerprint } from "lucide-react";
 import { useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
 import { useState } from "react";
 
+import CustomDropdown from "@/components/CustomDropdown";
+
 export default function IntelligencePage() {
     const [commandMode, setCommandMode] = useState<"most" | "least">("most");
     const [commandSearch, setCommandSearch] = useState("");
@@ -212,11 +214,16 @@ export default function IntelligencePage() {
                             <span className="text-[10px] font-mono text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">{uniqueCommandCount} unique</span>
                         </div>
                         <div className="flex gap-2 items-center">
-                            <div className="flex rounded border border-slate-200 dark:border-white/10 overflow-hidden shrink-0">
-                                <button onClick={() => { setCommandMode("most"); setCommandPage(1); }} className={`px-2 py-1 text-[10px] font-medium ${commandMode === "most" ? "bg-blue-600 text-white" : "bg-white dark:bg-[#0f0f0f] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5"}`}>Most</button>
-                                <button onClick={() => { setCommandMode("least"); setCommandPage(1); }} className={`px-2 py-1 text-[10px] font-medium border-l border-slate-200 dark:border-white/10 ${commandMode === "least" ? "bg-blue-600 text-white" : "bg-white dark:bg-[#0f0f0f] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5"}`}>Least</button>
-                            </div>
-                            <input type="text" value={commandSearch} onChange={(e) => { setCommandSearch(e.target.value); setCommandPage(1); }} placeholder="Search..." className="w-full bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                            <CustomDropdown
+                                options={[
+                                    { label: "Most Used", value: "most" },
+                                    { label: "Least Used", value: "least" }
+                                ]}
+                                value={commandMode}
+                                onChange={(val) => { setCommandMode(val as "most" | "least"); setCommandPage(1); }}
+                                className="w-28 shrink-0"
+                            />
+                            <input type="text" value={commandSearch} onChange={(e) => { setCommandSearch(e.target.value); setCommandPage(1); }} placeholder="Search..." className="w-full bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm transition-all" />
                         </div>
                     </div>
                     
