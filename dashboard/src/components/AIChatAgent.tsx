@@ -179,9 +179,9 @@ GLOBAL CONTROLS (work from any page):
     // ─── Gradient Style ──────────────────────────────────────────────────
 
     const gradientStyle = {
-        background: "linear-gradient(110deg, #4285f4 0%, #9b72cb 25%, #d96570 50%, #fbbc05 75%, #4285f4 100%)",
-        backgroundSize: "200% 200%",
-        animation: "ai-gradient-anim 6s ease-in-out infinite",
+        background: "linear-gradient(-45deg, #4285f4, #9b72cb, #d96570, #fbbc05, #4285f4, #9b72cb)",
+        backgroundSize: "400% 400%",
+        animation: "ai-gradient-anim 8s ease infinite",
     };
 
     // ─── Closed State (FAB button) ───────────────────────────────────────
@@ -192,7 +192,9 @@ GLOBAL CONTROLS (work from any page):
                 <style>{`
                     @keyframes ai-gradient-anim {
                         0% { background-position: 0% 50%; }
+                        25% { background-position: 50% 100%; }
                         50% { background-position: 100% 50%; }
+                        75% { background-position: 50% 0%; }
                         100% { background-position: 0% 50%; }
                     }
                 `}</style>
@@ -217,7 +219,9 @@ GLOBAL CONTROLS (work from any page):
             <style>{`
                 @keyframes ai-gradient-anim {
                     0% { background-position: 0% 50%; }
+                    25% { background-position: 50% 100%; }
                     50% { background-position: 100% 50%; }
+                    75% { background-position: 50% 0%; }
                     100% { background-position: 0% 50%; }
                 }
             `}</style>
