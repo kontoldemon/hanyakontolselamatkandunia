@@ -70,7 +70,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto flex flex-col h-full gap-6 pb-6">
+        <div className="h-full flex flex-col gap-6">
             <div className="flex justify-between items-end shrink-0">
                 <div>
                     <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">System Configuration</h2>

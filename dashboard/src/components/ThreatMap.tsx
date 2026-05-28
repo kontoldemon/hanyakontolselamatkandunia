@@ -271,7 +271,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                     >
                                         <circle cx={source.point.x} cy={source.point.y} r="16" fill="transparent" />
                                         <circle cx={source.point.x} cy={source.point.y} r="8" fill={source.color} opacity="0.2" />
-                                        <circle cx={source.point.x} cy={source.point.y} r="4" fill={source.color} className="animate-ping" />
+                                        <circle cx={source.point.x} cy={source.point.y} r="4" fill={source.color} className="animate-pulse" />
                                         <circle cx={source.point.x} cy={source.point.y} r="3" fill={source.color} />
                                     </g>
                                 </g>
@@ -322,7 +322,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     )}
                 </div>
                 {!isExpanded && (
-                    <div className="mt-auto border-t border-slate-200 dark:border-white/5 bg-white/50 dark:bg-[#0a0a0a]/50 backdrop-blur-md p-3 flex items-center gap-3 overflow-hidden text-[11px]">
+                    <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 dark:border-white/5 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl p-3 flex items-center gap-3 overflow-hidden text-[11px] z-20">
                         <style>{`
                             @keyframes marquee {
                                 0% { transform: translateX(0); }
@@ -334,7 +334,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         </span>
                         <div className="flex items-center gap-4 whitespace-nowrap opacity-80 animate-[marquee_20s_linear_infinite] hover:animate-none">
                             {threatLogs.length === 0 && <span className="text-slate-500">Awaiting initial sensor data stream...</span>}
-                            {threatLogs.slice(0, 10).map((log, i) => (
+                            {Array.from(new Map(threatLogs.map(log => [log.ip, log])).values()).slice(0, 10).map((log, i) => (
                                 <span key={i} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                     <span className="font-mono text-blue-600 dark:text-blue-400">{log.ip}</span>
                                     <span>attempted</span>
