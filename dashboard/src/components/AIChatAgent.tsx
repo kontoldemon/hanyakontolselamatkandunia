@@ -129,6 +129,8 @@ export default function AIChatAgent() {
         setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
         setIsLoading(true);
 
+        const recentHistory = messages.slice(-5).map(m => `${m.role === "user" ? "User" : "AI"}: ${m.content}`).join("\n");
+
         // Build context string with system instructions for action markers
         const contextStr = `
 Current Page: ${pathname}
@@ -137,6 +139,7 @@ Total Captured IPs: ${sessions.length} (Live: ${activeIpCount})
 Total Attacks: ${stats.totalAttacks}
 MTTB: ${stats.mttb}
 Top IPs: ${topIps}${focusedSessionContext}
+${recentHistory ? `\nRECENT CONVERSATION HISTORY:\n${recentHistory}\n` : ""}
 
 SYSTEM INSTRUCTIONS:
 You are CloudSentinel AI, an autonomous cybersecurity agent that FULLY CONTROLS the dashboard.
@@ -199,7 +202,7 @@ GLOBAL CONTROLS (work from any page):
                 // But skip fallback for casual/greeting messages
                 const isCasual = /^\s*(hi|hello|hey|yo|sup|what'?s?\s*up|good\s*(morning|afternoon|evening|night)|thanks|thank\s*you|ok|okay|cool|nice|great)\b/i.test(userMsg);
                 const finalActions =
-                    parsedActions.length > 0 ? parsedActions : (isCasual ? [] : detectIntentActions(userMsg, data.response));
+                    parsedActions.length > 0 ? parsedActions : (isCasual ? [] : detectIntentActions(userMsg, data.response, messages));
 
                 const aiMessage: AgentMessage = {
                     role: "ai",
@@ -218,7 +221,7 @@ GLOBAL CONTROLS (work from any page):
                         }
                     ]);
                 } else {
-                    const offlineActions = detectIntentActions(userMsg, "");
+                    const offlineActions = detectIntentActions(userMsg, "", messages);
                     const isCasual = /^\s*(hi|hello|hey|yo|sup|what'?s?\s*up|good\s*(morning|afternoon|evening|night))\b/i.test(userMsg);
                     const isThanks = /^\s*(thanks|thank\s*you|ty)\b/i.test(userMsg);
 
@@ -260,7 +263,7 @@ GLOBAL CONTROLS (work from any page):
                 }
             }
         } catch {
-            const offlineActions = detectIntentActions(userMsg, "");
+            const offlineActions = detectIntentActions(userMsg, "", messages);
             const isCasual = /^\s*(hi|hello|hey|yo|sup|what'?s?\s*up|good\s*(morning|afternoon|evening|night))\b/i.test(userMsg);
             const isThanks = /^\s*(thanks|thank\s*you|ty)\b/i.test(userMsg);
 

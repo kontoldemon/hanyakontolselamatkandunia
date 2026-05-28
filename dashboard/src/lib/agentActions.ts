@@ -134,12 +134,42 @@ const PAGE_KEYWORDS: Record<string, string> = {
   "config": "/settings",
 };
 
-export function detectIntentActions(userMessage: string, aiResponse: string): AgentAction[] {
+export function detectIntentActions(userMessage: string, aiResponse: string, history: AgentMessage[] = []): AgentAction[] {
   const combined = `${userMessage} ${aiResponse}`.toLowerCase();
   const userLower = userMessage.toLowerCase();
   const actions: AgentAction[] = [];
   const ipMatch = userMessage.match(IP_RE) ?? aiResponse.match(IP_RE);
   const ip = ipMatch?.[1] ?? "";
+
+  // ── Conversational Context Memory Resolution ──
+  let lastAction: AgentAction | null = null;
+  if (history && history.length > 0) {
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].actions && history[i].actions!.length > 0) {
+        lastAction = history[i].actions![0];
+        break;
+      }
+    }
+  }
+
+  if (lastAction?.type === "ui_command" && lastAction.params.target === "sidebar.toggle") {
+    const isSidebarCollapse = lastAction.params.value === "collapse";
+    if (isSidebarCollapse && ["open it back", "open it again", "expand it", "show it", "bring it back", "undo", "open it", "turn it on"].some((w) => userLower.includes(w))) {
+      actions.push({
+        type: "ui_command",
+        label: "Expand sidebar",
+        description: "Expand the navigation sidebar back",
+        params: { target: "sidebar.toggle", value: "expand" }
+      });
+    } else if (!isSidebarCollapse && ["close it", "hide it", "collapse it", "undo", "turn it off"].some((w) => userLower.includes(w))) {
+      actions.push({
+        type: "ui_command",
+        label: "Collapse sidebar",
+        description: "Minimize the navigation sidebar",
+        params: { target: "sidebar.toggle", value: "collapse" }
+      });
+    }
+  }
 
   // ── Block intent ──
   const blockWords = ["block", "ban", "firewall", "stop", "blacklist", "deny"];
