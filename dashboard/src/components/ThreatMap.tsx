@@ -181,9 +181,9 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     const landStroke = theme === "dark" ? "#2f3747" : "#ffffff";
     const ocean = theme === "dark" ? "#050505" : "#f8fafc";
 
-    const selectSource = (name: string) => {
+    const selectSource = useCallback((name: string) => {
         onRegionClick?.(selectedRegion === name ? null : name);
-    };
+    }, [onRegionClick, selectedRegion]);
 
     const renderSources = useMemo(() => {
         if (!underAttack) return null;
@@ -229,7 +229,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                 </g>
             );
         });
-    }, [underAttack, sources, selectedRegion, theme]);
+    }, [underAttack, sources, selectedRegion, theme, selectSource]);
 
     return (
         <>
