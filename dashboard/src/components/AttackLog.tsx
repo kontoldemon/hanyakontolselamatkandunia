@@ -154,8 +154,8 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
     }
 
     return (
-        <div className="h-full min-h-[520px] max-h-[720px] overflow-y-auto overflow-x-hidden terminal-scrollbar pr-1 scroll-smooth">
-            <div className="sticky top-0 z-20 mb-2 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur border border-slate-200 dark:border-white/10 rounded-lg p-2 flex items-center justify-between gap-2">
+        <div className="h-full flex flex-col min-h-0 overflow-hidden">
+            <div className="sticky top-0 z-20 mb-2 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur border border-slate-200 dark:border-white/10 rounded-lg p-2 flex items-center justify-between gap-2 shrink-0">
                 <div className="flex flex-1 items-center gap-2">
                     <span className="text-xs text-slate-500 whitespace-nowrap">{filteredLogs.length} IPs</span>
                     <div className="relative flex-1 max-w-[200px]">
@@ -165,8 +165,8 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                             placeholder="Search IP, HASSH..."
                             value={searchQuery}
                             onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                setVisibleCount(40);
+                                  setSearchQuery(e.target.value);
+                                  setVisibleCount(40);
                             }}
                             className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded py-1 pl-7 pr-6 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
                         />
@@ -190,12 +190,18 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                     className="w-24"
                 />
             </div>
-            <div className="space-y-2 pb-4">
-                {filteredLogs.length === 0 && (
+            
+            {/* Scrollable Log Area */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden terminal-scrollbar pr-1 scroll-smooth space-y-2 pb-4 min-h-0">
+                {threatLogs.length === 0 ? (
                     <div className="p-4 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-slate-500 dark:text-slate-400">
                         No live sensor events yet. Waiting for Socket.IO stream or backend admin API.
                     </div>
-                )}
+                ) : filteredLogs.length === 0 ? (
+                    <div className="p-4 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-slate-500 dark:text-slate-400 font-medium">
+                        No matching live events found for "{searchQuery}".
+                    </div>
+                ) : null}
                 {visibleLogs.map((log) => {
                     const target = selectedRegion ? (COUNTRY_MAP[selectedRegion] || selectedRegion) : null;
                     const isSelected = target && (log.country === target || log.ip === target);
