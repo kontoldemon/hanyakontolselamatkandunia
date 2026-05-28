@@ -208,16 +208,58 @@ GLOBAL CONTROLS (work from any page):
                 };
                 setMessages((prev) => [...prev, aiMessage]);
             } else {
-                const errMsg = data.error === "auth_failed"
-                    ? "Authentication failed. The configured CLOUDSENTINEL_ADMIN_TOKEN is invalid or mismatched. Please verify your admin token configuration."
-                    : "I'm having trouble reaching the backend right now. The sensor API might be restarting or temporarily unavailable. Try again in a moment.";
-                setMessages((prev) => [
-                    ...prev,
-                    { role: "ai", content: errMsg },
-                ]);
+                if (data.error === "auth_failed") {
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            role: "ai",
+                            content: "Authentication failed. The configured CLOUDSENTINEL_ADMIN_TOKEN is invalid or mismatched. Please verify your admin token configuration."
+                        }
+                    ]);
+                } else {
+                    const offlineActions = detectIntentActions(userMsg, "");
+                    if (offlineActions.length > 0) {
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                role: "ai",
+                                content: "I couldn't reach the backend LLM service, but I've detected your command locally! What action would you like to take?",
+                                actions: offlineActions,
+                                actionState: "pending"
+                            }
+                        ]);
+                    } else {
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                role: "ai",
+                                content: "I couldn't reach the backend LLM service, and the sensor API may be offline or restarting. Please try again in a moment."
+                            }
+                        ]);
+                    }
+                }
             }
         } catch {
-            setMessages((prev) => [...prev, { role: "ai", content: "Something went wrong with the connection. Please try again." }]);
+            const offlineActions = detectIntentActions(userMsg, "");
+            if (offlineActions.length > 0) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "ai",
+                        content: "I couldn't reach the backend LLM service, but I've detected your command locally! What action would you like to take?",
+                        actions: offlineActions,
+                        actionState: "pending"
+                    }
+                ]);
+            } else {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "ai",
+                        content: "I couldn't reach the backend LLM service. Please check your network connection and try again."
+                    }
+                ]);
+            }
         } finally {
             setIsLoading(false);
         }
