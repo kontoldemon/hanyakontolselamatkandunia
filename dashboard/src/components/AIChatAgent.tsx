@@ -21,7 +21,6 @@ export default function AIChatAgent() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const pathname = usePathname();
     const { executeAction, isExecuting } = useAgent();
     const lastAiMsgCountRef = useRef(1);
@@ -72,13 +71,7 @@ export default function AIChatAgent() {
         }
     }, [messages, isLoading, isOpen, isMinimized]);
 
-    // Auto-resize textarea
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = "auto";
-            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
-        }
-    }, [input]);
+
 
     // ─── Action Execution ────────────────────────────────────────────────
 
@@ -215,13 +208,16 @@ GLOBAL CONTROLS (work from any page):
                 };
                 setMessages((prev) => [...prev, aiMessage]);
             } else {
+                const errMsg = data.error === "auth_failed"
+                    ? "Authentication failed. The configured CLOUDSENTINEL_ADMIN_TOKEN is invalid or mismatched. Please verify your admin token configuration."
+                    : "I'm having trouble reaching the backend right now. The sensor API might be restarting or temporarily unavailable. Try again in a moment.";
                 setMessages((prev) => [
                     ...prev,
-                    { role: "ai", content: "Sorry, I couldn't reach the backend LLM service. The sensor API may be offline." },
+                    { role: "ai", content: errMsg },
                 ]);
             }
         } catch {
-            setMessages((prev) => [...prev, { role: "ai", content: "Network error occurred." }]);
+            setMessages((prev) => [...prev, { role: "ai", content: "Something went wrong with the connection. Please try again." }]);
         } finally {
             setIsLoading(false);
         }
@@ -420,27 +416,25 @@ GLOBAL CONTROLS (work from any page):
 
                     {/* Input Area */}
                     <div className="p-3 bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-white/5 shrink-0">
-                        <div className="relative flex items-end">
-                            <textarea
-                                ref={textareaRef}
+                        <div className="relative flex items-center">
+                            <input
+                                type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
+                                    if (e.key === "Enter") {
                                         e.preventDefault();
                                         handleSend();
                                     }
                                 }}
-                                placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent... (Shift+Enter for new line)"}
+                                placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
                                 disabled={isExecuting}
-                                rows={1}
-                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl pl-4 pr-10 py-2.5 text-[13px] outline-none focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-500 disabled:opacity-50 resize-none overflow-y-auto leading-relaxed"
-                                style={{ maxHeight: "120px" }}
+                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full pl-4 pr-10 py-2 text-[13px] outline-none focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-500 disabled:opacity-50"
                             />
                             <button
                                 onClick={handleSend}
                                 disabled={!input.trim() || isLoading || isExecuting}
-                                className={`absolute right-1 bottom-1 w-8 h-8 flex items-center justify-center rounded-full text-white transition-colors ${!input.trim() || isLoading || isExecuting ? "bg-slate-400 dark:bg-slate-600" : "bg-blue-600 hover:bg-blue-700"}`}
+                                className={`absolute right-1 w-8 h-8 flex items-center justify-center rounded-full text-white transition-colors ${!input.trim() || isLoading || isExecuting ? "bg-slate-400 dark:bg-slate-600" : "bg-blue-600 hover:bg-blue-700"}`}
                             >
                                 <Send size={12} />
                             </button>
