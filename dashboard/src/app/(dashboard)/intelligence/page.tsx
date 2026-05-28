@@ -117,9 +117,7 @@ export default function IntelligencePage() {
     const responseModeRows = [...responseModeTotals.entries()]
         .map(([mode, count]) => ({ mode, count }))
         .sort((a, b) => b.count - a.count);
-    const filteredResponseModeRows = responseModeFilter === "all"
-        ? responseModeRows
-        : responseModeRows.filter((item) => item.mode === responseModeFilter);
+
     const sourceCommands = commandMode === "most" ? topCommands : leastCommands;
     const commandQuery = commandSearch.trim().toLowerCase();
     const commandRows = sourceCommands

@@ -1,7 +1,7 @@
 "use client";
 
 import TerminalReplay from "@/components/TerminalReplay";
-import { Terminal, Clock, Activity, ArrowRight, ShieldAlert, ArrowLeft, Shield, Cpu, Search, Bot, Loader2, Ban } from "lucide-react";
+import { Terminal, Clock, ShieldAlert, ArrowLeft, Shield, Search, Loader2, Ban } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useCapturedSessions } from "@/lib/liveEvents";
