@@ -38,19 +38,45 @@ export default function AgentOverlay() {
       >
 
 
-        {/* Gradient edge glow with smooth corners */}
-        <div
-          className="absolute inset-1.5 md:inset-3 rounded-2xl md:rounded-3xl pointer-events-none"
-          style={{
-            border: "3px solid transparent",
-            background: `
-              linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box,
-              linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box
-            `,
-            animation: "agent-gradient-spin 4s linear infinite",
-            boxShadow: "0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.3)",
-          }}
-        />
+        {/* Gradient edge glow - Top Left Corner */}
+        <div className="absolute top-2 md:top-3 left-2 md:left-3 w-16 h-16 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 left-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
+               style={{
+                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
+                 animation: "agent-gradient-spin 4s linear infinite",
+                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
+               }} />
+        </div>
+
+        {/* Gradient edge glow - Top Right Corner */}
+        <div className="absolute top-2 md:top-3 right-2 md:right-3 w-16 h-16 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
+               style={{
+                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
+                 animation: "agent-gradient-spin 4s linear infinite",
+                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
+               }} />
+        </div>
+
+        {/* Gradient edge glow - Bottom Left Corner */}
+        <div className="absolute bottom-2 md:bottom-3 left-2 md:left-3 w-16 h-16 pointer-events-none overflow-hidden">
+          <div className="absolute bottom-0 left-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
+               style={{
+                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
+                 animation: "agent-gradient-spin 4s linear infinite",
+                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
+               }} />
+        </div>
+
+        {/* Gradient edge glow - Bottom Right Corner */}
+        <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3 w-16 h-16 pointer-events-none overflow-hidden">
+          <div className="absolute bottom-0 right-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
+               style={{
+                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
+                 animation: "agent-gradient-spin 4s linear infinite",
+                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
+               }} />
+        </div>
 
         {/* Floating status pill at top-center */}
         <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-auto">

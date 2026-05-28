@@ -382,9 +382,12 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                 count: 0,
                 topIp: log.ip,
                 dominantTtp: log.mitreId || log.type,
-                topHassh: log.hassh || "unknown",
+                topHassh: log.hassh || "N/A",
             };
             current.count += 1;
+            if (log.hassh && (!current.topHassh || current.topHassh === "N/A" || current.topHassh === "unknown")) {
+                current.topHassh = log.hassh;
+            }
             // Always center on the country if defined in COUNTRY_COORDS, otherwise use IP coordinates
             if (!meta && hasCoordinates) {
                 current.lat = log.latitude as number;
