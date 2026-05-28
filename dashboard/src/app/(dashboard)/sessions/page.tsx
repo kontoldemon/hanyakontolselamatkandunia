@@ -1,7 +1,7 @@
 "use client";
 
 import TerminalReplay from "@/components/TerminalReplay";
-import { Terminal, Clock, ShieldAlert, ArrowLeft, Shield, Search, Loader2, Ban } from "lucide-react";
+import { Terminal, Clock, ShieldAlert, ArrowLeft, Shield, Search, Ban } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useCapturedSessions } from "@/lib/liveEvents";
@@ -177,7 +177,7 @@ export default function SessionsPage() {
                 cardRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
             }
         }
-    }, [focusIp, filteredSessions]);
+    }, [focusIp, filteredSessions, selectedSessionId]);
 
     async function blockIp(ip: string) {
         const confirmed = window.confirm(`Block ${ip} at the sensor firewall?`);

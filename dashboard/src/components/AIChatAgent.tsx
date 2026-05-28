@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, X, Loader2, Minimize2, Maximize2, ShieldCheck, ShieldX, Zap, ArrowRight } from "lucide-react";
+import { Bot, Send, X, Loader2, Minimize2, Maximize2, ShieldCheck, ShieldX, Zap } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCapturedSessions, useDashboardStats } from "@/lib/liveEvents";
 import { useAgent } from "@/lib/AgentContext";
-import type { AgentMessage, AgentAction } from "@/lib/agentActions";
+import type { AgentMessage } from "@/lib/agentActions";
 import { parseActionsFromResponse, detectIntentActions } from "@/lib/agentActions";
 
 export default function AIChatAgent() {

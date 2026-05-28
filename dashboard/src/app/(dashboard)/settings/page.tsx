@@ -1,7 +1,7 @@
 "use client";
 
-import { Shield, Zap, Fingerprint, Database, Save, Activity, ChevronDown, Check, Power, Maximize2, Minimize2 } from "lucide-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { Shield, Zap, Fingerprint, Database, Save, Activity, Check, Power, Maximize2, Minimize2 } from "lucide-react";
+import { useState, useCallback } from "react";
 import { useSensorOperations, useSocketTelemetry } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 

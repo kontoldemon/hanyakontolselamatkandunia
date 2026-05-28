@@ -11,14 +11,12 @@ export default function IntelligencePage() {
     const [commandMode, setCommandMode] = useState<"most" | "least">("most");
     const [commandSearch, setCommandSearch] = useState("");
     const [commandPage, setCommandPage] = useState(1);
-    const [responseModeFilter, setResponseModeFilter] = useState("all");
     const PAGE_SIZE = 10;
 
     // ── Agent command handlers ──
     useAgentCommand("intel.sort", useCallback((v: string) => { setCommandMode(v as "most" | "least"); setCommandPage(1); }, []));
     useAgentCommand("intel.search", useCallback((v: string) => { setCommandSearch(v); setCommandPage(1); }, []));
     useAgentCommand("intel.page", useCallback((v: string) => setCommandPage(Math.max(1, parseInt(v) || 1)), []));
-    useAgentCommand("intel.response_filter", useCallback((v: string) => setResponseModeFilter(v), []));
 
     const operations = useSensorOperations();
     const liveLogs = useLiveThreatLogs();
@@ -106,17 +104,7 @@ export default function IntelligencePage() {
         .map(([command, count]) => ({ command, count }))
         .sort((a, b) => (a.count - b.count) || a.command.localeCompare(b.command));
     const uniqueCommandCount = commandCounts.size;
-    const responseModeTotals = new Map<string, number>();
-    for (const log of liveLogs) {
-        if (log.role !== "honeypot") {
-            continue;
-        }
-        const mode = (log.responseMode || "deterministic").trim().toLowerCase() || "deterministic";
-        responseModeTotals.set(mode, (responseModeTotals.get(mode) ?? 0) + 1);
-    }
-    const responseModeRows = [...responseModeTotals.entries()]
-        .map(([mode, count]) => ({ mode, count }))
-        .sort((a, b) => b.count - a.count);
+
 
     const sourceCommands = commandMode === "most" ? topCommands : leastCommands;
     const commandQuery = commandSearch.trim().toLowerCase();
