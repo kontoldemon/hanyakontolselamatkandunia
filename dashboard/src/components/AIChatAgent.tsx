@@ -63,7 +63,7 @@ export default function AIChatAgent() {
                 ...prev,
                 {
                     role: "ai",
-                    content: `✓ Done — ${result}`,
+                    content: `✓ Done - ${result}`,
                 },
             ]);
         },
@@ -177,10 +177,21 @@ GLOBAL CONTROLS (work from any page):
     }
 
     const gradientStyle = {
-        background: "linear-gradient(120deg, #2563eb, #7c3aed, #db2777, #2563eb)",
-        backgroundSize: "300% 300%",
-        animation: "ai-gradient-anim 12s ease infinite",
+        background: "linear-gradient(var(--bg-angle, 0deg), #2563eb 0%, #7c3aed 33%, #db2777 66%, #2563eb 100%)",
+        backgroundSize: "200% 200%",
+        animation: "ai-gradient-spin 8s linear infinite",
     };
+
+    function formatAiText(text: string) {
+        let clean = text.replace(/—/g, "-");
+        const parts = clean.split(/(\*\*.*?\*\*)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={i} className="font-bold">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
+    }
 
     // ─── Closed State (FAB button) ───────────────────────────────────────
 
@@ -188,10 +199,14 @@ GLOBAL CONTROLS (work from any page):
         return (
             <>
                 <style>{`
-                    @keyframes ai-gradient-anim {
-                        0% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
-                        100% { background-position: 0% 50%; }
+                    @property --bg-angle {
+                        syntax: "<angle>";
+                        initial-value: 0deg;
+                        inherits: false;
+                    }
+                    @keyframes ai-gradient-spin {
+                        0% { --bg-angle: 0deg; }
+                        100% { --bg-angle: 360deg; }
                     }
                 `}</style>
                 <button
@@ -213,10 +228,14 @@ GLOBAL CONTROLS (work from any page):
             className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"}`}
         >
             <style>{`
-                @keyframes ai-gradient-anim {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
+                @property --bg-angle {
+                    syntax: "<angle>";
+                    initial-value: 0deg;
+                    inherits: false;
+                }
+                @keyframes ai-gradient-spin {
+                    0% { --bg-angle: 0deg; }
+                    100% { --bg-angle: 360deg; }
                 }
             `}</style>
 
@@ -273,7 +292,7 @@ GLOBAL CONTROLS (work from any page):
                                                 : "bg-white dark:bg-[#151515] border border-slate-200 dark:border-white/5 text-slate-800 dark:text-slate-200 rounded-bl-none"
                                         }`}
                                     >
-                                        {msg.content}
+                                        {formatAiText(msg.content)}
                                     </div>
 
                                     {/* Action Cards */}

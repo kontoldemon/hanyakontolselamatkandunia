@@ -16,7 +16,14 @@ export default function Dashboard() {
   const liveConnectionCount = stats.activeSessions;
 
   const combinedLogs = useMemo(() => {
-    const combined = [...threatLogs];
+    const activeIps = new Set(sessions.filter(s => s.status === "Active").map(s => s.ip));
+    
+    // Only keep threat logs for currently active IPs, or IPs that are so new they aren't in the sessions list at all yet
+    const filteredThreatLogs = threatLogs.filter(
+      (log) => activeIps.has(log.ip) || !sessions.some((s) => s.ip === log.ip)
+    );
+    
+    const combined = [...filteredThreatLogs];
     const existingIps = new Set(combined.map((log) => log.ip));
 
     for (const s of sessions) {
