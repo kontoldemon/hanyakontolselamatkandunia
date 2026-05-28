@@ -48,6 +48,25 @@ const COUNTRY_COORDS: Record<string, { name: string; lat: number; lng: number; c
     TH: { name: "Thailand", lat: 15.87, lng: 100.9925, color: "#84cc16" },
     US: { name: "United States of America", lat: 37.0902, lng: -95.7129, color: "#3b82f6" },
     VN: { name: "Vietnam", lat: 14.0583, lng: 108.2772, color: "#ec4899" },
+    GB: { name: "United Kingdom", lat: 55.3781, lng: -3.436, color: "#6366f1" },
+    FR: { name: "France", lat: 46.2276, lng: 2.2137, color: "#ec4899" },
+    JP: { name: "Japan", lat: 36.2048, lng: 138.2529, color: "#fb7185" },
+    KR: { name: "South Korea", lat: 35.9078, lng: 127.7669, color: "#34d399" },
+    AU: { name: "Australia", lat: -25.2744, lng: 133.7751, color: "#fcd34d" },
+    CA: { name: "Canada", lat: 56.1304, lng: -106.3468, color: "#f87171" },
+    IT: { name: "Italy", lat: 41.8719, lng: 12.5674, color: "#10b981" },
+    ES: { name: "Spain", lat: 40.4637, lng: -3.7492, color: "#f59e0b" },
+    NL: { name: "Netherlands", lat: 52.1326, lng: 5.2913, color: "#fb923c" },
+    SE: { name: "Sweden", lat: 60.1282, lng: 18.6435, color: "#38bdf8" },
+    CH: { name: "Switzerland", lat: 46.8182, lng: 8.2275, color: "#dc2626" },
+    MX: { name: "Mexico", lat: 23.6345, lng: -102.5528, color: "#4ade80" },
+    AR: { name: "Argentina", lat: -38.4161, lng: -63.6167, color: "#60a5fa" },
+    ZA: { name: "South Africa", lat: -30.5595, lng: 22.9375, color: "#a78bfa" },
+    EG: { name: "Egypt", lat: 26.8206, lng: 30.8025, color: "#eab308" },
+    NG: { name: "Nigeria", lat: 9.082, lng: 8.6753, color: "#22c55e" },
+    UA: { name: "Ukraine", lat: 48.3794, lng: 31.1656, color: "#fbbf24" },
+    TR: { name: "Turkey", lat: 38.9637, lng: 35.2433, color: "#ef4444" },
+    PL: { name: "Poland", lat: 51.9194, lng: 19.1451, color: "#ff8787" },
 };
 
 type CountryFeature = {
@@ -154,7 +173,8 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                 topHassh: log.hassh || "unknown",
             };
             current.count += 1;
-            if (hasCoordinates) {
+            // Always center on the country if defined in COUNTRY_COORDS, otherwise use IP coordinates
+            if (!meta && hasCoordinates) {
                 current.lat = log.latitude as number;
                 current.lng = log.longitude as number;
             }
@@ -329,17 +349,19 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     )}
                 </div>
                 {!isExpanded && (
-                    <div className="relative border-t border-slate-300 dark:border-white/10 bg-white dark:bg-[#050505] p-3 flex items-center gap-3 overflow-hidden text-[11px] shrink-0 z-[999] w-full">
+                    <div className="relative border-t border-slate-300 dark:border-white/10 bg-white dark:bg-[#050505] overflow-hidden text-[11px] shrink-0 z-[999] w-full flex items-center h-10">
                         <style>{`
                             @keyframes marquee {
                                 0% { transform: translateX(0); }
                                 100% { transform: translateX(-50%); }
                             }
                         `}</style>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest shrink-0 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Intel Feed
-                        </span>
-                        <div className="flex items-center gap-4 whitespace-nowrap opacity-80 animate-[marquee_20s_linear_infinite] hover:[animation-play-state:paused]">
+                        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center pl-3 pr-8 bg-gradient-to-r from-white via-white to-transparent dark:from-[#050505] dark:via-[#050505] dark:to-transparent">
+                            <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest shrink-0 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Intel Feed
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4 whitespace-nowrap opacity-80 animate-[marquee_20s_linear_infinite] hover:[animation-play-state:paused] pl-[140px]">
                             {threatLogs.length === 0 && <span className="text-slate-500">Awaiting initial sensor data stream...</span>}
                             {Array.from(new Map(threatLogs.map(log => [log.ip, log])).values()).slice(0, 10).map((log, i) => (
                                 <span key={i} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
