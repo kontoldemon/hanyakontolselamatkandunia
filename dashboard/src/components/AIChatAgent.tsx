@@ -219,6 +219,9 @@ GLOBAL CONTROLS (work from any page):
                     ]);
                 } else {
                     const offlineActions = detectIntentActions(userMsg, "");
+                    const isCasual = /^\s*(hi|hello|hey|yo|sup|what'?s?\s*up|good\s*(morning|afternoon|evening|night))\b/i.test(userMsg);
+                    const isThanks = /^\s*(thanks|thank\s*you|ty)\b/i.test(userMsg);
+
                     if (offlineActions.length > 0) {
                         setMessages((prev) => [
                             ...prev,
@@ -229,12 +232,28 @@ GLOBAL CONTROLS (work from any page):
                                 actionState: "pending"
                             }
                         ]);
+                    } else if (isCasual) {
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                role: "ai",
+                                content: "Hi there! I'm operating in offline mode right now, but I'm ready to assist. You can ask me to do things like 'go to sessions' or 'switch to dark mode'!"
+                            }
+                        ]);
+                    } else if (isThanks) {
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                role: "ai",
+                                content: "You're very welcome! Let me know if you want me to navigate or perform any other dashboard actions."
+                            }
+                        ]);
                     } else {
                         setMessages((prev) => [
                             ...prev,
                             {
                                 role: "ai",
-                                content: "I am currently offline or cannot reach the LLM provider. However, you can still control the dashboard locally! Try commanding me to 'go to sessions', 'switch to dark mode', or 'block [IP]'."
+                                content: "I couldn't reach the backend LLM service. (Offline Mode: you can still type commands like 'go to sessions' or 'block [IP]')"
                             }
                         ]);
                     }
@@ -242,6 +261,9 @@ GLOBAL CONTROLS (work from any page):
             }
         } catch {
             const offlineActions = detectIntentActions(userMsg, "");
+            const isCasual = /^\s*(hi|hello|hey|yo|sup|what'?s?\s*up|good\s*(morning|afternoon|evening|night))\b/i.test(userMsg);
+            const isThanks = /^\s*(thanks|thank\s*you|ty)\b/i.test(userMsg);
+
             if (offlineActions.length > 0) {
                 setMessages((prev) => [
                     ...prev,
@@ -252,12 +274,28 @@ GLOBAL CONTROLS (work from any page):
                         actionState: "pending"
                     }
                 ]);
+            } else if (isCasual) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "ai",
+                        content: "Hi there! I'm operating in offline mode right now, but I'm ready to assist. You can ask me to do things like 'go to sessions' or 'switch to dark mode'!"
+                    }
+                ]);
+            } else if (isThanks) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "ai",
+                        content: "You're very welcome! Let me know if you want me to navigate or perform any other dashboard actions."
+                    }
+                ]);
             } else {
                 setMessages((prev) => [
                     ...prev,
                     {
                         role: "ai",
-                        content: "I couldn't reach the backend LLM service. Please check your network connection and try again."
+                        content: "I couldn't reach the backend LLM service. (Offline Mode: you can still type commands like 'go to sessions' or 'block [IP]')"
                     }
                 ]);
             }
