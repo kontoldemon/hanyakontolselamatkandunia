@@ -11,10 +11,15 @@ export default function AgentOverlay() {
   return (
     <>
       <style>{`
-        @keyframes agent-border-glow {
-          0% { opacity: 0.7; filter: hue-rotate(0deg); }
-          50% { opacity: 1; filter: hue-rotate(15deg); }
-          100% { opacity: 0.7; filter: hue-rotate(0deg); }
+        @keyframes agent-gradient-flow-x {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes agent-gradient-flow-y {
+          0% { background-position: 50% 0%; }
+          50% { background-position: 50% 100%; }
+          100% { background-position: 50% 0%; }
         }
         @keyframes agent-fade-in {
           0% { opacity: 0; }
@@ -41,7 +46,7 @@ export default function AgentOverlay() {
           style={{
             background: "linear-gradient(90deg, #3b65ca, #cf3a7a, #f45051, #cf3a7a, #3b65ca)",
             backgroundSize: "300% 100%",
-            animation: "agent-border-glow 3s ease infinite",
+            animation: "agent-gradient-flow-x 4s linear infinite",
             boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
           }}
         />
@@ -51,7 +56,7 @@ export default function AgentOverlay() {
           style={{
             background: "linear-gradient(90deg, #f45051, #cf3a7a, #3b65ca, #cf3a7a, #f45051)",
             backgroundSize: "300% 100%",
-            animation: "agent-border-glow 3s ease infinite",
+            animation: "agent-gradient-flow-x 4s linear infinite reverse",
             boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
           }}
         />
@@ -61,7 +66,7 @@ export default function AgentOverlay() {
           style={{
             background: "linear-gradient(180deg, #3b65ca, #cf3a7a, #f45051, #cf3a7a, #3b65ca)",
             backgroundSize: "100% 300%",
-            animation: "agent-border-glow 3s ease infinite",
+            animation: "agent-gradient-flow-y 4s linear infinite",
             boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
           }}
         />
@@ -71,7 +76,7 @@ export default function AgentOverlay() {
           style={{
             background: "linear-gradient(180deg, #f45051, #cf3a7a, #3b65ca, #cf3a7a, #f45051)",
             backgroundSize: "100% 300%",
-            animation: "agent-border-glow 3s ease infinite",
+            animation: "agent-gradient-flow-y 4s linear infinite reverse",
             boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
           }}
         />
@@ -81,8 +86,9 @@ export default function AgentOverlay() {
           <div
             className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-white/20 text-white text-sm font-medium shadow-2xl"
             style={{
-              background: "linear-gradient(135deg, rgba(59,101,202,0.9), rgba(207,58,122,0.9), rgba(244,80,81,0.9))",
-              animation: "agent-pulse-ring 2s ease infinite",
+              background: "linear-gradient(135deg, rgba(59,101,202,0.9), rgba(207,58,122,0.9), rgba(244,80,81,0.9), rgba(59,101,202,0.9))",
+              backgroundSize: "300% 300%",
+              animation: "agent-gradient-flow-x 4s linear infinite, agent-pulse-ring 2s ease infinite",
               backdropFilter: "blur(16px)",
             }}
           >
