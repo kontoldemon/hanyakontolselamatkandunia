@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Bot, Send, X, Loader2, Minimize2, Maximize2, ShieldCheck, ShieldX, Zap } from "lucide-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCapturedSessions, useDashboardStats } from "@/lib/liveEvents";
 import { useAgent } from "@/lib/AgentContext";
 import type { AgentMessage } from "@/lib/agentActions";
@@ -23,7 +23,6 @@ export default function AIChatAgent() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const pathname = usePathname();
-    const searchParams = useSearchParams();
     const { executeAction, isExecuting } = useAgent();
     const lastAiMsgCountRef = useRef(1);
 
@@ -35,8 +34,12 @@ export default function AIChatAgent() {
     // Build a brief list of top IPs for the AI to reference
     const topIps = sessions.slice(0, 8).map((s) => `${s.ip} (${s.country}, ${s.status})`).join(", ");
 
-    // Detect focused session IP from URL or the currently open session detail
-    const focusIp = searchParams.get("focusIp") ?? "";
+    // Detect focused session IP from URL (avoids useSearchParams Suspense requirement)
+    const [focusIp, setFocusIp] = useState("");
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        setFocusIp(params.get("focusIp")?.trim() ?? "");
+    }, [pathname]);
     const focusedSession = focusIp ? sessions.find((s) => s.ip === focusIp) : null;
 
     // Build contextual info about the focused session
