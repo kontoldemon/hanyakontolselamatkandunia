@@ -11,15 +11,9 @@ export default function AgentOverlay() {
   return (
     <>
       <style>{`
-        @keyframes agent-gradient-flow-x {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        @keyframes agent-gradient-flow-y {
-          0% { background-position: 50% 0%; }
-          50% { background-position: 50% 100%; }
-          100% { background-position: 50% 0%; }
+        @keyframes agent-gradient-spin {
+          0% { --bg-angle: 0deg; }
+          100% { --bg-angle: 360deg; }
         }
         @keyframes agent-fade-in {
           0% { opacity: 0; }
@@ -29,6 +23,11 @@ export default function AgentOverlay() {
           0% { box-shadow: 0 0 0 0 rgba(59,101,202,0.5); }
           50% { box-shadow: 0 0 0 12px rgba(207,58,122,0); }
           100% { box-shadow: 0 0 0 0 rgba(244,80,81,0); }
+        }
+        @property --bg-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
         }
       `}</style>
 
@@ -40,44 +39,17 @@ export default function AgentOverlay() {
         {/* Dimmed backdrop */}
         <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px]" />
 
-        {/* Gradient edge glow — top */}
+        {/* Gradient edge glow with smooth corners */}
         <div
-          className="absolute top-0 left-0 right-0 h-2"
+          className="absolute inset-1.5 md:inset-3 rounded-2xl md:rounded-3xl pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, #3b65ca, #cf3a7a, #f45051, #cf3a7a, #3b65ca)",
-            backgroundSize: "300% 100%",
-            animation: "agent-gradient-flow-x 4s linear infinite",
-            boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
-          }}
-        />
-        {/* Gradient edge glow — bottom */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-2"
-          style={{
-            background: "linear-gradient(90deg, #f45051, #cf3a7a, #3b65ca, #cf3a7a, #f45051)",
-            backgroundSize: "300% 100%",
-            animation: "agent-gradient-flow-x 4s linear infinite reverse",
-            boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
-          }}
-        />
-        {/* Gradient edge glow — left */}
-        <div
-          className="absolute top-0 bottom-0 left-0 w-2"
-          style={{
-            background: "linear-gradient(180deg, #3b65ca, #cf3a7a, #f45051, #cf3a7a, #3b65ca)",
-            backgroundSize: "100% 300%",
-            animation: "agent-gradient-flow-y 4s linear infinite",
-            boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
-          }}
-        />
-        {/* Gradient edge glow — right */}
-        <div
-          className="absolute top-0 bottom-0 right-0 w-2"
-          style={{
-            background: "linear-gradient(180deg, #f45051, #cf3a7a, #3b65ca, #cf3a7a, #f45051)",
-            backgroundSize: "100% 300%",
-            animation: "agent-gradient-flow-y 4s linear infinite reverse",
-            boxShadow: "0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2)",
+            border: "4px solid transparent",
+            background: `
+              linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box,
+              linear-gradient(var(--bg-angle, 0deg), #3b65ca, #cf3a7a, #f45051, #cf3a7a, #3b65ca) border-box
+            `,
+            animation: "agent-gradient-spin 4s linear infinite",
+            boxShadow: "inset 0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2), 0 0 40px 10px rgba(59,101,202,0.1)",
           }}
         />
 
@@ -86,9 +58,8 @@ export default function AgentOverlay() {
           <div
             className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-white/20 text-white text-sm font-medium shadow-2xl"
             style={{
-              background: "linear-gradient(135deg, rgba(59,101,202,0.9), rgba(207,58,122,0.9), rgba(244,80,81,0.9), rgba(59,101,202,0.9))",
-              backgroundSize: "300% 300%",
-              animation: "agent-gradient-flow-x 4s linear infinite, agent-pulse-ring 2s ease infinite",
+              background: "linear-gradient(var(--bg-angle, 135deg), rgba(59,101,202,0.9), rgba(207,58,122,0.9), rgba(244,80,81,0.9), rgba(59,101,202,0.9))",
+              animation: "agent-gradient-spin 4s linear infinite, agent-pulse-ring 2s ease infinite",
               backdropFilter: "blur(16px)",
             }}
           >

@@ -158,9 +158,12 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           }
 
           case "export_data": {
-            router.push("/");
-            await wait(800);
-            result = "Navigated to War Room. Click the 'Export' button in the top-right corner to download the sensor JSON payload.";
+            if (pathnameRef.current !== "/") {
+              router.push("/");
+              await wait(1500);
+            }
+            window.dispatchEvent(new Event("agent:export"));
+            result = "Successfully downloaded the sensor JSON payload.";
             break;
           }
 

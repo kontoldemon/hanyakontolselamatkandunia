@@ -110,6 +110,12 @@ export default function Dashboard() {
     URL.revokeObjectURL(url);
   }
 
+  useEffect(() => {
+    const handleExport = () => downloadSensorJson();
+    window.addEventListener("agent:export", handleExport);
+    return () => window.removeEventListener("agent:export", handleExport);
+  }, [operations]);
+
   return (
     <div className="h-full flex flex-col gap-4">
       {/* Header & Compact Stats */}

@@ -178,8 +178,7 @@ GLOBAL CONTROLS (work from any page):
 
     const gradientStyle = {
         background: "linear-gradient(var(--bg-angle, 0deg), #2563eb 0%, #7c3aed 33%, #db2777 66%, #2563eb 100%)",
-        backgroundSize: "200% 200%",
-        animation: "ai-gradient-spin 8s linear infinite",
+        animation: "ai-gradient-spin 20s linear infinite",
     };
 
     function formatAiText(text: string) {
@@ -321,8 +320,7 @@ GLOBAL CONTROLS (work from any page):
                                                             <button
                                                                 onClick={() => handleActionApprove(i, ai)}
                                                                 disabled={isExecuting}
-                                                                style={gradientStyle}
-                                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
                                                             >
                                                                 <ShieldCheck size={12} />
                                                                 Allow

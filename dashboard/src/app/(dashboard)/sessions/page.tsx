@@ -1,7 +1,7 @@
 "use client";
 
 import TerminalReplay from "@/components/TerminalReplay";
-import { Terminal, Clock, ShieldAlert, ArrowLeft, Shield, Search, Ban } from "lucide-react";
+import { Terminal, Clock, ShieldAlert, ArrowLeft, Shield, Search, Ban, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useCapturedSessions } from "@/lib/liveEvents";
@@ -169,15 +169,14 @@ export default function SessionsPage() {
         }
         const target = filteredSessions.find((session) => session.ip === focusIp);
         if (target) {
-            if (selectedSessionId !== target.id) {
-                setSelectedSessionId(target.id);
-                setLastSelectedIp(target.ip);
-            }
+            setSelectedSessionId(target.id);
+            setLastSelectedIp(target.ip);
+            setFocusIp(""); // clear to allow normal clicking after initial focus
             if (cardRefs.current[target.id]) {
                 cardRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
             }
         }
-    }, [focusIp, filteredSessions, selectedSessionId]);
+    }, [focusIp, filteredSessions]);
 
     async function blockIp(ip: string) {
         const confirmed = window.confirm(`Block ${ip} at the sensor firewall?`);
@@ -219,15 +218,23 @@ export default function SessionsPage() {
                             className="w-28"
                         />
                     </div>
-                    <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <div className="relative flex items-center">
+                        <Search size={14} className="absolute left-3 text-slate-400" />
                         <input 
                             type="text" 
                             placeholder="Search IP, HASSH..." 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full transition-all shadow-sm"
+                            className="bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded-lg pl-9 pr-8 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full transition-all shadow-sm"
                         />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
                     </div>
                 </div>
 
