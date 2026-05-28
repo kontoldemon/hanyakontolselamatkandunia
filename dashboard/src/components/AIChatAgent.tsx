@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Bot, Send, X, Loader2, Minimize2, Maximize2, ShieldCheck, ShieldX, Zap } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCapturedSessions, useDashboardStats } from "@/lib/liveEvents";
 import { useAgent } from "@/lib/AgentContext";
 import type { AgentMessage } from "@/lib/agentActions";
@@ -11,6 +11,7 @@ import { parseActionsFromResponse, detectIntentActions } from "@/lib/agentAction
 export default function AIChatAgent() {
     const [isOpen, setIsOpen] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
+    const [hasUnread, setHasUnread] = useState(false);
     const [messages, setMessages] = useState<AgentMessage[]>([
         {
             role: "ai",
@@ -20,8 +21,11 @@ export default function AIChatAgent() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { executeAction, isExecuting } = useAgent();
+    const lastAiMsgCountRef = useRef(1);
 
     // Grab some context to send to the backend
     const stats = useDashboardStats();
@@ -31,11 +35,47 @@ export default function AIChatAgent() {
     // Build a brief list of top IPs for the AI to reference
     const topIps = sessions.slice(0, 8).map((s) => `${s.ip} (${s.country}, ${s.status})`).join(", ");
 
+    // Detect focused session IP from URL or the currently open session detail
+    const focusIp = searchParams.get("focusIp") ?? "";
+    const focusedSession = focusIp ? sessions.find((s) => s.ip === focusIp) : null;
+
+    // Build contextual info about the focused session
+    const focusedSessionContext = focusedSession
+        ? `\nCurrently Viewing Attacker Detail: IP=${focusedSession.ip}, Country=${focusedSession.countryName ?? focusedSession.country}, Client=${focusedSession.client}, HASSH=${focusedSession.fingerprint || "unknown"}, Status=${focusedSession.status}, ISP=${focusedSession.isp ?? "unknown"}, Events=${focusedSession.input?.length ?? 0}, Risk=${focusedSession.riskScore ?? 0}, SOAR=${focusedSession.soarAction ?? "none"}, MITRE=${(focusedSession.mitreTechniques ?? []).join(",") || "none"}`
+        : "";
+
+    // Track unread AI responses
+    useEffect(() => {
+        const aiMsgCount = messages.filter((m) => m.role === "ai").length;
+        if (aiMsgCount > lastAiMsgCountRef.current) {
+            // New AI message arrived
+            if (!isOpen || isMinimized) {
+                setHasUnread(true);
+            }
+        }
+        lastAiMsgCountRef.current = aiMsgCount;
+    }, [messages, isOpen, isMinimized]);
+
+    // Clear unread when chat is opened/unminimized
+    useEffect(() => {
+        if (isOpen && !isMinimized) {
+            setHasUnread(false);
+        }
+    }, [isOpen, isMinimized]);
+
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, isLoading, isOpen, isMinimized]);
+
+    // Auto-resize textarea
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
+        }
+    }, [input]);
 
     // ─── Action Execution ────────────────────────────────────────────────
 
@@ -100,15 +140,21 @@ Total Active Connections: ${stats.activeSessions}
 Total Captured IPs: ${sessions.length} (Live: ${activeIpCount})
 Total Attacks: ${stats.totalAttacks}
 MTTB: ${stats.mttb}
-Top IPs: ${topIps}
+Top IPs: ${topIps}${focusedSessionContext}
 
 SYSTEM INSTRUCTIONS:
 You are CloudSentinel AI, an autonomous cybersecurity agent that FULLY CONTROLS the dashboard.
 You can navigate pages, click buttons, change dropdowns, set filters, search, and block IPs.
 
+PERSONALITY RULES:
+1. For casual greetings (hi, hello, hey, what's up, etc), respond warmly and briefly. Ask how you can help with the honeypot monitoring. Do NOT suggest any actions or include any ACTION markers for greetings.
+2. For questions about specific IPs, attackers, or threats, always reference the focused session context above if available.
+3. Be conversational and human. Avoid robotic or overly technical responses unless the user asks for technical detail.
+4. Never generate ACTION markers unless the user is clearly requesting an action (navigate, block, export, change settings, etc).
+
 RESPONSE RULES:
 1. Provide a concise technical explanation first (2-3 sentences max).
-2. Append action markers for ANY actionable request. You may include MULTIPLE markers.
+2. Append action markers ONLY for actionable requests. You may include MULTIPLE markers.
 3. Before each marker, write a brief sentence like "I can do that for you" or "Let me change that".
 4. Do NOT explain markers. Use them naturally. Be direct. No filler.
 
@@ -153,8 +199,10 @@ GLOBAL CONTROLS (work from any page):
                 const { cleanText, actions: parsedActions } = parseActionsFromResponse(data.response);
 
                 // If no markers found, try fallback intent detection
+                // But skip fallback for casual/greeting messages
+                const isCasual = /^\s*(hi|hello|hey|yo|sup|what'?s?\s*up|good\s*(morning|afternoon|evening|night)|thanks|thank\s*you|ok|okay|cool|nice|great)\b/i.test(userMsg);
                 const finalActions =
-                    parsedActions.length > 0 ? parsedActions : detectIntentActions(userMsg, data.response);
+                    parsedActions.length > 0 ? parsedActions : (isCasual ? [] : detectIntentActions(userMsg, data.response));
 
                 const aiMessage: AgentMessage = {
                     role: "ai",
@@ -211,7 +259,9 @@ GLOBAL CONTROLS (work from any page):
                     className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] w-14 h-14 hover:opacity-90 rounded-full shadow-2xl flex items-center justify-center text-white transition-transform hover:scale-105 border-2 border-white/20"
                 >
                     <Bot size={24} />
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#0a0a0a] rounded-full animate-pulse"></span>
+                    {hasUnread && (
+                        <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#0a0a0a] rounded-full animate-pulse"></span>
+                    )}
                 </button>
             </>
         );
@@ -367,20 +417,27 @@ GLOBAL CONTROLS (work from any page):
 
                     {/* Input Area */}
                     <div className="p-3 bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-white/5 shrink-0">
-                        <div className="relative flex items-center">
-                            <input
-                                type="text"
+                        <div className="relative flex items-end">
+                            <textarea
+                                ref={textareaRef}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                                placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
+                                placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent... (Shift+Enter for new line)"}
                                 disabled={isExecuting}
-                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full pl-4 pr-10 py-2 text-[13px] outline-none focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-500 disabled:opacity-50"
+                                rows={1}
+                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl pl-4 pr-10 py-2.5 text-[13px] outline-none focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-500 disabled:opacity-50 resize-none overflow-y-auto leading-relaxed"
+                                style={{ maxHeight: "120px" }}
                             />
                             <button
                                 onClick={handleSend}
                                 disabled={!input.trim() || isLoading || isExecuting}
-                                className={`absolute right-1 w-8 h-8 flex items-center justify-center rounded-full text-white transition-colors ${!input.trim() || isLoading || isExecuting ? "bg-slate-400 dark:bg-slate-600" : "bg-blue-600 hover:bg-blue-700"}`}
+                                className={`absolute right-1 bottom-1 w-8 h-8 flex items-center justify-center rounded-full text-white transition-colors ${!input.trim() || isLoading || isExecuting ? "bg-slate-400 dark:bg-slate-600" : "bg-blue-600 hover:bg-blue-700"}`}
                             >
                                 <Send size={12} />
                             </button>

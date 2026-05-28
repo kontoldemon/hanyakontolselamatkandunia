@@ -8,6 +8,8 @@ export default function AgentOverlay() {
 
   if (!isExecuting) return null;
 
+  const borderGradient = `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`;
+
   return (
     <>
       <style>{`
@@ -20,9 +22,9 @@ export default function AgentOverlay() {
           100% { opacity: 1; }
         }
         @keyframes agent-pulse-ring {
-          0% { box-shadow: 0 0 0 0 rgba(59,101,202,0.5); }
-          50% { box-shadow: 0 0 0 12px rgba(207,58,122,0); }
-          100% { box-shadow: 0 0 0 0 rgba(244,80,81,0); }
+          0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+          50% { box-shadow: 0 0 0 12px rgba(139,92,246,0); }
+          100% { box-shadow: 0 0 0 0 rgba(236,72,153,0); }
         }
         @property --bg-angle {
           syntax: "<angle>";
@@ -31,59 +33,58 @@ export default function AgentOverlay() {
         }
       `}</style>
 
-      {/* Full-screen overlay container — pointer-events-auto so it blocks user clicks from disturbing the agent's programmatic flow */}
       <div
         className="fixed inset-0 z-[95] pointer-events-auto"
         style={{ animation: "agent-fade-in 0.5s ease-out forwards" }}
       >
 
-
-        {/* Gradient edge glow - Top Left Corner */}
-        <div className="absolute top-2 md:top-3 left-2 md:left-3 w-16 h-16 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
-               style={{
-                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
-                 animation: "agent-gradient-spin 4s linear infinite",
-                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
-               }} />
-        </div>
-
-        {/* Gradient edge glow - Top Right Corner */}
-        <div className="absolute top-2 md:top-3 right-2 md:right-3 w-16 h-16 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
-               style={{
-                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
-                 animation: "agent-gradient-spin 4s linear infinite",
-                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
-               }} />
-        </div>
-
-        {/* Gradient edge glow - Bottom Left Corner */}
-        <div className="absolute bottom-2 md:bottom-3 left-2 md:left-3 w-16 h-16 pointer-events-none overflow-hidden">
-          <div className="absolute bottom-0 left-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
-               style={{
-                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
-                 animation: "agent-gradient-spin 4s linear infinite",
-                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
-               }} />
-        </div>
-
-        {/* Gradient edge glow - Bottom Right Corner */}
-        <div className="absolute bottom-2 md:bottom-3 right-2 md:right-3 w-16 h-16 pointer-events-none overflow-hidden">
-          <div className="absolute bottom-0 right-0 w-32 h-32 rounded-[1.5rem] border-[3px] border-transparent"
-               style={{
-                 background: `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box, linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box`,
-                 animation: "agent-gradient-spin 4s linear infinite",
-                 boxShadow: "0 0 20px rgba(59, 130, 246, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.4)",
-               }} />
-        </div>
+        {/* Top edge */}
+        <div
+          className="absolute top-2 md:top-3 left-2 md:left-3 right-2 md:right-3 h-[3px] rounded-t-2xl md:rounded-t-3xl pointer-events-none"
+          style={{
+            background: borderGradient,
+            borderTop: "3px solid transparent",
+            animation: "agent-gradient-spin 4s linear infinite",
+            boxShadow: "0 0 16px rgba(59, 130, 246, 0.5), 0 0 40px rgba(139, 92, 246, 0.2)",
+          }}
+        />
+        {/* Bottom edge */}
+        <div
+          className="absolute bottom-2 md:bottom-3 left-2 md:left-3 right-2 md:right-3 h-[3px] rounded-b-2xl md:rounded-b-3xl pointer-events-none"
+          style={{
+            background: borderGradient,
+            borderBottom: "3px solid transparent",
+            animation: "agent-gradient-spin 4s linear infinite",
+            boxShadow: "0 0 16px rgba(59, 130, 246, 0.5), 0 0 40px rgba(139, 92, 246, 0.2)",
+          }}
+        />
+        {/* Left edge */}
+        <div
+          className="absolute top-2 md:top-3 bottom-2 md:bottom-3 left-2 md:left-3 w-[3px] rounded-l-2xl md:rounded-l-3xl pointer-events-none"
+          style={{
+            background: borderGradient,
+            borderLeft: "3px solid transparent",
+            animation: "agent-gradient-spin 4s linear infinite",
+            boxShadow: "0 0 16px rgba(59, 130, 246, 0.5), 0 0 40px rgba(139, 92, 246, 0.2)",
+          }}
+        />
+        {/* Right edge */}
+        <div
+          className="absolute top-2 md:top-3 bottom-2 md:bottom-3 right-2 md:right-3 w-[3px] rounded-r-2xl md:rounded-r-3xl pointer-events-none"
+          style={{
+            background: borderGradient,
+            borderRight: "3px solid transparent",
+            animation: "agent-gradient-spin 4s linear infinite",
+            boxShadow: "0 0 16px rgba(59, 130, 246, 0.5), 0 0 40px rgba(139, 92, 246, 0.2)",
+          }}
+        />
 
         {/* Floating status pill at top-center */}
         <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-auto">
           <div
             className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-white/20 text-white text-sm font-medium shadow-2xl"
             style={{
-              background: "linear-gradient(var(--bg-angle, 135deg), rgba(59,101,202,0.9), rgba(207,58,122,0.9), rgba(244,80,81,0.9), rgba(59,101,202,0.9))",
+              background: "linear-gradient(var(--bg-angle, 135deg), rgba(59,130,246,0.9), rgba(139,92,246,0.9), rgba(236,72,153,0.9), rgba(59,130,246,0.9))",
               animation: "agent-gradient-spin 4s linear infinite, agent-pulse-ring 2s ease infinite",
               backdropFilter: "blur(16px)",
             }}

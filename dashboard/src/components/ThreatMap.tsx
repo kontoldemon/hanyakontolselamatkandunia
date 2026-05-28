@@ -298,13 +298,14 @@ type Source = {
 };
 
 function tooltipFor(source: Source, event: MouseEvent<SVGElement>): TooltipState {
+    const hasshLabel = source.topHassh && source.topHassh.length > 4 ? source.topHassh : "Scanning...";
     return {
         title: `Attacker Node: ${source.name}`,
         subtitle: "Active Botnet Infrastructure",
         details: [
             { label: "Top IP", value: source.topIp },
             { label: "Dom. TTP", value: source.dominantTtp },
-            { label: "HASSH", value: source.topHassh },
+            { label: "HASSH", value: hasshLabel },
         ],
         x: event.clientX,
         y: event.clientY,
@@ -382,10 +383,10 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                 count: 0,
                 topIp: log.ip,
                 dominantTtp: log.mitreId || log.type,
-                topHassh: log.hassh || "N/A",
+                topHassh: "",
             };
             current.count += 1;
-            if (log.hassh && (!current.topHassh || current.topHassh === "N/A" || current.topHassh === "unknown")) {
+            if (log.hassh && log.hassh.length > 4 && (!current.topHassh || current.topHassh === "N/A" || current.topHassh === "unknown")) {
                 current.topHassh = log.hassh;
             }
             // Always center on the country if defined in COUNTRY_COORDS, otherwise use IP coordinates
