@@ -327,7 +327,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     )}
                 </div>
                 {!isExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200/50 dark:border-white/10 bg-white/30 dark:bg-[#0a0a0a]/30 backdrop-blur-xl p-3 flex items-center gap-3 overflow-hidden text-[11px] z-20">
+                    <div className="absolute bottom-0 left-0 right-0 border-t border-slate-300/50 dark:border-white/10 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-2xl p-3 flex items-center gap-3 overflow-hidden text-[11px] z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
                         <style>{`
                             @keyframes marquee {
                                 0% { transform: translateX(0); }
