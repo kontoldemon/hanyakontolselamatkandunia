@@ -24,9 +24,12 @@ export default function Dashboard() {
 
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    setNow(Date.now());
+    const t = setTimeout(() => setNow(Date.now()), 0);
     const interval = setInterval(() => setNow(Date.now()), 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(t);
+      clearInterval(interval);
+    };
   }, []);
 
   const underAttack = stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && now !== null && now - threatLogs[0].epochMs < 20000));
