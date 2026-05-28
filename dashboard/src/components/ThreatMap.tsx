@@ -247,7 +247,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                 </button>
 
-                <div className={`relative w-full h-full flex ${isExpanded ? "items-center justify-center p-2 md:p-12 mb-12 md:mb-0" : ""}`}>
+                <div className={`relative flex-1 w-full flex ${isExpanded ? "items-center justify-center p-2 md:p-12 mb-12 md:mb-0" : ""}`}>
                     <div className="absolute inset-0 opacity-20 pointer-events-none"
                         style={{
                             backgroundImage: `radial-gradient(${theme === "dark" ? "#333" : "#ccc"} 1px, transparent 1px)`,
@@ -327,7 +327,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     )}
                 </div>
                 {!isExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 border-t border-slate-300/50 dark:border-white/10 bg-white/80 dark:bg-[#050505]/80 backdrop-blur-2xl p-3 flex items-center gap-3 overflow-hidden text-[11px] z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+                    <div className="relative border-t border-slate-300/50 dark:border-white/10 bg-white/95 dark:bg-[#050505]/95 backdrop-blur-md p-3 flex items-center gap-3 overflow-hidden text-[11px] shrink-0 z-50">
                         <style>{`
                             @keyframes marquee {
                                 0% { transform: translateX(0); }
