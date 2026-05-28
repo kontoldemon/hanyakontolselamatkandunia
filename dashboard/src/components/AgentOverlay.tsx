@@ -42,13 +42,13 @@ export default function AgentOverlay() {
         <div
           className="absolute inset-1.5 md:inset-3 rounded-2xl md:rounded-3xl pointer-events-none"
           style={{
-            border: "4px solid transparent",
+            border: "3px solid transparent",
             background: `
               linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box,
-              linear-gradient(var(--bg-angle, 0deg), #3b65ca, #cf3a7a, #f45051, #cf3a7a, #3b65ca) border-box
+              linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) border-box
             `,
             animation: "agent-gradient-spin 4s linear infinite",
-            boxShadow: "inset 0 0 30px 8px rgba(207,58,122,0.4), 0 0 60px 16px rgba(59,101,202,0.2), 0 0 40px 10px rgba(59,101,202,0.1)",
+            boxShadow: "0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.3)",
           }}
         />
 

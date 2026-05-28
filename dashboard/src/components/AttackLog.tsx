@@ -1,7 +1,7 @@
 "use client";
 
 import { ThreatLog, useLiveThreatLogs } from "@/lib/liveEvents";
-import { Ban, Globe, Shield } from "lucide-react";
+import { Ban, Globe, Shield, Search, X } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,6 +48,7 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
     const liveLogs = useLiveThreatLogs(!externalLogs);
     const threatLogs = externalLogs ?? liveLogs;
     const [sortMode, setSortMode] = useState<SortMode>("newest");
+    const [searchQuery, setSearchQuery] = useState("");
     const [visibleCount, setVisibleCount] = useState(40);
     const [blockingIp, setBlockingIp] = useState<string | null>(null);
     const aggregatedLogs = useMemo(() => {
@@ -101,18 +102,23 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
     const sorted = [...aggregatedLogs].sort((a, b) =>
         sortMode === "newest" ? b.latestEpochMs - a.latestEpochMs : a.latestEpochMs - b.latestEpochMs,
     );
-    const filteredLogs = sorted;
+    const filteredLogs = sorted.filter((log) => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return log.ip.includes(q) || log.countryName?.toLowerCase().includes(q) || log.country.toLowerCase().includes(q) || log.hassh?.toLowerCase().includes(q);
+    });
     const visibleLogs = filteredLogs.slice(0, visibleCount);
 
     useEffect(() => {
-        if (targetCode) {
-            const index = sorted.findIndex((log) => log.country === targetCode);
+        if (selectedRegion) {
+            const target = COUNTRY_MAP[selectedRegion] || selectedRegion;
+            const index = filteredLogs.findIndex((log) => log.country === target || log.ip === target);
             if (index >= 0) {
                 if (index >= visibleCount) {
                     setVisibleCount(index + 10);
                 }
                 setTimeout(() => {
-                    const firstMatch = sorted[index];
+                    const firstMatch = filteredLogs[index];
                     if (firstMatch && itemRefs.current[firstMatch.id]) {
                         const el = itemRefs.current[firstMatch.id];
                         if (el) {
@@ -122,7 +128,7 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                 }, 50);
             }
         }
-    }, [targetCode, sorted, visibleCount]);
+    }, [selectedRegion, filteredLogs, visibleCount]);
 
     async function blockIp(ip: string) {
         const confirmed = window.confirm(`Block ${ip} at the sensor firewall?`);
@@ -150,9 +156,26 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
     return (
         <div className="h-full min-h-[520px] max-h-[720px] overflow-y-auto overflow-x-hidden terminal-scrollbar pr-1 scroll-smooth">
             <div className="sticky top-0 z-20 mb-2 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur border border-slate-200 dark:border-white/10 rounded-lg p-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <span>{filteredLogs.length} IPs</span>
-                    {targetCode && <span className="font-mono">[{targetCode}]</span>}
+                <div className="flex flex-1 items-center gap-2">
+                    <span className="text-xs text-slate-500 whitespace-nowrap">{filteredLogs.length} IPs</span>
+                    <div className="relative flex-1 max-w-[200px]">
+                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search IP, HASSH..."
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setVisibleCount(40);
+                            }}
+                            className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded py-1 pl-7 pr-6 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <CustomDropdown
                     value={sortMode}
@@ -174,8 +197,9 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                     </div>
                 )}
                 {visibleLogs.map((log) => {
-                    const isSelected = targetCode && log.country === targetCode;
-                    const isDimmed = targetCode && log.country !== targetCode;
+                    const target = selectedRegion ? (COUNTRY_MAP[selectedRegion] || selectedRegion) : null;
+                    const isSelected = target && (log.country === target || log.ip === target);
+                    const isDimmed = target && (log.country !== target && log.ip !== target);
                     return (
                         <div 
                             key={log.id} 

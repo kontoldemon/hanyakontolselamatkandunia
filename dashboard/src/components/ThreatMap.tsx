@@ -413,14 +413,14 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     const landStroke = theme === "dark" ? "#2f3747" : "#ffffff";
     const ocean = theme === "dark" ? "#050505" : "#f8fafc";
 
-    const selectSource = useCallback((name: string) => {
-        onRegionClick?.(selectedRegion === name ? null : name);
+    const selectSource = useCallback((sourceName: string, topIp: string) => {
+        onRegionClick?.(selectedRegion === topIp ? null : topIp);
     }, [onRegionClick, selectedRegion]);
 
     const renderSources = useMemo(() => {
         if (!underAttack) return null;
         return sources.map((source, index) => {
-            const isDimmed = selectedRegion && selectedRegion !== source.name;
+            const isDimmed = selectedRegion && selectedRegion !== source.name && selectedRegion !== source.topIp;
             const isLeftOfTarget = source.point.x < targetPoint.x;
             return (
                 <g key={source.name} opacity={isDimmed ? 0.25 : 1}>
@@ -449,7 +449,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     <g
                         role="button"
                         tabIndex={0}
-                        onClick={() => selectSource(source.name)}
+                        onClick={() => selectSource(source.name, source.topIp)}
                         onMouseEnter={(event) => setTooltipContent(tooltipFor(source, event))}
                         onMouseMove={(event) => setTooltipContent((previous) => previous ? { ...previous, x: event.clientX, y: event.clientY } : null)}
                         onMouseLeave={() => setTooltipContent(null)}
@@ -501,7 +501,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         <g stroke={landStroke} strokeWidth="0.65">
                             {countries.map((country) => {
                                 const name = country.properties?.name ?? "";
-                                const selected = selectedRegion === name || selectedRegion === "USA" && name === "United States of America";
+                                const selected = selectedRegion === name || (selectedRegion === "USA" && name === "United States of America") || sources.some(s => s.name === name && s.topIp === selectedRegion);
                                 return (
                                     <path
                                         key={name}
