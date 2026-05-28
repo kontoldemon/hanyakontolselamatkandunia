@@ -72,8 +72,8 @@ export default function Dashboard() {
           <p className="text-slate-500 text-xs mt-0.5">Real-time Threat Intelligence Monitor</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-lg shadow-sm text-sm overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-lg shadow-sm text-sm overflow-x-auto w-full md:w-auto scrollbar-hide">
             <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
               <span className="text-slate-500 text-xs mr-2">Connections</span>
               <span className="font-semibold text-slate-900 dark:text-white">{liveConnectionCount.toLocaleString()}</span>
@@ -127,7 +127,7 @@ export default function Dashboard() {
               <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></span>Command</span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 relative">
+          <div className="flex-1 min-h-0 relative flex flex-col">
             <ThreatMap
               onRegionClick={setSelectedRegion}
               selectedRegion={selectedRegion}

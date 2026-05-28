@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { Copy, Terminal as TerminalIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Copy, Terminal as TerminalIcon, Check, Maximize2, Minimize2 } from "lucide-react";
+import { useAgentCommand } from "@/lib/AgentContext";
 
 import CustomDropdown from "@/components/CustomDropdown";
 
@@ -21,6 +22,18 @@ interface TerminalReplayProps {
 export default function TerminalReplay({ lines, replay, mode = "both", onModeChange }: TerminalReplayProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const stickToBottomRef = useRef(true);
+    const [copied, setCopied] = useState(false);
+    const [isFullScreen, setIsFullScreen] = useState(false);
+
+    // ── Agent command handlers ──
+    useAgentCommand("replay.fullscreen", useCallback(() => setIsFullScreen((p) => !p), []));
+    useAgentCommand("replay.mode", useCallback((v: string) => onModeChange?.(v as "attacker" | "both"), [onModeChange]));
+    useAgentCommand("replay.copy", useCallback(() => {
+        const text = (replay && replay.length > 0 ? replay : lines.map((l) => ({ role: "attacker" as const, text: l }))).map((e) => `${e.role === "honeypot" ? "#" : "$"} ${e.text}`).join("\n");
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }, [replay, lines]));
     
     const entries = useMemo(() => {
         if (replay && replay.length > 0) {
@@ -57,8 +70,16 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
         stickToBottomRef.current = distanceFromBottom < 24;
     }
 
+    function handleCopy() {
+        const text = visibleEntries.map(e => `${e.role === 'honeypot' ? '#' : '$'} ${e.text}`).join('\n');
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
+
     return (
-        <div className="w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-sm shadow-sm flex flex-col h-full min-h-[300px]">
+        <div className={isFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-sm shadow-2xl flex flex-col" : "w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-sm shadow-sm flex flex-col h-full min-h-[300px]"}>
+            {isFullScreen && <div className="fixed inset-0 z-[-1] bg-black/60 backdrop-blur-sm" onClick={() => setIsFullScreen(false)} />}
             {/* Terminal Header */}
             <div className="bg-slate-100 dark:bg-white/[0.02] px-4 py-2.5 flex items-center justify-between border-b border-slate-200 dark:border-white/5 shrink-0">
                 <div className="flex items-center gap-2">
@@ -72,9 +93,14 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                         root@cloudsentinel:~
                     </span>
                 </div>
-                <button className="text-slate-400 hover:text-slate-600 dark:text-slate-50 dark:hover:text-slate-300 transition-colors">
-                    <Copy size={14} />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setIsFullScreen(!isFullScreen)} className="p-1 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors rounded hover:bg-slate-200 dark:hover:bg-white/10" title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}>
+                        {isFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                    </button>
+                    <button onClick={handleCopy} className="p-1 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors rounded hover:bg-slate-200 dark:hover:bg-white/10" title="Copy to clipboard">
+                        {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                    </button>
+                </div>
             </div>
             <div className="bg-slate-50 dark:bg-[#0f0f0f] px-4 py-2 border-b border-slate-200 dark:border-white/5 flex items-center justify-between gap-3 shrink-0">
                 <span className="text-[10px] uppercase tracking-wide text-slate-500 font-bold">Replay Filter</span>

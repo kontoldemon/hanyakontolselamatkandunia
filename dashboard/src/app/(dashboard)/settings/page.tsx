@@ -1,8 +1,9 @@
 "use client";
 
-import { Shield, Zap, Fingerprint, Database, Save, Activity, ChevronDown, Check, Power } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Shield, Zap, Fingerprint, Database, Save, Activity, ChevronDown, Check, Power, Maximize2, Minimize2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSensorOperations, useSocketTelemetry } from "@/lib/liveEvents";
+import { useAgentCommand } from "@/lib/AgentContext";
 
 import CustomDropdown from "@/components/CustomDropdown";
 
@@ -11,6 +12,23 @@ export default function SettingsPage() {
     const socketTelemetry = useSocketTelemetry();
     const [exposurePaused, setExposurePaused] = useState(false);
     const [exposureBusy, setExposureBusy] = useState(false);
+    const [isSocketFullScreen, setIsSocketFullScreen] = useState(false);
+    // Controlled state for all config dropdowns
+    const [deceptionLevel, setDeceptionLevel] = useState("High (Full VFS)");
+    const [hasshAction, setHashAction] = useState("Immediate Drop");
+    const [hasshThreshold, setHashThreshold] = useState(85);
+    const [fakeKeys, setFakeKeys] = useState(true);
+    const [soarTrigger, setSoarTrigger] = useState("MITRE Match (>1)");
+    const [soarExecution, setSoarExecution] = useState("Lambda (Warm)");
+
+    // ── Agent command handlers ──
+    useAgentCommand("settings.deception_level", useCallback((v: string) => setDeceptionLevel(v), []));
+    useAgentCommand("settings.hassh_action", useCallback((v: string) => setHashAction(v), []));
+    useAgentCommand("settings.hassh_threshold", useCallback((v: string) => setHashThreshold(Math.max(0, Math.min(100, parseInt(v) || 85))), []));
+    useAgentCommand("settings.fake_keys", useCallback((v: string) => setFakeKeys(v === "true" || v === "toggle" ? !fakeKeys : v === "on"), [fakeKeys]));
+    useAgentCommand("settings.soar_trigger", useCallback((v: string) => setSoarTrigger(v), []));
+    useAgentCommand("settings.soar_execution", useCallback((v: string) => setSoarExecution(v), []));
+    useAgentCommand("socket.fullscreen", useCallback(() => setIsSocketFullScreen((p) => !p), []));
     const upstreamLatency = operations?.telemetry?.upstreamLatencyMs ?? {};
     const latencyRows = [
         { name: "Readiness", value: Number(upstreamLatency.readiness ?? 0) },
@@ -133,15 +151,15 @@ export default function SettingsPage() {
                                             { label: "Medium (Restricted)", value: "Medium (Restricted)" },
                                             { label: "Low (Port listener)", value: "Low (Port listener)" }
                                         ]}
-                                        value="High (Full VFS)"
-                                        onChange={() => {}}
+                                        value={deceptionLevel}
+                                        onChange={setDeceptionLevel}
                                     />
                                 </div>
                                 <div className="pt-2">
                                     <label className="flex items-center gap-2 cursor-pointer group">
                                         <div className="relative flex items-center justify-center w-4 h-4 rounded border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[#0f0f0f] group-hover:border-indigo-500 transition-colors">
-                                            <input type="checkbox" defaultChecked className="opacity-0 absolute inset-0 cursor-pointer" />
-                                            <Check size={12} className="text-indigo-500 opacity-100" />
+                                            <input type="checkbox" checked={fakeKeys} onChange={() => setFakeKeys(!fakeKeys)} className="opacity-0 absolute inset-0 cursor-pointer" />
+                                            {fakeKeys && <Check size={12} className="text-indigo-500 opacity-100" />}
                                         </div>
                                         <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Inject Fake AWS API Keys (bash_history)</span>
                                     </label>
@@ -165,15 +183,15 @@ export default function SettingsPage() {
                                             { label: "Allow & Monitor", value: "Allow & Monitor" },
                                             { label: "Tarpit", value: "Tarpit" }
                                         ]}
-                                        value="Immediate Drop"
-                                        onChange={() => {}}
+                                        value={hasshAction}
+                                        onChange={setHashAction}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Confidence Threshold</label>
                                     <div className="flex items-center gap-3">
-                                        <input type="range" min="0" max="100" defaultValue="85" className="flex-1 accent-purple-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none outline-none" />
-                                        <span className="text-[11px] font-mono font-bold w-8 text-right text-slate-700 dark:text-slate-300">85%</span>
+                                        <input type="range" min="0" max="100" value={hasshThreshold} onChange={(e) => setHashThreshold(parseInt(e.target.value))} className="flex-1 accent-purple-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none outline-none" />
+                                        <span className="text-[11px] font-mono font-bold w-8 text-right text-slate-700 dark:text-slate-300">{hasshThreshold}%</span>
                                     </div>
                                 </div>
                             </div>
@@ -195,7 +213,7 @@ export default function SettingsPage() {
                                     { label: "MITRE Match (>1)", value: "MITRE Match (>1)" },
                                     { label: "Auth Spike (>10/m)", value: "Auth Spike (>10/m)" },
                                     { label: "Any Input", value: "Any Input" }
-                                ]} value="MITRE Match (>1)" onChange={() => {}} />
+                                ]} value={soarTrigger} onChange={setSoarTrigger} />
                             </div>
                             <div>
                                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Execution Path</label>
@@ -203,7 +221,7 @@ export default function SettingsPage() {
                                     { label: "Lambda (Warm)", value: "Lambda (Warm)" },
                                     { label: "Lambda (Cold)", value: "Lambda (Cold)" },
                                     { label: "Local Docker", value: "Local Docker" }
-                                ]} value="Lambda (Warm)" onChange={() => {}} />
+                                ]} value={soarExecution} onChange={setSoarExecution} />
                             </div>
                             <div>
                                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Action Applied</label>
@@ -216,15 +234,21 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Socket Logs */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 flex flex-col min-h-[200px] overflow-hidden">
+                    <div className={isSocketFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col overflow-hidden" : "bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm h-[400px] lg:h-auto lg:flex-1 flex flex-col overflow-hidden"}>
+                        {isSocketFullScreen && <div className="fixed inset-0 z-[-1] bg-black/60 backdrop-blur-sm" onClick={() => setIsSocketFullScreen(false)} />}
                         <div className="p-3 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center shrink-0">
                             <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Socket Telemetry</h3>
-                            <div className="flex gap-3 text-[10px] font-mono text-slate-500">
-                                <span>Conn: {socketTelemetry.connectCount}</span>
-                                <span>Drop: {socketTelemetry.disconnectCount}</span>
-                                <span className={socketTelemetry.connected ? "text-emerald-500 font-bold" : "text-amber-500 font-bold"}>
-                                    {socketTelemetry.connected ? "ONLINE" : "OFFLINE"}
-                                </span>
+                            <div className="flex items-center gap-3">
+                                <div className="flex gap-3 text-[10px] font-mono text-slate-500 mr-2">
+                                    <span>Conn: {socketTelemetry.connectCount}</span>
+                                    <span>Drop: {socketTelemetry.disconnectCount}</span>
+                                    <span className={socketTelemetry.connected ? "text-emerald-500 font-bold" : "text-amber-500 font-bold"}>
+                                        {socketTelemetry.connected ? "ONLINE" : "OFFLINE"}
+                                    </span>
+                                </div>
+                                <button onClick={() => setIsSocketFullScreen(!isSocketFullScreen)} className="p-1 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors rounded hover:bg-slate-200 dark:hover:bg-white/10" title={isSocketFullScreen ? "Exit Fullscreen" : "Fullscreen"}>
+                                    {isSocketFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                                </button>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto p-3 space-y-1 terminal-scrollbar bg-slate-50/30 dark:bg-[#050505]">

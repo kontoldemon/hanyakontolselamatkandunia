@@ -2,9 +2,10 @@
 
 import TerminalReplay from "@/components/TerminalReplay";
 import { Terminal, Clock, Activity, ArrowRight, ShieldAlert, ArrowLeft, Shield, Cpu, Search, Bot, Loader2, Ban } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useCapturedSessions } from "@/lib/liveEvents";
+import { useAgentCommand } from "@/lib/AgentContext";
 
 import CustomDropdown from "@/components/CustomDropdown";
 
@@ -80,6 +81,17 @@ export default function SessionsPage() {
     const [focusIp, setFocusIp] = useState("");
     const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+    // ── Agent command handlers ──
+    useAgentCommand("sessions.search", useCallback((v: string) => setSearchQuery(v), []));
+    useAgentCommand("sessions.filter", useCallback((v: string) => setFilterStatus(v as "all" | "active"), []));
+    useAgentCommand("sessions.select", useCallback((ip: string) => {
+        const target = sessions.find((s) => s.ip === ip);
+        if (target) {
+            setSelectedSessionId(target.id);
+            setLastSelectedIp(target.ip);
+        }
+    }, [sessions]));
+
     const exactMatch = selectedSessionId ? sessions.find(s => s.id === selectedSessionId) : null;
     const selectedSession = exactMatch || (lastSelectedIp ? sessions.find(s => s.ip === lastSelectedIp) : null);
     
@@ -112,17 +124,28 @@ export default function SessionsPage() {
         return `${minutes}m ${seconds}s`;
     }
 
-    const filteredSessions = useMemo(() => sessions.filter(session => {
-        if (filterStatus === "active" && (session.status || "").toLowerCase() !== "active") {
-            return false;
+    const filteredSessions = useMemo(() => {
+        const unique = new Map();
+        for (const session of sessions) {
+            if (filterStatus === "active" && (session.status || "").toLowerCase() !== "active") {
+                continue;
+            }
+            const query = searchQuery.toLowerCase();
+            const matches = session.ip.toLowerCase().includes(query) ||
+                session.country.toLowerCase().includes(query) ||
+                (session.countryName && session.countryName.toLowerCase().includes(query)) ||
+                (session.fingerprint && session.fingerprint.toLowerCase().includes(query)) ||
+                (session.client && session.client.toLowerCase().includes(query));
+                
+            if (matches) {
+                // Keep the active one, or the first one we find
+                if (!unique.has(session.ip) || (session.status || "").toLowerCase() === "active") {
+                    unique.set(session.ip, session);
+                }
+            }
         }
-        const query = searchQuery.toLowerCase();
-        return session.ip.toLowerCase().includes(query) ||
-            session.country.toLowerCase().includes(query) ||
-            (session.countryName && session.countryName.toLowerCase().includes(query)) ||
-            (session.fingerprint && session.fingerprint.toLowerCase().includes(query)) ||
-            (session.client && session.client.toLowerCase().includes(query));
-    }), [sessions, searchQuery, filterStatus]);
+        return Array.from(unique.values());
+    }, [sessions, searchQuery, filterStatus]);
 
     useEffect(() => {
         if (typeof window === "undefined") {
@@ -145,8 +168,14 @@ export default function SessionsPage() {
             return;
         }
         const target = filteredSessions.find((session) => session.ip === focusIp);
-        if (target && cardRefs.current[target.id]) {
-            cardRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (target) {
+            if (selectedSessionId !== target.id) {
+                setSelectedSessionId(target.id);
+                setLastSelectedIp(target.ip);
+            }
+            if (cardRefs.current[target.id]) {
+                cardRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
         }
     }, [focusIp, filteredSessions]);
 

@@ -2,7 +2,8 @@
 
 import { BrainCircuit, ShieldAlert, Fingerprint } from "lucide-react";
 import { useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useAgentCommand } from "@/lib/AgentContext";
 
 import CustomDropdown from "@/components/CustomDropdown";
 
@@ -12,6 +13,12 @@ export default function IntelligencePage() {
     const [commandPage, setCommandPage] = useState(1);
     const [responseModeFilter, setResponseModeFilter] = useState("all");
     const PAGE_SIZE = 10;
+
+    // ── Agent command handlers ──
+    useAgentCommand("intel.sort", useCallback((v: string) => { setCommandMode(v as "most" | "least"); setCommandPage(1); }, []));
+    useAgentCommand("intel.search", useCallback((v: string) => { setCommandSearch(v); setCommandPage(1); }, []));
+    useAgentCommand("intel.page", useCallback((v: string) => setCommandPage(Math.max(1, parseInt(v) || 1)), []));
+    useAgentCommand("intel.response_filter", useCallback((v: string) => setResponseModeFilter(v), []));
 
     const operations = useSensorOperations();
     const liveLogs = useLiveThreatLogs();
