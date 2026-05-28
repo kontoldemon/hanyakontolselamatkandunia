@@ -185,6 +185,52 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
         onRegionClick?.(selectedRegion === name ? null : name);
     };
 
+    const renderSources = useMemo(() => {
+        if (!underAttack) return null;
+        return sources.map((source, index) => {
+            const isDimmed = selectedRegion && selectedRegion !== source.name;
+            return (
+                <g key={source.name} opacity={isDimmed ? 0.25 : 1}>
+                    <path
+                        d={source.path}
+                        fill="none"
+                        stroke={source.color}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeDasharray="4,4"
+                        style={{ animation: `dash ${2 + index * 0.3}s linear infinite` }}
+                    />
+                    <text
+                        x={source.point.x + 8}
+                        y={source.point.y - 8}
+                        fill={theme === "dark" ? "#dbeafe" : "#1e3a8a"}
+                        fontSize="10"
+                        fontWeight="700"
+                        paintOrder="stroke"
+                        stroke={theme === "dark" ? "#050505" : "#f8fafc"}
+                        strokeWidth="3"
+                    >
+                        {source.name}
+                    </text>
+                    <g
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => selectSource(source.name)}
+                        onMouseEnter={(event) => setTooltipContent(tooltipFor(source, event))}
+                        onMouseMove={(event) => setTooltipContent((previous) => previous ? { ...previous, x: event.clientX, y: event.clientY } : null)}
+                        onMouseLeave={() => setTooltipContent(null)}
+                        className="cursor-pointer"
+                    >
+                        <circle cx={source.point.x} cy={source.point.y} r="16" fill="transparent" />
+                        <circle cx={source.point.x} cy={source.point.y} r="8" fill={source.color} opacity="0.2" />
+                        <circle cx={source.point.x} cy={source.point.y} r="4" fill={source.color} className="animate-pulse" />
+                        <circle cx={source.point.x} cy={source.point.y} r="3" fill={source.color} />
+                    </g>
+                </g>
+            );
+        });
+    }, [underAttack, sources, selectedRegion, theme]);
+
     return (
         <>
             {isExpanded && (
@@ -235,48 +281,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                             })}
                         </g>
 
-                        {underAttack && sources.map((source, index) => {
-                            const isDimmed = selectedRegion && selectedRegion !== source.name;
-                            return (
-                                <g key={source.name} opacity={isDimmed ? 0.25 : 1}>
-                                    <path
-                                        d={source.path}
-                                        fill="none"
-                                        stroke={source.color}
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeDasharray="4,4"
-                                        style={{ animation: `dash ${2 + index * 0.3}s linear infinite` }}
-                                    />
-                                    <text
-                                        x={source.point.x + 8}
-                                        y={source.point.y - 8}
-                                        fill={theme === "dark" ? "#dbeafe" : "#1e3a8a"}
-                                        fontSize="10"
-                                        fontWeight="700"
-                                        paintOrder="stroke"
-                                        stroke={theme === "dark" ? "#050505" : "#f8fafc"}
-                                        strokeWidth="3"
-                                    >
-                                        {source.name}
-                                    </text>
-                                    <g
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => selectSource(source.name)}
-                                        onMouseEnter={(event) => setTooltipContent(tooltipFor(source, event))}
-                                        onMouseMove={(event) => setTooltipContent((previous) => previous ? { ...previous, x: event.clientX, y: event.clientY } : null)}
-                                        onMouseLeave={() => setTooltipContent(null)}
-                                        className="cursor-pointer"
-                                    >
-                                        <circle cx={source.point.x} cy={source.point.y} r="16" fill="transparent" />
-                                        <circle cx={source.point.x} cy={source.point.y} r="8" fill={source.color} opacity="0.2" />
-                                        <circle cx={source.point.x} cy={source.point.y} r="4" fill={source.color} className="animate-pulse" />
-                                        <circle cx={source.point.x} cy={source.point.y} r="3" fill={source.color} />
-                                    </g>
-                                </g>
-                            );
-                        })}
+                        {renderSources}
 
                         <g
                             onMouseEnter={(event) => setTooltipContent({ title: TARGET.name, subtitle: "Local Honeypot Target", x: event.clientX, y: event.clientY })}
@@ -322,7 +327,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     )}
                 </div>
                 {!isExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 dark:border-white/5 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl p-3 flex items-center gap-3 overflow-hidden text-[11px] z-20">
+                    <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200/50 dark:border-white/10 bg-white/30 dark:bg-[#0a0a0a]/30 backdrop-blur-xl p-3 flex items-center gap-3 overflow-hidden text-[11px] z-20">
                         <style>{`
                             @keyframes marquee {
                                 0% { transform: translateX(0); }

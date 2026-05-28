@@ -179,9 +179,9 @@ GLOBAL CONTROLS (work from any page):
     // ─── Gradient Style ──────────────────────────────────────────────────
 
     const gradientStyle = {
-        background: "linear-gradient(270deg, #3b65ca, #cf3a7a, #cf3a7a, #f45051, #f45051, #f45051)",
-        backgroundSize: "400% 400%",
-        animation: "ai-gradient-anim 5s ease infinite",
+        background: "linear-gradient(270deg, #3b65ca, #cf3a7a, #f45051, #cf3a7a, #3b65ca)",
+        backgroundSize: "300% 300%",
+        animation: "ai-gradient-anim 4s linear infinite",
     };
 
     // ─── Closed State (FAB button) ───────────────────────────────────────
