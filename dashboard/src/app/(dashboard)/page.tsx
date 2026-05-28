@@ -3,7 +3,7 @@
 import { Activity, Globe, Download } from "lucide-react";
 import ThreatMap from "@/components/ThreatMap";
 import AttackLog from "@/components/AttackLog";
-import { useDashboardStats, useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
+import { useDashboardStats, useLiveThreatLogs, useSensorOperations, useCapturedSessions, ThreatLog } from "@/lib/liveEvents";
 import { useMemo, useState, useEffect } from "react";
 
 export default function Dashboard() {
@@ -12,7 +12,44 @@ export default function Dashboard() {
   const stats = useDashboardStats();
   const threatLogs = useLiveThreatLogs();
   const operations = useSensorOperations();
+  const sessions = useCapturedSessions();
   const liveConnectionCount = stats.activeSessions;
+
+  const combinedLogs = useMemo(() => {
+    const combined = [...threatLogs];
+    const existingIps = new Set(combined.map((log) => log.ip));
+
+    for (const s of sessions) {
+      if (s.status === "Active" && !existingIps.has(s.ip)) {
+        combined.push({
+          id: s.id,
+          timestamp: s.startTime,
+          epochMs: s.startedAtEpochMs ?? 0,
+          ip: s.ip,
+          country: s.country,
+          countryName: s.countryName,
+          asn: s.asn,
+          isp: s.isp,
+          org: s.org,
+          services: s.services,
+          region: s.region,
+          city: s.city,
+          latitude: s.latitude ? parseFloat(s.latitude) : undefined,
+          longitude: s.longitude ? parseFloat(s.longitude) : undefined,
+          timezone: s.timezone,
+          type: "SENSOR_EVENT",
+          payload: "Active Connection",
+          mitreId: s.mitreTechniques?.[0] ?? "",
+          action: "Active",
+          timeToBlock: null,
+          hassh: s.fingerprint,
+          client: s.client,
+          mitreTechniques: s.mitreTechniques,
+        });
+      }
+    }
+    return combined.sort((a, b) => b.epochMs - a.epochMs);
+  }, [threatLogs, sessions]);
 
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
@@ -135,7 +172,7 @@ export default function Dashboard() {
               onRegionClick={setSelectedRegion}
               selectedRegion={selectedRegion}
               underAttack={underAttack}
-              threatLogs={threatLogs}
+              threatLogs={combinedLogs}
             />
           </div>
         </div>
@@ -149,7 +186,7 @@ export default function Dashboard() {
             </h3>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto p-2">
-            <AttackLog selectedRegion={selectedRegion} underAttack={underAttack} threatLogs={threatLogs} />
+            <AttackLog selectedRegion={selectedRegion} underAttack={underAttack} threatLogs={combinedLogs} />
           </div>
         </div>
       </div>
