@@ -11,20 +11,29 @@ export default function AgentOverlay() {
   const [savedAction, setSavedAction] = useState(currentAction);
 
   useEffect(() => {
+    let t1: NodeJS.Timeout;
+    let t2: NodeJS.Timeout;
     if (isExecuting) {
-      setShouldRender(true);
-      setIsFadingOut(false);
-      if (currentAction) {
-        setSavedAction(currentAction);
-      }
-    } else {
-      setIsFadingOut(true);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
+      t1 = setTimeout(() => {
+        setShouldRender(true);
         setIsFadingOut(false);
-      }, 500); // Wait for 500ms fadeout keyframe
-      return () => clearTimeout(timer);
+        if (currentAction) {
+          setSavedAction(currentAction);
+        }
+      }, 0);
+    } else {
+      t1 = setTimeout(() => {
+        setIsFadingOut(true);
+        t2 = setTimeout(() => {
+          setShouldRender(false);
+          setIsFadingOut(false);
+        }, 500);
+      }, 0);
     }
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [isExecuting, currentAction]);
 
   if (!shouldRender) return null;

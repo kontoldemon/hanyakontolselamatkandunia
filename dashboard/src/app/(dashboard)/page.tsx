@@ -3,8 +3,8 @@
 import { Activity, Globe, Download } from "lucide-react";
 import ThreatMap from "@/components/ThreatMap";
 import AttackLog from "@/components/AttackLog";
-import { useDashboardStats, useLiveThreatLogs, useSensorOperations, useCapturedSessions, ThreatLog } from "@/lib/liveEvents";
-import { useMemo, useState, useEffect } from "react";
+import { useDashboardStats, useLiveThreatLogs, useSensorOperations, useCapturedSessions } from "@/lib/liveEvents";
+import { useMemo, useState, useEffect, useCallback } from "react";
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
@@ -90,7 +90,7 @@ export default function Dashboard() {
   })();
   const mappedMitreCount = Math.max(stats.mitreCoverage, mappedFromGraph, mappedFromSessions);
 
-  function downloadSensorJson() {
+  const downloadSensorJson = useCallback(() => {
     if (!operations) {
       return;
     }
@@ -108,13 +108,13 @@ export default function Dashboard() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-  }
+  }, [operations]);
 
   useEffect(() => {
     const handleExport = () => downloadSensorJson();
     window.addEventListener("agent:export", handleExport);
     return () => window.removeEventListener("agent:export", handleExport);
-  }, [operations]);
+  }, [downloadSensorJson]);
 
   return (
     <div className="h-full flex flex-col gap-4">

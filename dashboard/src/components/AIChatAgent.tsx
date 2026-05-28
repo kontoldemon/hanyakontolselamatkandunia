@@ -314,7 +314,7 @@ GLOBAL CONTROLS (work from any page):
     };
 
     function formatAiText(text: string) {
-        let clean = text.replace(/—/g, "-");
+        const clean = text.replace(/—/g, "-");
         const parts = clean.split(/(\*\*.*?\*\*)/g);
         return parts.map((part, i) => {
             if (part.startsWith('**') && part.endsWith('**')) {

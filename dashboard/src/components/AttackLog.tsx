@@ -31,18 +31,19 @@ type AggregatedLog = {
     lastMttb: string | null;
 };
 
-export default function AttackLog({ selectedRegion, underAttack = false, threatLogs: externalLogs }: AttackLogProps = {}) {
-    const COUNTRY_MAP: Record<string, string> = {
-        "China": "CN",
-        "Russia": "RU",
-        "Brazil": "BR",
-        "United States of America": "US",
-        "USA": "US",
-        "Iran": "IR",
-        "Vietnam": "VN"
-    };
+const COUNTRY_MAP: Record<string, string> = {
+    "China": "CN",
+    "Russia": "RU",
+    "Brazil": "BR",
+    "United States of America": "US",
+    "USA": "US",
+    "Iran": "IR",
+    "Vietnam": "VN",
+    "Indonesia": "ID",
+    "India": "IN"
+};
 
-    const targetCode = selectedRegion ? COUNTRY_MAP[selectedRegion] : null;
+export default function AttackLog({ selectedRegion, underAttack = false, threatLogs: externalLogs }: AttackLogProps = {}) {
     const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const router = useRouter();
     const liveLogs = useLiveThreatLogs(!externalLogs);
@@ -199,7 +200,7 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                     </div>
                 ) : filteredLogs.length === 0 ? (
                     <div className="p-4 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-slate-500 dark:text-slate-400 font-medium">
-                        No matching live events found for "{searchQuery}".
+                        No matching live events found for &quot;{searchQuery}&quot;.
                     </div>
                 ) : null}
                 {visibleLogs.map((log) => {

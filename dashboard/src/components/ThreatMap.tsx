@@ -295,6 +295,7 @@ type Source = {
     topIp: string;
     dominantTtp: string;
     topHassh: string;
+    countryCode: string;
 };
 
 function tooltipFor(source: Source, event: MouseEvent<SVGElement>): TooltipState {
@@ -310,6 +311,149 @@ function tooltipFor(source: Source, event: MouseEvent<SVGElement>): TooltipState
         x: event.clientX,
         y: event.clientY,
     };
+}
+const MAP_NAME_TO_CC: Record<string, string> = {
+    "united states of america": "US",
+    "united states": "US",
+    "usa": "US",
+    "russia": "RU",
+    "russian federation": "RU",
+    "china": "CN",
+    "indonesia": "ID",
+    "india": "IN",
+    "brazil": "BR",
+    "vietnam": "VN",
+    "viet nam": "VN",
+    "iran": "IR",
+    "iran, islamic republic of": "IR",
+    "united kingdom": "GB",
+    "great britain": "GB",
+    "uk": "GB",
+    "north korea": "KP",
+    "south korea": "KR",
+    "korea, republic of": "KR",
+    "taiwan": "TW",
+    "taiwan, province of china": "TW",
+    "tanzania": "TZ",
+    "tanzania, united republic of": "TZ",
+    "moldova": "MD",
+    "moldova, republic of": "MD",
+    "bolivia": "BO",
+    "bolivia, plurinational state of": "BO",
+    "syria": "SY",
+    "syrian arab republic": "SY",
+    "venezuela": "VE",
+    "venezuela, bolivarian republic of": "VE",
+    "laos": "LA",
+    "lao people's democratic republic": "LA",
+    "brunei": "BN",
+    "brunei darussalam": "BN",
+    "dem. rep. congo": "CD",
+    "congo, the democratic republic of the": "CD",
+    "congo": "CG",
+    "w. sahara": "EH",
+    "western sahara": "EH",
+    "south africa": "ZA",
+    "greenland": "GL",
+    "timor-leste": "TL",
+    "eswatini": "SZ",
+    "swaziland": "SZ",
+    "israel": "IL",
+    "palestine": "PS",
+    "gambia": "GM",
+    "algeria": "DZ",
+    "jordan": "JO",
+    "united arab emirates": "AE",
+    "qatar": "QA",
+    "kuwait": "KW",
+    "iraq": "IQ",
+    "oman": "OM",
+    "vanuatu": "VU",
+    "cambodia": "KH",
+    "thailand": "TH",
+    "myanmar": "MM",
+    "bangladesh": "BD",
+    "bhutan": "BT",
+    "nepal": "NP",
+    "pakistan": "PK",
+    "afghanistan": "AF",
+    "tajikistan": "TJ",
+    "kyrgyzstan": "KG",
+    "turkmenistan": "TM",
+    "armenia": "AM",
+    "sweden": "SE",
+    "belarus": "BY",
+    "ukraine": "UA",
+    "poland": "PL",
+    "austria": "AT",
+    "hungary": "HU",
+    "romania": "RO",
+    "lithuania": "LT",
+    "latvia": "LV",
+    "estonia": "EE",
+    "germany": "DE",
+    "bulgaria": "BG",
+    "greece": "GR",
+    "turkey": "TR",
+    "albania": "AL",
+    "croatia": "HR",
+    "switzerland": "CH",
+    "luxembourg": "LU",
+    "belgium": "BE",
+    "netherlands": "NL",
+    "portugal": "PT",
+    "spain": "ES",
+    "ireland": "IE",
+    "new caledonia": "NC",
+    "solomon is.": "SB",
+    "new zealand": "NZ",
+    "australia": "AU",
+    "sri lanka": "LK",
+    "italy": "IT",
+    "denmark": "DK",
+    "azerbaijan": "AZ",
+    "georgia": "GE",
+    "philippines": "PH",
+    "malaysia": "MY",
+    "slovenia": "SI",
+    "finland": "FI",
+    "slovakia": "SK",
+    "czechia": "CZ",
+    "czech republic": "CZ",
+    "eritrea": "ER",
+    "japan": "JP",
+    "paraguay": "PY",
+    "yemen": "YE",
+    "saudi arabia": "SA",
+    "morocco": "MA",
+    "egypt": "EG",
+    "libya": "LY",
+    "libyan arab jamahiriya": "LY",
+    "ethiopia": "ET",
+    "djibouti": "DJ",
+    "uganda": "UG",
+    "rwanda": "RW",
+    "bosnia and herz.": "BA",
+    "bosnia and herzegovina": "BA",
+    "macedonia": "MK",
+    "macedonia, the former yugoslav republic of": "MK",
+    "serbia": "RS",
+    "montenegro": "ME",
+    "france": "FR",
+    "falkland is.": "FK",
+    "fr. s. antarctic lands": "TF",
+    "central african rep.": "CF",
+    "dominican rep.": "DO"
+};
+
+function getCountryCode(name: string): string {
+    const lower = name.toLowerCase();
+    if (MAP_NAME_TO_CC[lower]) return MAP_NAME_TO_CC[lower];
+    const foundKey = Object.keys(COUNTRY_COORDS).find(k => {
+        const cName = COUNTRY_COORDS[k].name.toLowerCase();
+        return cName === lower || cName.includes(lower) || lower.includes(cName);
+    });
+    return foundKey || "";
 }
 
 export default function ThreatMap({ onRegionClick, selectedRegion, underAttack = false, threatLogs: externalLogs }: ThreatMapProps = {}) {
@@ -380,6 +524,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
             };
             const current = grouped.get(log.country) ?? {
                 ...countryMeta,
+                countryCode: log.country,
                 count: 0,
                 topIp: log.ip,
                 dominantTtp: log.mitreId || log.type,
@@ -411,6 +556,14 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
             return { ...source, point: start, path };
         });
     }, [mapData, project, targetPoint]);
+
+    const selectedCC = useMemo(() => {
+        if (!selectedRegion) return null;
+        const matchedSource = sources.find(s => s.topIp === selectedRegion);
+        if (matchedSource) return matchedSource.countryCode;
+        if (selectedRegion.length === 2) return selectedRegion.toUpperCase();
+        return getCountryCode(selectedRegion);
+    }, [selectedRegion, sources]);
 
     const land = theme === "dark" ? "#171717" : "#dbeafe";
     const selectedLand = theme === "dark" ? "#1d4ed8" : "#93c5fd";
@@ -467,7 +620,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                 </g>
             );
         });
-    }, [underAttack, sources, selectedRegion, theme, selectSource]);
+    }, [underAttack, sources, selectedRegion, theme, selectSource, targetPoint]);
 
     return (
         <>
@@ -505,13 +658,21 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         <g stroke={landStroke} strokeWidth="0.65">
                             {countries.map((country) => {
                                 const name = country.properties?.name ?? "";
-                                const selected = selectedRegion === name || (selectedRegion === "USA" && name === "United States of America") || sources.some(s => s.name === name && s.topIp === selectedRegion);
+                                const cc = getCountryCode(name);
+                                const selected = !!selectedCC && selectedCC === cc;
                                 return (
                                     <path
                                         key={name}
                                         d={path(country as never) ?? undefined}
                                         fill={selected ? selectedLand : land}
                                         opacity={selectedRegion && !selected ? 0.35 : 0.92}
+                                        onClick={() => {
+                                            if (!cc) return;
+                                            const source = sources.find(s => s.countryCode === cc);
+                                            const val = source?.topIp || cc;
+                                            onRegionClick?.(selectedRegion === val ? null : val);
+                                        }}
+                                        className="cursor-pointer transition-colors duration-200 hover:fill-blue-500/10 dark:hover:fill-blue-400/10"
                                     >
                                         <title>{name}</title>
                                     </path>
