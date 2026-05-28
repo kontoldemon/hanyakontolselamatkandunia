@@ -8,7 +8,7 @@ import { useMemo, useState, useEffect } from "react";
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const [underAttack, setUnderAttack] = useState(false);
+
   const stats = useDashboardStats();
   const threatLogs = useLiveThreatLogs();
   const operations = useSensorOperations();
@@ -22,9 +22,14 @@ export default function Dashboard() {
     return ips.size;
   }, [threatLogs]);
 
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    setUnderAttack(stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && Date.now() - threatLogs[0].epochMs < 20000)));
-  }, [stats.source, stats.attackActive, threatLogs]);
+    setNow(Date.now());
+    const interval = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const underAttack = stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && now !== null && now - threatLogs[0].epochMs < 20000));
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;
