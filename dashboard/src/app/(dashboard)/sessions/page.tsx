@@ -316,9 +316,9 @@ export default function SessionsPage() {
                             </button>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div className="flex-1 grid grid-cols-1 xl:grid-cols-3 gap-6 p-4 md:p-6 min-h-0 overflow-hidden">
                             {/* Main: Terminal Replay */}
-                            <div className="xl:col-span-2 flex flex-col">
+                            <div className="xl:col-span-2 flex flex-col h-full min-h-0 overflow-hidden">
                                 <TerminalReplay
                                     lines={selectedSession.input ?? []}
                                     replay={selectedSession.replay}
@@ -328,8 +328,8 @@ export default function SessionsPage() {
                             </div>
 
                             {/* Sidebar: Intelligence */}
-                            <div className="flex flex-col gap-4">
-                                <div className="bg-slate-50 dark:bg-white/[0.02] p-4 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm text-sm">
+                            <div className="flex flex-col gap-4 overflow-y-auto h-full pr-1 pb-2">
+                                <div className="bg-slate-50 dark:bg-white/[0.02] p-4 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm text-sm shrink-0">
                                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                                         <Shield className="text-blue-500" size={16} />
                                         SOAR Action
@@ -354,7 +354,7 @@ export default function SessionsPage() {
                                     </div>
                                 </div>
 
-                                <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/20 shadow-sm text-sm">
+                                <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/20 shadow-sm text-sm shrink-0">
                                     <h3 className="font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
                                         <ShieldAlert size={16} />
                                         MITRE ATT&CK
