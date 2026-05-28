@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { MouseEvent, useEffect, useMemo, useState } from "react";
+import { MouseEvent, useEffect, useMemo, useState, useCallback } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { geoEqualEarth, geoGraticule, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
