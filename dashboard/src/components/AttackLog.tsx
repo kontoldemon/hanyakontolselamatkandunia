@@ -5,6 +5,7 @@ import { Ban, Globe, Shield } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import CustomDropdown from "./CustomDropdown";
 
 interface AttackLogProps {
     selectedRegion?: string | null;
@@ -100,21 +101,28 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
     const sorted = [...aggregatedLogs].sort((a, b) =>
         sortMode === "newest" ? b.latestEpochMs - a.latestEpochMs : a.latestEpochMs - b.latestEpochMs,
     );
-    const filteredLogs = targetCode ? sorted.filter((item) => item.country === targetCode) : sorted;
+    const filteredLogs = sorted;
     const visibleLogs = filteredLogs.slice(0, visibleCount);
 
     useEffect(() => {
         if (targetCode) {
-            // Find the first log that matches the target code
-            const firstMatch = filteredLogs[0];
-            if (firstMatch && itemRefs.current[firstMatch.id]) {
-                const el = itemRefs.current[firstMatch.id];
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const index = sorted.findIndex((log) => log.country === targetCode);
+            if (index >= 0) {
+                if (index >= visibleCount) {
+                    setVisibleCount(index + 10);
                 }
+                setTimeout(() => {
+                    const firstMatch = sorted[index];
+                    if (firstMatch && itemRefs.current[firstMatch.id]) {
+                        const el = itemRefs.current[firstMatch.id];
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }, 50);
             }
         }
-    }, [targetCode, filteredLogs]);
+    }, [targetCode, sorted, visibleCount]);
 
     async function blockIp(ip: string) {
         const confirmed = window.confirm(`Block ${ip} at the sensor firewall?`);
@@ -146,17 +154,18 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                     <span>{filteredLogs.length} IPs</span>
                     {targetCode && <span className="font-mono">[{targetCode}]</span>}
                 </div>
-                <select
+                <CustomDropdown
                     value={sortMode}
-                    onChange={(event) => {
-                        setSortMode(event.target.value as SortMode);
+                    onChange={(value) => {
+                        setSortMode(value as SortMode);
                         setVisibleCount(40);
                     }}
-                    className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs px-2 py-1 text-slate-700 dark:text-slate-200"
-                >
-                    <option value="newest">Newest</option>
-                    <option value="oldest">Oldest</option>
-                </select>
+                    options={[
+                        { label: "Newest", value: "newest" },
+                        { label: "Oldest", value: "oldest" }
+                    ]}
+                    className="w-24"
+                />
             </div>
             <div className="space-y-2 pb-4">
                 {filteredLogs.length === 0 && (

@@ -63,7 +63,7 @@ export default function AIChatAgent() {
                 ...prev,
                 {
                     role: "ai",
-                    content: `✓ Done - ${result}`,
+                    content: result,
                 },
             ]);
         },
@@ -177,8 +177,9 @@ GLOBAL CONTROLS (work from any page):
     }
 
     const gradientStyle = {
-        background: "linear-gradient(var(--bg-angle, 0deg), #2563eb 0%, #7c3aed 33%, #db2777 66%, #2563eb 100%)",
-        animation: "ai-gradient-spin 20s linear infinite",
+        background: "linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
+        backgroundSize: "300% 300%",
+        animation: "ai-gradient-pan 12s ease infinite",
     };
 
     function formatAiText(text: string) {
@@ -198,14 +199,10 @@ GLOBAL CONTROLS (work from any page):
         return (
             <>
                 <style>{`
-                    @property --bg-angle {
-                        syntax: "<angle>";
-                        initial-value: 0deg;
-                        inherits: false;
-                    }
-                    @keyframes ai-gradient-spin {
-                        0% { --bg-angle: 0deg; }
-                        100% { --bg-angle: 360deg; }
+                    @keyframes ai-gradient-pan {
+                        0% { background-position: 0% 50%; }
+                        50% { background-position: 100% 50%; }
+                        100% { background-position: 0% 50%; }
                     }
                 `}</style>
                 <button
@@ -227,14 +224,10 @@ GLOBAL CONTROLS (work from any page):
             className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"}`}
         >
             <style>{`
-                @property --bg-angle {
-                    syntax: "<angle>";
-                    initial-value: 0deg;
-                    inherits: false;
-                }
-                @keyframes ai-gradient-spin {
-                    0% { --bg-angle: 0deg; }
-                    100% { --bg-angle: 360deg; }
+                @keyframes ai-gradient-pan {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
                 }
             `}</style>
 
@@ -387,8 +380,7 @@ GLOBAL CONTROLS (work from any page):
                             <button
                                 onClick={handleSend}
                                 disabled={!input.trim() || isLoading || isExecuting}
-                                style={input.trim() && !isLoading && !isExecuting ? gradientStyle : {}}
-                                className={`absolute right-1 w-8 h-8 flex items-center justify-center rounded-full text-white transition-colors ${!input.trim() || isLoading || isExecuting ? "bg-slate-400 dark:bg-slate-600" : "hover:opacity-90"}`}
+                                className={`absolute right-1 w-8 h-8 flex items-center justify-center rounded-full text-white transition-colors ${!input.trim() || isLoading || isExecuting ? "bg-slate-400 dark:bg-slate-600" : "bg-blue-600 hover:bg-blue-700"}`}
                             >
                                 <Send size={12} />
                             </button>

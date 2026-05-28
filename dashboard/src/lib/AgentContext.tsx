@@ -163,7 +163,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
               await wait(1500);
             }
             window.dispatchEvent(new Event("agent:export"));
-            result = "Successfully downloaded the sensor JSON payload.";
+            result = "Sensor data exported and downloading to your device now.";
             break;
           }
 

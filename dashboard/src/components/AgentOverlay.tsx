@@ -36,8 +36,7 @@ export default function AgentOverlay() {
         className="fixed inset-0 z-[95] pointer-events-auto"
         style={{ animation: "agent-fade-in 0.5s ease-out forwards" }}
       >
-        {/* Dimmed backdrop */}
-        <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px]" />
+
 
         {/* Gradient edge glow with smooth corners */}
         <div
