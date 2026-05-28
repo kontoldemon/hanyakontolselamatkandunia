@@ -35,7 +35,10 @@ export function useAgent() {
 export function useAgentCommand(target: string, handler: (value: string) => void) {
   const { registerCommand, unregisterCommand } = useAgent();
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+
+  useEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
 
   useEffect(() => {
     const stableHandler = (v: string) => handlerRef.current(v);
@@ -53,7 +56,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
+  
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   // Command handler registry
   const commandHandlers = useRef<Map<string, (value: string) => void>>(new Map());
