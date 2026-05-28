@@ -9,7 +9,7 @@ import { ThreatLog, useLiveThreatLogs } from "@/lib/liveEvents";
 
 const TARGET = {
     name: "CloudSentinel HQ",
-    lat: 3.1390,
+    lat: 4.5,
     lng: 101.6869,
 };
 
@@ -36,18 +36,18 @@ type TooltipState = {
 const WIDTH = 800;
 const HEIGHT = 400;
 const COUNTRY_COORDS: Record<string, { name: string; lat: number; lng: number; color: string }> = {
-    BR: { name: "Brazil", lat: -15.7975, lng: -47.8919, color: "#eab308" },
-    CN: { name: "China", lat: 39.9042, lng: 116.4074, color: "#ef4444" },
-    DE: { name: "Germany", lat: 52.5200, lng: 13.4050, color: "#38bdf8" },
-    ID: { name: "Indonesia", lat: -6.2088, lng: 106.8456, color: "#22c55e" },
-    IN: { name: "India", lat: 28.6139, lng: 77.2090, color: "#f97316" },
-    IR: { name: "Iran", lat: 35.6892, lng: 51.3890, color: "#a855f7" },
-    MY: { name: "Malaysia", lat: 3.1390, lng: 101.6869, color: "#14b8a6" },
-    RU: { name: "Russia", lat: 55.7558, lng: 37.6173, color: "#f97316" },
+    BR: { name: "Brazil", lat: -14.235, lng: -51.9253, color: "#eab308" },
+    CN: { name: "China", lat: 35.8617, lng: 104.1954, color: "#ef4444" },
+    DE: { name: "Germany", lat: 51.1657, lng: 10.4515, color: "#38bdf8" },
+    ID: { name: "Indonesia", lat: -0.7893, lng: 113.9213, color: "#22c55e" },
+    IN: { name: "India", lat: 20.5937, lng: 78.9629, color: "#f97316" },
+    IR: { name: "Iran", lat: 32.4279, lng: 53.688, color: "#a855f7" },
+    MY: { name: "Malaysia", lat: 4.2105, lng: 101.9758, color: "#14b8a6" },
+    RU: { name: "Russia", lat: 61.524, lng: 105.3188, color: "#f97316" },
     SG: { name: "Singapore", lat: 1.3521, lng: 103.8198, color: "#06b6d4" },
-    TH: { name: "Thailand", lat: 13.7563, lng: 100.5018, color: "#84cc16" },
-    US: { name: "United States of America", lat: 38.9072, lng: -77.0369, color: "#3b82f6" },
-    VN: { name: "Vietnam", lat: 21.0285, lng: 105.8542, color: "#ec4899" },
+    TH: { name: "Thailand", lat: 15.87, lng: 100.9925, color: "#84cc16" },
+    US: { name: "United States of America", lat: 37.0902, lng: -95.7129, color: "#3b82f6" },
+    VN: { name: "Vietnam", lat: 14.0583, lng: 108.2772, color: "#ec4899" },
 };
 
 type CountryFeature = {
@@ -329,7 +329,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     )}
                 </div>
                 {!isExpanded && (
-                    <div className="relative border-t border-slate-300/50 dark:border-white/10 bg-white/95 dark:bg-[#050505]/95 backdrop-blur-md p-3 flex items-center gap-3 overflow-hidden text-[11px] shrink-0 z-50">
+                    <div className="relative border-t border-slate-300 dark:border-white/10 bg-white dark:bg-[#050505] p-3 flex items-center gap-3 overflow-hidden text-[11px] shrink-0 z-[999] w-full">
                         <style>{`
                             @keyframes marquee {
                                 0% { transform: translateX(0); }
