@@ -308,7 +308,7 @@ GLOBAL CONTROLS (work from any page):
     }
 
     const gradientStyle = {
-        background: "linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
+        background: "linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #3b82f6)",
         backgroundSize: "300% 300%",
         animation: "ai-gradient-pan 12s ease infinite",
     };

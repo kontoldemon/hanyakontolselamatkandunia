@@ -68,7 +68,7 @@ export default function AgentOverlay() {
           className="absolute inset-0 pointer-events-none"
           style={{
             border: "6px solid transparent",
-            borderImage: "linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #3b82f6) 1",
+            borderImage: "linear-gradient(var(--bg-angle, 0deg), #3b82f6, #8b5cf6, #ec4899, #f59e0b, #3b82f6) 1",
             animation: "agent-gradient-spin 5s linear infinite",
             boxShadow: "inset 0 0 20px rgba(59, 130, 246, 0.45), inset 0 0 50px rgba(139, 92, 246, 0.25)",
           }}
@@ -79,7 +79,7 @@ export default function AgentOverlay() {
           <div
             className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-white/20 text-white text-sm font-medium shadow-2xl"
             style={{
-              background: "linear-gradient(var(--bg-angle, 135deg), rgba(59,130,246,0.95), rgba(139,92,246,0.95), rgba(236,72,153,0.95), rgba(59,130,246,0.95))",
+              background: "linear-gradient(var(--bg-angle, 135deg), rgba(59,130,246,0.95), rgba(139,92,246,0.95), rgba(236,72,153,0.95), rgba(245,158,11,0.95), rgba(59,130,246,0.95))",
               animation: "agent-gradient-spin 5s linear infinite, agent-pulse-ring 2.5s ease infinite",
               backdropFilter: "blur(16px)",
             }}
