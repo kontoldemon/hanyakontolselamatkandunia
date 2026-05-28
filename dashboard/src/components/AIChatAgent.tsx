@@ -190,7 +190,8 @@ GLOBAL CONTROLS (work from any page):
                 body: JSON.stringify({ prompt: userMsg, context: contextStr }),
             });
             const data = await res.json();
-            if (data.ok && data.response) {
+            const isOfflineResponse = data.response === "I am currently offline or cannot reach the LLM provider.";
+            if (data.ok && data.response && !isOfflineResponse) {
                 // Parse AI response for action markers
                 const { cleanText, actions: parsedActions } = parseActionsFromResponse(data.response);
 
@@ -233,7 +234,7 @@ GLOBAL CONTROLS (work from any page):
                             ...prev,
                             {
                                 role: "ai",
-                                content: "I couldn't reach the backend LLM service, and the sensor API may be offline or restarting. Please try again in a moment."
+                                content: "I am currently offline or cannot reach the LLM provider. However, you can still control the dashboard locally! Try commanding me to 'go to sessions', 'switch to dark mode', or 'block [IP]'."
                             }
                         ]);
                     }
