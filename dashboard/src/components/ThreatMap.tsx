@@ -247,7 +247,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                 </button>
 
-                <div className={`relative flex-1 w-full flex ${isExpanded ? "items-center justify-center p-2 md:p-12 mb-12 md:mb-0" : ""}`}>
+                <div className={`relative flex-1 w-full flex overflow-hidden ${isExpanded ? "items-center justify-center p-2 md:p-12 mb-12 md:mb-0" : ""}`}>
                     <div className="absolute inset-0 opacity-20 pointer-events-none"
                         style={{
                             backgroundImage: `radial-gradient(${theme === "dark" ? "#333" : "#ccc"} 1px, transparent 1px)`,
@@ -337,7 +337,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest shrink-0 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Intel Feed
                         </span>
-                        <div className="flex items-center gap-4 whitespace-nowrap opacity-80 animate-[marquee_20s_linear_infinite] hover:animate-none">
+                        <div className="flex items-center gap-4 whitespace-nowrap opacity-80 animate-[marquee_20s_linear_infinite] hover:[animation-play-state:paused]">
                             {threatLogs.length === 0 && <span className="text-slate-500">Awaiting initial sensor data stream...</span>}
                             {Array.from(new Map(threatLogs.map(log => [log.ip, log])).values()).slice(0, 10).map((log, i) => (
                                 <span key={i} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
