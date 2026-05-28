@@ -177,9 +177,9 @@ GLOBAL CONTROLS (work from any page):
     }
 
     const gradientStyle = {
-        background: "linear-gradient(45deg, #4285f4, #9b72cb, #d96570, #4285f4)",
+        background: "linear-gradient(120deg, #2563eb, #7c3aed, #db2777, #2563eb)",
         backgroundSize: "300% 300%",
-        animation: "ai-gradient-anim 4s linear infinite, ai-color-spin 10s linear infinite",
+        animation: "ai-gradient-anim 12s ease infinite",
     };
 
     // ─── Closed State (FAB button) ───────────────────────────────────────
@@ -192,10 +192,6 @@ GLOBAL CONTROLS (work from any page):
                         0% { background-position: 0% 50%; }
                         50% { background-position: 100% 50%; }
                         100% { background-position: 0% 50%; }
-                    }
-                    @keyframes ai-color-spin {
-                        from { filter: hue-rotate(0deg); }
-                        to { filter: hue-rotate(360deg); }
                     }
                 `}</style>
                 <button
@@ -221,10 +217,6 @@ GLOBAL CONTROLS (work from any page):
                     0% { background-position: 0% 50%; }
                     50% { background-position: 100% 50%; }
                     100% { background-position: 0% 50%; }
-                }
-                @keyframes ai-color-spin {
-                    from { filter: hue-rotate(0deg); }
-                    to { filter: hue-rotate(360deg); }
                 }
             `}</style>
 
@@ -373,7 +365,7 @@ GLOBAL CONTROLS (work from any page):
                                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                                 placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
                                 disabled={isExecuting}
-                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full pl-4 pr-10 py-2 text-[13px] outline-none focus:ring-1 focus:ring-purple-500 text-slate-900 dark:text-white placeholder:text-slate-500 disabled:opacity-50"
+                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full pl-4 pr-10 py-2 text-[13px] outline-none focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-500 disabled:opacity-50"
                             />
                             <button
                                 onClick={handleSend}

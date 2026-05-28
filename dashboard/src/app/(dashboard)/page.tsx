@@ -71,13 +71,7 @@ export default function Dashboard() {
       {/* Header & Compact Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
         <div>
-          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-[ai-gradient-anim_3s_linear_infinite,hue-rotate_10s_linear_infinite]">War Room</h2>
-          <style>{`
-            @keyframes hue-rotate {
-              from { filter: hue-rotate(0deg); }
-              to { filter: hue-rotate(360deg); }
-            }
-          `}</style>
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">War Room</h2>
           <p className="text-slate-500 text-xs mt-0.5">Real-time Threat Intelligence Monitor</p>
         </div>
         
