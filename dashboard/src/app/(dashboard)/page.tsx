@@ -4,10 +4,11 @@ import { Activity, Globe, Download } from "lucide-react";
 import ThreatMap from "@/components/ThreatMap";
 import AttackLog from "@/components/AttackLog";
 import { useDashboardStats, useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [underAttack, setUnderAttack] = useState(false);
   const stats = useDashboardStats();
   const threatLogs = useLiveThreatLogs();
   const operations = useSensorOperations();
@@ -20,7 +21,10 @@ export default function Dashboard() {
     }
     return ips.size;
   }, [threatLogs]);
-  const underAttack = stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && Date.now() - threatLogs[0].epochMs < 20000));
+
+  useEffect(() => {
+    setUnderAttack(stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && Date.now() - threatLogs[0].epochMs < 20000)));
+  }, [stats.source, stats.attackActive, threatLogs]);
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;
