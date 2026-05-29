@@ -411,7 +411,7 @@ GLOBAL CONTROLS (work from any page):
                                 <div className="max-w-[90%] flex flex-col gap-2">
                                     {/* Message Bubble */}
                                     <div
-                                        className={`rounded-2xl px-3 py-2 text-[13px] leading-relaxed shadow-sm ${
+                                        className={`whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] leading-relaxed shadow-sm ${
                                             msg.role === "user"
                                                 ? "bg-blue-600 text-white rounded-br-none"
                                                 : "bg-white dark:bg-[#151515] border border-slate-200 dark:border-white/5 text-slate-800 dark:text-slate-200 rounded-bl-none"
