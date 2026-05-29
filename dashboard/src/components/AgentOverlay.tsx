@@ -88,8 +88,8 @@ export default function AgentOverlay() {
           <div
             className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-white/20 text-white text-sm font-medium shadow-2xl"
             style={{
-              background: "linear-gradient(var(--bg-angle, 135deg), rgba(59,130,246,0.95), rgba(139,92,246,0.95), rgba(236,72,153,0.95), rgba(245,158,11,0.95), rgba(59,130,246,0.95))",
-              animation: "agent-gradient-spin 5s linear infinite, agent-pulse-ring 2.5s ease infinite",
+              background: "linear-gradient(var(--bg-angle, 135deg), rgba(59,130,246,0.95), rgba(139,92,246,0.95), rgba(59,130,246,0.95))",
+              animation: "agent-gradient-spin 12s linear infinite, agent-pulse-ring 3s ease infinite",
               backdropFilter: "blur(16px)",
             }}
           >

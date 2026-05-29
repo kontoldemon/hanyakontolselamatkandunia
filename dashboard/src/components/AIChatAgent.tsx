@@ -354,7 +354,7 @@ GLOBAL CONTROLS (work from any page):
 
     return (
         <div
-            className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-opacity duration-200 ${isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"}`}
+            className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"}`}
         >
             <style>{`
                 @keyframes ai-gradient-pan {
@@ -492,7 +492,7 @@ GLOBAL CONTROLS (work from any page):
                         {isLoading && (
                             <div className="flex justify-start">
                                 <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-white/5 text-slate-800 dark:text-slate-200 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
-                                    <Loader2 size={14} className="animate-spin text-purple-500" />
+                                    <Loader2 size={14} className="animate-spin text-blue-500" />
                                 </div>
                             </div>
                         )}

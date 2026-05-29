@@ -117,6 +117,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           case "navigate_session": {
             const ip = action.params.value;
             router.push(`/sessions?focusIp=${encodeURIComponent(ip)}`);
+            router.refresh();
             await wait(1200);
             result = `Navigated to Sessions and focused on attacker ${ip}. You can now see full session details, terminal replay, SOAR action status, and MITRE ATT&CK mappings.`;
             break;
