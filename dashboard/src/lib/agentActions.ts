@@ -110,8 +110,10 @@ export function parseActionsFromResponse(aiText: string): { cleanText: string; a
       const { label, description } = labelForAction(type, param);
       actions.push({ type, label, description, params: { target, value } });
     } else {
-      const { label, description } = labelForAction(type, param);
-      actions.push({ type, label, description, params: { value: param } });
+      let resolvedParam = param;
+      if (type === "navigate_page" && param === "/") resolvedParam = "/dashboard";
+      const { label, description } = labelForAction(type, resolvedParam);
+      actions.push({ type, label, description, params: { value: resolvedParam } });
     }
     return "";
   }).trim();

@@ -124,10 +124,11 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           }
 
           case "navigate_page": {
-            const path = action.params.value || "/";
+            let path = action.params.value || "/dashboard";
+            if (path === "/") path = "/dashboard"; // Remap legacy LLM prompts
             router.push(path);
             await wait(1000);
-            const names: Record<string, string> = { "/": "War Room", "/sessions": "Sessions", "/intelligence": "Intelligence", "/settings": "Settings" };
+            const names: Record<string, string> = { "/dashboard": "War Room", "/sessions": "Sessions", "/intelligence": "Intelligence", "/settings": "Settings" };
             result = `Navigated to ${names[path] ?? path}. You're now viewing the latest data.`;
             break;
           }
