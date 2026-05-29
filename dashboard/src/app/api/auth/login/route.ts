@@ -124,8 +124,8 @@ export async function POST(request: Request) {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (resend && adminEmail) {
     try {
-      await resend.emails.send({
-        from: "CloudSentinel <security@cloudsentinel.dev>", // Or a verified domain you own on Resend
+      const { data, error } = await resend.emails.send({
+        from: "CloudSentinel <onboarding@resend.dev>", // Must use onboarding@resend.dev for unverified domains
         to: [adminEmail],
         subject: "CloudSentinel - Dashboard Verification Code",
         html: `
@@ -139,8 +139,14 @@ export async function POST(request: Request) {
           </div>
         `
       });
+      
+      if (error) {
+        console.error("Resend API Error:", error);
+      } else {
+        console.log("OTP Email sent successfully:", data);
+      }
     } catch (e) {
-      console.error("Failed to send OTP email:", e);
+      console.error("Failed to send OTP email exception:", e);
     }
   } else {
     // Fallback for development if no Resend key is provided
