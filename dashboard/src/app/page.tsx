@@ -224,44 +224,40 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-              
-              {/* Left Side: Key Capabilities Cards */}
-              <div className="lg:col-span-5 flex flex-col gap-4">
-                <div className="reveal-on-scroll">
-                  <FeatureCard 
-                    icon={<Globe className="text-blue-400" size={20} />} 
-                    title="Global Threat Map" 
-                    description="Interactive D3.js world map showing attack origins and geographic densities live." 
-                    tags={["D3.js", "GeoIP"]} 
-                  />
-                </div>
-                <div className="reveal-on-scroll">
-                  <FeatureCard 
-                    icon={<Terminal className="text-emerald-400" size={20} />} 
-                    title="Live Session Replay" 
-                    description="Replay full attacker CLI terminal sessions in a simulated terminal environment." 
-                    tags={["WebSocket", "Replay"]} 
-                  />
-                </div>
-                <div className="reveal-on-scroll">
-                  <FeatureCard 
-                    icon={<Shield className="text-red-400" size={20} />} 
-                    title="SOAR Response" 
-                    description="Security Orchestration triggers iptables blocks within 15ms of malicious detection." 
-                    tags={["SOAR", "iptables"]} 
-                  />
-                </div>
+            {/* 3 Symmetrical Horizontal Cards Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="reveal-on-scroll">
+                <FeatureCard 
+                  icon={<Globe className="text-blue-400" size={20} />} 
+                  title="Global Threat Map" 
+                  description="Interactive D3.js world map showing attack origins and geographic densities live." 
+                  tags={["D3.js", "GeoIP"]} 
+                />
               </div>
-
-              {/* Right Side: Live Interactive Sandbox Simulator Playground! */}
-              <div className="lg:col-span-7 reveal-on-scroll">
-                <div className="p-5 rounded-2xl border border-white/10 bg-[#07070a]/60 backdrop-blur-xl relative overflow-hidden shadow-2xl">
-                  <div className="absolute -top-16 -right-16 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
-                  <LiveThreatSandbox />
-                </div>
+              <div className="reveal-on-scroll">
+                <FeatureCard 
+                  icon={<Terminal className="text-emerald-400" size={20} />} 
+                  title="Live Session Replay" 
+                  description="Replay full attacker CLI terminal sessions in a simulated terminal environment." 
+                  tags={["WebSocket", "Replay"]} 
+                />
               </div>
+              <div className="reveal-on-scroll">
+                <FeatureCard 
+                  icon={<Shield className="text-red-400" size={20} />} 
+                  title="SOAR Response" 
+                  description="Security Orchestration triggers iptables blocks within 15ms of malicious detection." 
+                  tags={["SOAR", "iptables"]} 
+                />
+              </div>
+            </div>
 
+            {/* Symmetrical Full-Width Live Interactive Sandbox Simulator Console at the bottom */}
+            <div className="w-full reveal-on-scroll">
+              <div className="p-4 rounded-xl border border-white/10 bg-[#07070a]/60 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+                <div className="absolute -top-16 -right-16 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
+                <LiveThreatSandbox />
+              </div>
             </div>
           </div>
         </section>
@@ -389,7 +385,7 @@ function FeatureCard({ icon, title, description, tags }: {
   icon: React.ReactNode; title: string; description: string; tags: string[];
 }) {
   return (
-    <div className="group flex flex-col p-5 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all hover:-translate-y-0.5 h-[175px] justify-between">
+    <div className="group flex flex-col p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all hover:-translate-y-0.5 h-[125px] justify-between">
       <div className="space-y-2">
         <div className="flex items-center gap-3">
           <div className="p-1.5 rounded-lg bg-[#050505] border border-white/10 group-hover:scale-105 transition-transform">
