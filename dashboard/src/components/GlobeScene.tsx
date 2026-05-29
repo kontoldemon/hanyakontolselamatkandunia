@@ -12,7 +12,7 @@ const HQ_LAT = 4.5;
 const HQ_LNG = 101.69;
 const ARC_SEGMENTS = 64;
 const MAX_ARCS = 18;
-const SPAWN_INTERVAL = 900; // faster spawn
+const SPAWN_INTERVAL = 900;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -55,35 +55,6 @@ function randomOrigin(): OriginCity {
   return ORIGINS[Math.floor(Math.random() * ORIGINS.length)];
 }
 
-// ─── Globe Mesh ──────────────────────────────────────────────────────────────
-
-function GlobeWireframe() {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const glowRef = useRef<THREE.Mesh>(null);
-
-  useFrame((_, delta) => {
-    if (meshRef.current) meshRef.current.rotation.y += delta * 0.06;
-    if (glowRef.current) glowRef.current.rotation.y += delta * 0.06;
-  });
-
-  return (
-    <group>
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[GLOBE_RADIUS, 48, 48]} />
-        <meshBasicMaterial color="#1e3a5f" wireframe transparent opacity={0.25} />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[GLOBE_RADIUS * 0.99, 48, 48]} />
-        <meshBasicMaterial color="#050a14" transparent opacity={0.9} />
-      </mesh>
-      <mesh ref={glowRef}>
-        <sphereGeometry args={[GLOBE_RADIUS * 1.005, 48, 48]} />
-        <meshBasicMaterial color="#1a4a7a" wireframe transparent opacity={0.08} />
-      </mesh>
-    </group>
-  );
-}
-
 // ─── Origin Dots — glowing dots at attack cities ─────────────────────────────
 
 function OriginDots() {
@@ -98,18 +69,18 @@ function OriginDots() {
 
 function OriginDot({ lat, lng, color }: { lat: number; lng: number; color: string }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const position = useMemo(() => latLngToVec3(lat, lng, GLOBE_RADIUS * 1.008), [lat, lng]);
+  const position = useMemo(() => latLngToVec3(lat, lng, GLOBE_RADIUS * 1.002), [lat, lng]);
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
-    const pulse = 0.7 + Math.sin(clock.elapsedTime * 2 + lat) * 0.3;
+    const pulse = 0.85 + Math.sin(clock.elapsedTime * 2.5 + lat) * 0.15;
     meshRef.current.scale.setScalar(pulse);
   });
 
   return (
     <mesh ref={meshRef} position={position}>
-      <sphereGeometry args={[0.018, 8, 8]} />
-      <meshBasicMaterial color={color} transparent opacity={0.8} />
+      <sphereGeometry args={[0.012, 12, 12]} />
+      <meshBasicMaterial color={color} transparent opacity={0.9} />
     </mesh>
   );
 }
@@ -119,29 +90,29 @@ function OriginDot({ lat, lng, color }: { lat: number; lng: number; color: strin
 function HQPoint() {
   const meshRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
-  const position = useMemo(() => latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.01), []);
+  const position = useMemo(() => latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.004), []);
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
-    const pulse = 1 + Math.sin(clock.elapsedTime * 3) * 0.3;
+    const pulse = 1 + Math.sin(clock.elapsedTime * 3) * 0.2;
     meshRef.current.scale.setScalar(pulse);
     if (ringRef.current) {
-      const ringPulse = 1 + Math.sin(clock.elapsedTime * 1.5) * 0.5;
+      const ringPulse = 1 + Math.sin(clock.elapsedTime * 2) * 0.4;
       ringRef.current.scale.setScalar(ringPulse);
-      (ringRef.current.material as THREE.MeshBasicMaterial).opacity = 0.3 - Math.sin(clock.elapsedTime * 1.5) * 0.15;
+      (ringRef.current.material as THREE.MeshBasicMaterial).opacity = 0.4 - Math.sin(clock.elapsedTime * 2) * 0.2;
     }
   });
 
   return (
     <group position={position}>
       <mesh ref={meshRef}>
-        <sphereGeometry args={[0.05, 16, 16]} />
+        <sphereGeometry args={[0.025, 16, 16]} />
         <meshBasicMaterial color="#3b82f6" />
       </mesh>
       {/* Pulsing ring */}
       <mesh ref={ringRef}>
-        <ringGeometry args={[0.06, 0.1, 32]} />
-        <meshBasicMaterial color="#3b82f6" transparent opacity={0.3} side={THREE.DoubleSide} />
+        <ringGeometry args={[0.03, 0.06, 32]} />
+        <meshBasicMaterial color="#3b82f6" transparent opacity={0.4} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
@@ -161,8 +132,8 @@ interface ArcData {
 
 function createArcData(id: number): ArcData {
   const origin = randomOrigin();
-  const start = latLngToVec3(origin.lat, origin.lng, GLOBE_RADIUS * 1.01);
-  const end = latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.01);
+  const start = latLngToVec3(origin.lat, origin.lng, GLOBE_RADIUS * 1.004);
+  const end = latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.004);
 
   const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
   const dist = start.distanceTo(end);
@@ -254,24 +225,50 @@ function AttackArcs() {
   );
 }
 
+// ─── Rotating Earth Assembly ─────────────────────────────────────────────────
+
+function RotatingGlobe() {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y += delta * 0.08; // smooth rotation
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Solid dark earth sphere (blocks backside arcs) */}
+      <mesh>
+        <sphereGeometry args={[GLOBE_RADIUS, 48, 48]} />
+        <meshBasicMaterial color="#050a14" transparent opacity={0.96} />
+      </mesh>
+
+      {/* Origin glowing dots */}
+      <OriginDots />
+
+      {/* HQ Point */}
+      <HQPoint />
+
+      {/* Attack arcs */}
+      <AttackArcs />
+    </group>
+  );
+}
+
 // ─── Scene ───────────────────────────────────────────────────────────────────
 
 function Scene() {
   return (
     <>
-      <ambientLight intensity={0.15} />
-      <pointLight position={[10, 10, 10]} intensity={0.5} color="#3b82f6" />
-      <pointLight position={[-10, -5, -10]} intensity={0.2} color="#8b5cf6" />
-      <pointLight position={[0, 8, -5]} intensity={0.15} color="#06b6d4" />
-      <GlobeWireframe />
-      <HQPoint />
-      <OriginDots />
-      <AttackArcs />
+      <ambientLight intensity={0.25} />
+      <pointLight position={[10, 10, 10]} intensity={0.6} color="#3b82f6" />
+      <pointLight position={[-10, -5, -10]} intensity={0.3} color="#8b5cf6" />
+      <pointLight position={[0, 8, -5]} intensity={0.2} color="#06b6d4" />
+      <RotatingGlobe />
       <OrbitControls
         enableZoom={false}
         enablePan={false}
-        autoRotate
-        autoRotateSpeed={0.4}
         minPolarAngle={Math.PI * 0.3}
         maxPolarAngle={Math.PI * 0.7}
       />
