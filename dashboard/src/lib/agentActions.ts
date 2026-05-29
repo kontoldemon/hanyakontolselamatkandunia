@@ -126,7 +126,7 @@ export function parseActionsFromResponse(aiText: string): { cleanText: string; p
       actions.push({ type, label, description, params: { value: resolvedParam } });
     }
     return "";
-  }).trim();
+  }).replace(/\n{3,}/g, '\n\n').trim();
   
   return { cleanText, postActionContent, actions };
 }
