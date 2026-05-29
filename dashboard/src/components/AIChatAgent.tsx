@@ -76,18 +76,18 @@ export default function AIChatAgent() {
     // ─── Action Execution ────────────────────────────────────────────────
 
     const handleActionApprove = useCallback(
-        async (msgIndex: number, actionIndex: number) => {
+        async (msgIndex: number) => {
             const msg = messages[msgIndex];
-            if (!msg?.actions?.[actionIndex]) return;
-
-            const action = msg.actions[actionIndex];
+            if (!msg?.actions || msg.actions.length === 0) return;
 
             // Mark as executing
             setMessages((prev) =>
                 prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "executing" as const } : m)),
             );
 
-            const result = await executeAction(action);
+            for (const action of msg.actions) {
+                await executeAction(action);
+            }
 
             // Mark as done
             setMessages((prev) =>
@@ -99,7 +99,7 @@ export default function AIChatAgent() {
                 ...prev,
                 {
                     role: "ai",
-                    content: result,
+                    content: msg.actions.length > 1 ? "All actions completed successfully." : "Action completed.",
                 },
             ]);
         },
@@ -422,68 +422,66 @@ GLOBAL CONTROLS (work from any page):
 
                                     {/* Action Cards */}
                                     {msg.actions && msg.actions.length > 0 && (
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 mt-2">
                                             {msg.actions.map((action, ai) => (
                                                 <div
                                                     key={ai}
-                                                    className="bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl p-3 shadow-sm"
+                                                    className="bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl p-3 shadow-sm flex items-start gap-2"
                                                 >
-                                                    <div className="flex items-start gap-2 mb-2">
-                                                        <Zap size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                                                        <div>
-                                                            <p className="text-[12px] font-semibold text-slate-800 dark:text-slate-200">
-                                                                {action.label}
-                                                            </p>
-                                                            <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                                                                {action.description}
-                                                            </p>
-                                                        </div>
+                                                    <Zap size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="text-[12px] font-semibold text-slate-800 dark:text-slate-200">
+                                                            {action.label}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                            {action.description}
+                                                        </p>
                                                     </div>
-
-                                                    {/* Action State Rendering */}
-                                                    {msg.actionState === "pending" && (
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <button
-                                                                onClick={() => handleActionApprove(i, ai)}
-                                                                disabled={isExecuting}
-                                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
-                                                            >
-                                                                <ShieldCheck size={12} />
-                                                                Allow
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleActionDeny(i)}
-                                                                disabled={isExecuting}
-                                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50 border border-slate-200 dark:border-white/10"
-                                                            >
-                                                                <ShieldX size={12} />
-                                                                Deny
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    {msg.actionState === "executing" && (
-                                                        <div className="flex items-center gap-2 mt-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-                                                            <Loader2 size={12} className="animate-spin" />
-                                                            Executing action...
-                                                        </div>
-                                                    )}
-
-                                                    {msg.actionState === "done" && (
-                                                        <div className="flex items-center gap-2 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                                            <ShieldCheck size={12} />
-                                                            Action completed
-                                                        </div>
-                                                    )}
-
-                                                    {msg.actionState === "denied" && (
-                                                        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 font-medium">
-                                                            <ShieldX size={12} />
-                                                            Action declined
-                                                        </div>
-                                                    )}
                                                 </div>
                                             ))}
+
+                                            {/* Action State Rendering (Once per message) */}
+                                            {msg.actionState === "pending" && (
+                                                <div className="flex items-center gap-2 mt-3 pl-1">
+                                                    <button
+                                                        onClick={() => handleActionApprove(i)}
+                                                        disabled={isExecuting}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
+                                                    >
+                                                        <ShieldCheck size={12} />
+                                                        {msg.actions.length > 1 ? "Allow All" : "Allow"}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleActionDeny(i)}
+                                                        disabled={isExecuting}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50 border border-slate-200 dark:border-white/10"
+                                                    >
+                                                        <ShieldX size={12} />
+                                                        {msg.actions.length > 1 ? "Deny All" : "Deny"}
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {msg.actionState === "executing" && (
+                                                <div className="flex items-center gap-2 mt-2 pl-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                    Executing {msg.actions.length > 1 ? "actions" : "action"}...
+                                                </div>
+                                            )}
+
+                                            {msg.actionState === "done" && (
+                                                <div className="flex items-center gap-2 mt-2 pl-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                    <ShieldCheck size={12} />
+                                                    {msg.actions.length > 1 ? "Actions completed" : "Action completed"}
+                                                </div>
+                                            )}
+
+                                            {msg.actionState === "denied" && (
+                                                <div className="flex items-center gap-2 mt-2 pl-1 text-[11px] text-slate-400 font-medium">
+                                                    <ShieldX size={12} />
+                                                    {msg.actions.length > 1 ? "Actions declined" : "Action declined"}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
