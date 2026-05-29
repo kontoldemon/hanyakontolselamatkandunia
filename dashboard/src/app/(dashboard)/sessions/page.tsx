@@ -89,6 +89,9 @@ export default function SessionsPage() {
         if (target) {
             setSelectedSessionId(target.id);
             setLastSelectedIp(target.ip);
+            if (cardRefs.current[target.id]) {
+                cardRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
         }
     }, [sessions]));
 
