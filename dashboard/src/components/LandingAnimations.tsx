@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Shield, Activity, RefreshCw, Cpu, Server } from "lucide-react";
+import { Shield, Activity, RefreshCw, Cpu, Server, Radio } from "lucide-react";
 
 export default function LandingAnimations() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState(0);
+  const [showHUD, setShowHUD] = useState(true);
 
   useEffect(() => {
     // 1. Intersection Observer for scroll reveals
@@ -31,7 +32,7 @@ export default function LandingAnimations() {
       observer.observe(target);
     });
 
-    // 2. Scroll Progress Tracker for scroll-driven animations
+    // 2. Scroll Progress Tracker for scroll-snapped modules
     const container = document.getElementById("snap-container");
     const handleScroll = () => {
       if (!container) return;
@@ -41,9 +42,14 @@ export default function LandingAnimations() {
         const progress = (scrollTop / docHeight) * 100;
         setScrollProgress(progress);
 
-        // Map progress to active section (0 to 4)
         const sectionIndex = Math.min(4, Math.floor(progress / 19.9));
-        setActiveSection(sectionIndex);
+        setActiveSection((prev) => {
+          if (prev !== sectionIndex) {
+            // Flash HUD open temporarily when section changes for futuristic popup effect
+            setShowHUD(true);
+          }
+          return sectionIndex;
+        });
       }
     };
 
@@ -67,6 +73,17 @@ export default function LandingAnimations() {
     { title: "CS-SOAR", status: "ACTIVE DEFENSE SYSTEM ONLINE", icon: <Shield size={12} className="text-red-400" /> },
   ];
 
+  // Helper to trigger snap scrolling to specific sections directly from hud clicks
+  const scrollToSection = (idx: number) => {
+    const container = document.getElementById("snap-container");
+    if (container) {
+      container.scrollTo({
+        top: idx * window.innerHeight,
+        behavior: "smooth"
+      });
+    }
+  };
+
   return (
     <>
       {/* Scroll Progress Bar */}
@@ -75,54 +92,81 @@ export default function LandingAnimations() {
         style={{ width: `${scrollProgress}%` }}
       />
 
-      {/* Floating Active Defense Telemetry HUD Sidebar (Desktop Only) */}
-      <div className="fixed right-6 top-[28%] z-40 hidden xl:flex flex-col gap-4 w-[240px] p-5 rounded-2xl border border-white/5 bg-[#0a0a0a]/60 backdrop-blur-xl animate-fade-in-scale select-none">
+      {/* ── Sleek Interactive HUD Sidebar Nav (Desktop Only) ────────────────── */}
+      <div className="fixed right-6 top-[30%] z-50 hidden xl:flex flex-row items-center gap-4">
         
-        {/* Radar Scanning Header */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-blue-400" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Live Defense Telemetry</span>
-          </div>
-          <span className="text-[8px] font-mono text-slate-500">CS-NODE-01</span>
-        </div>
+        {/* Dynamic HUD pop-up telemetry card — slides in neatly next to dots */}
+        {showHUD && (
+          <div className="w-[200px] p-4 rounded-xl border border-blue-500/10 bg-[#07070a]/90 backdrop-blur-xl animate-fade-in-scale select-none shadow-[0_4px_24px_rgba(59,130,246,0.06)] relative overflow-hidden">
+            
+            {/* Corner cyber accent lines */}
+            <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-blue-500/30" />
+            <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-blue-500/30" />
+            
+            <div className="space-y-3 font-mono">
+              <div className="flex items-center gap-1.5 border-b border-white/5 pb-1.5">
+                <Radio size={10} className="text-blue-500 animate-pulse" />
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">SYS MONITOR</span>
+              </div>
 
-        {/* Live Metrics Scanner */}
-        <div className="space-y-4">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Active Module</span>
-            <span className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
-              {sectionDetails[activeSection].icon}
-              {sectionDetails[activeSection].title}
-            </span>
-          </div>
+              <div className="space-y-2">
+                <div className="flex flex-col">
+                  <span className="text-[7px] text-slate-500 tracking-wider font-semibold">MODULE</span>
+                  <span className="text-[10px] font-bold text-white flex items-center gap-1">
+                    {sectionDetails[activeSection].icon}
+                    {sectionDetails[activeSection].title}
+                  </span>
+                </div>
 
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Module Status</span>
-            <span className="text-[10px] font-bold font-mono text-emerald-400 flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-              {sectionDetails[activeSection].status}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Global Target</span>
-            <span className="text-xs font-mono text-slate-300">Kuala Lumpur, MY (HQ)</span>
-          </div>
-        </div>
-
-        {/* Active Section Step Indicators */}
-        <div className="border-t border-white/5 pt-3 mt-1 space-y-1.5">
-          {sectionDetails.map((sec, idx) => (
-            <div key={idx} className="flex items-center justify-between text-[9px] font-mono">
-              <span className={`${idx === activeSection ? "text-blue-400 font-bold" : "text-slate-500"}`}>
-                {idx + 1}. {sec.title.split("-")[1]}
-              </span>
-              <span className={`w-1.5 h-1.5 rounded-full ${idx === activeSection ? "bg-blue-400 animate-pulse" : "bg-white/10"}`} />
+                <div className="flex flex-col">
+                  <span className="text-[7px] text-slate-500 tracking-wider font-semibold">TELEMETRY</span>
+                  <span className="text-[9px] font-bold text-emerald-400 leading-tight">
+                    {sectionDetails[activeSection].status}
+                  </span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => setShowHUD(false)}
+                className="w-full text-center text-[7px] text-slate-500 hover:text-white uppercase tracking-widest pt-1 border-t border-white/5 cursor-pointer block"
+              >
+                [ Minimize HUD ]
+              </button>
             </div>
+          </div>
+        )}
+
+        {/* Vertical Dot Navigation with radar pulses */}
+        <div className="flex flex-col gap-4 py-3 px-2 rounded-full border border-white/5 bg-[#0a0a0c]/80 backdrop-blur-md">
+          {sectionDetails.map((sec, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                scrollToSection(idx);
+                setShowHUD(true);
+              }}
+              title={sec.title}
+              className="relative flex items-center justify-center w-5 h-5 group cursor-pointer"
+            >
+              {/* Radar pulse for active item */}
+              {idx === activeSection && (
+                <span className="absolute inset-0 rounded-full border border-blue-500/50 animate-ping opacity-60 pointer-events-none" />
+              )}
+              {/* Hover label */}
+              <span className="absolute right-7 px-2 py-0.5 rounded bg-[#0a0a0c] border border-white/10 text-[8px] text-slate-400 font-mono tracking-wider opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                {sec.title.split("-")[1]}
+              </span>
+              
+              {/* Outer ring */}
+              <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all ${
+                idx === activeSection ? "border-blue-500" : "border-white/10 group-hover:border-white/30"
+              }`}>
+                {/* Inner dot */}
+                <span className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  idx === activeSection ? "bg-blue-400" : "bg-white/10 group-hover:bg-white/20"
+                }`} />
+              </span>
+            </button>
           ))}
         </div>
       </div>

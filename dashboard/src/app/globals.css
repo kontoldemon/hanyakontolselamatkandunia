@@ -187,6 +187,17 @@ body::-webkit-scrollbar-thumb {
   animation: packetFlow 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
+@keyframes movingGradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-moving-gradient {
+  background-size: 200% 200%;
+  animation: movingGradient 10s ease infinite;
+}
+
 .anim-delay-100 { animation-delay: 100ms; }
 .anim-delay-200 { animation-delay: 200ms; }
 .anim-delay-300 { animation-delay: 300ms; }

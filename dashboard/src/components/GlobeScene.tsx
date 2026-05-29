@@ -14,11 +14,26 @@ const ARC_SEGMENTS = 64;
 const MAX_ARCS = 18;
 const SPAWN_INTERVAL = 900;
 
+// Grid Segment segment settings to align intersections mathematically
+const GRID_WIDTH_SEGMENTS = 48;
+const GRID_HEIGHT_SEGMENTS = 24;
+
+const LAT_STEP = 180 / GRID_HEIGHT_SEGMENTS; // 7.5 degrees
+const LNG_STEP = 360 / GRID_WIDTH_SEGMENTS; // 7.5 degrees
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function snapToGrid(val: number, step: number): number {
+  return Math.round(val / step) * step;
+}
+
 function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lng + 180) * (Math.PI / 180);
+  // Snapped to perfect grid coordinate intersections
+  const snappedLat = snapToGrid(lat, LAT_STEP);
+  const snappedLng = snapToGrid(lng, LNG_STEP);
+
+  const phi = (90 - snappedLat) * (Math.PI / 180);
+  const theta = (snappedLng + 180) * (Math.PI / 180);
   return new THREE.Vector3(
     -radius * Math.sin(phi) * Math.cos(theta),
     radius * Math.cos(phi),
@@ -55,7 +70,7 @@ function randomOrigin(): OriginCity {
   return ORIGINS[Math.floor(Math.random() * ORIGINS.length)];
 }
 
-// ─── Origin Dots — glowing dots at attack cities ─────────────────────────────
+// ─── Origin Dots — glowing dots perfectly snapped to grid intersections ───────
 
 function OriginDots() {
   return (
@@ -85,7 +100,7 @@ function OriginDot({ lat, lng, color }: { lat: number; lng: number; color: strin
   );
 }
 
-// ─── HQ Point ────────────────────────────────────────────────────────────────
+// ─── HQ Point (HQ Snapped on Grid) ───────────────────────────────────────────
 
 function HQPoint() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -118,7 +133,7 @@ function HQPoint() {
   );
 }
 
-// ─── Attack Arc ──────────────────────────────────────────────────────────────
+// ─── Attack Arc — optimized buffer geometry initialization to prevent glitches ──
 
 interface ArcData {
   id: number;
@@ -162,7 +177,14 @@ function AttackArc({ arc, onDone }: { arc: ArcData; onDone: (id: number) => void
   const opacityRef = useRef(arc.opacity);
 
   const fullPoints = useMemo(() => arc.curve.getPoints(ARC_SEGMENTS), [arc.curve]);
-  const geometry = useMemo(() => new THREE.BufferGeometry(), []);
+  
+  // Safe geometry initialization with starting vertex so it is never empty or glitched to 0,0,0
+  const geometry = useMemo(() => {
+    const geom = new THREE.BufferGeometry();
+    geom.setFromPoints([fullPoints[0], fullPoints[0]]);
+    return geom;
+  }, [fullPoints]);
+
   const material = useMemo(() => new THREE.LineBasicMaterial({ color: arc.color, transparent: true, opacity: 1 }), [arc.color]);
   const lineObj = useMemo(() => new THREE.Line(geometry, material), [geometry, material]);
 
@@ -244,13 +266,13 @@ function RotatingGlobe() {
         <meshBasicMaterial color="#050a14" transparent opacity={0.96} />
       </mesh>
 
-      {/* Subtlest blue wireframe grid to reveal physical globe volume */}
+      {/* Dense longitude & latitude wireframe grid — beautifully snapping nodes */}
       <mesh>
-        <sphereGeometry args={[GLOBE_RADIUS * 0.999, 36, 36]} />
-        <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.07} />
+        <sphereGeometry args={[GLOBE_RADIUS * 0.999, GRID_WIDTH_SEGMENTS, GRID_HEIGHT_SEGMENTS]} />
+        <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.12} />
       </mesh>
 
-      {/* Origin glowing dots */}
+      {/* Origin glowing dots perfectly situated on intersections */}
       <OriginDots />
 
       {/* HQ Point */}

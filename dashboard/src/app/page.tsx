@@ -241,9 +241,9 @@ export default function LandingPage() {
         >
           <div className="flex-1 flex items-center justify-center">
             <div className="max-w-4xl mx-auto text-center reveal-on-scroll w-full">
-              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-blue-600/10 via-[#0a0a0a] to-indigo-600/10 p-10 md:p-14 relative overflow-hidden shadow-2xl">
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/25 rounded-full blur-3xl" />
-                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/25 rounded-full blur-3xl" />
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-blue-600/10 via-[#07070a] to-indigo-900/15 animate-moving-gradient p-10 md:p-14 relative overflow-hidden shadow-2xl">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
 
                 <div className="relative z-10 space-y-6">
                   <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white">
