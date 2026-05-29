@@ -100,7 +100,7 @@ export default function AIChatAgent() {
                 ...prev,
                 {
                     role: "ai",
-                    content: actions.length > 1 ? "All actions completed successfully." : "Action completed.",
+                    content: msg.postActionContent || (actions.length > 1 ? "All actions completed successfully." : "Action completed."),
                 },
             ]);
         },
@@ -157,6 +157,7 @@ RESPONSE RULES:
 2. Append action markers ONLY for actionable requests. You may include MULTIPLE markers.
 3. Before each marker, write a brief sentence like "I can do that for you" or "Let me change that".
 4. Do NOT explain markers. Use them naturally. Be direct. No filler.
+5. If you need to provide a lengthy explanation or analysis (e.g. explaining what an attacker did based on telemetry), wrap ONLY that detailed explanation in <post_action_explanation> ... </post_action_explanation> at the very end of your response. The user will only see this analysis AFTER they approve your actions.
 
 NAVIGATION MARKERS:
 [ACTION:navigate_session:IP] — View attacker session details
@@ -197,7 +198,7 @@ GLOBAL CONTROLS (work from any page):
             const isOfflineResponse = data.response === "I am currently offline or cannot reach the LLM provider.";
             if (data.ok && data.response && !isOfflineResponse) {
                 // Parse AI response for action markers
-                const { cleanText, actions: parsedActions } = parseActionsFromResponse(data.response);
+                const { cleanText, postActionContent, actions: parsedActions } = parseActionsFromResponse(data.response);
 
                 // If no markers found, try fallback intent detection
                 // But skip fallback for casual/greeting messages
@@ -208,6 +209,7 @@ GLOBAL CONTROLS (work from any page):
                 const aiMessage: AgentMessage = {
                     role: "ai",
                     content: cleanText,
+                    postActionContent,
                     actions: finalActions.length > 0 ? finalActions : undefined,
                     actionState: finalActions.length > 0 ? "pending" : undefined,
                 };

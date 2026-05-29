@@ -22,6 +22,7 @@ export interface AgentAction {
 export interface AgentMessage {
   role: "user" | "ai";
   content: string;
+  postActionContent?: string;
   actions?: AgentAction[];
   actionState?: "pending" | "approved" | "executing" | "done" | "denied";
 }
@@ -97,9 +98,18 @@ function labelForAction(type: AgentActionType, param: string): { label: string; 
   }
 }
 
-export function parseActionsFromResponse(aiText: string): { cleanText: string; actions: AgentAction[] } {
+export function parseActionsFromResponse(aiText: string): { cleanText: string; postActionContent?: string; actions: AgentAction[] } {
   const actions: AgentAction[] = [];
-  const cleanText = aiText.replace(MARKER_RE, (_, rawType: string, rawParam: string) => {
+  let postActionContent: string | undefined;
+
+  const match = aiText.match(/<post_action_explanation>([\s\S]*?)<\/post_action_explanation>/i);
+  let processText = aiText;
+  if (match) {
+    postActionContent = match[1].trim();
+    processText = aiText.replace(match[0], "").trim();
+  }
+
+  const cleanText = processText.replace(MARKER_RE, (_, rawType: string, rawParam: string) => {
     const type = rawType as AgentActionType;
     const param = (rawParam ?? "").trim();
 
@@ -117,7 +127,8 @@ export function parseActionsFromResponse(aiText: string): { cleanText: string; a
     }
     return "";
   }).trim();
-  return { cleanText, actions };
+  
+  return { cleanText, postActionContent, actions };
 }
 
 // ─── Fallback Intent Detection ──────────────────────────────────────────────
