@@ -159,7 +159,7 @@ RESPONSE RULES:
 
 NAVIGATION MARKERS:
 [ACTION:navigate_session:IP] — View attacker session details
-[ACTION:navigate_page:PATH] — Go to page (/ = War Room, /sessions, /intelligence, /settings)
+[ACTION:navigate_page:PATH] — Go to page (/dashboard = War Room, /sessions, /intelligence, /settings)
 [ACTION:show_threat_map:] — Focus the global threat map
 [ACTION:block_ip:IP] — Block an IP at the sensor firewall
 [ACTION:export_data:] — Export sensor JSON data
