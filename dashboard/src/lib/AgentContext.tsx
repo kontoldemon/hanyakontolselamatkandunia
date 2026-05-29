@@ -159,8 +159,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           }
 
           case "export_data": {
-            if (pathnameRef.current !== "/") {
-              router.push("/");
+            if (pathnameRef.current !== "/dashboard") {
+              router.push("/dashboard");
               await wait(1500);
             }
             window.dispatchEvent(new Event("agent:export"));
