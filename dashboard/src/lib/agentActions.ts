@@ -186,7 +186,7 @@ export function detectIntentActions(userMessage: string, aiResponse: string, his
 
   // ── Block intent ──
   const blockWords = ["block", "ban", "firewall", "stop", "blacklist", "deny"];
-  if (ip && blockWords.some((w) => combined.includes(w))) {
+  if (ip && blockWords.some((w) => userLower.includes(w))) {
     actions.push({
       type: "block_ip",
       label: `Block IP ${ip}`,
@@ -197,7 +197,7 @@ export function detectIntentActions(userMessage: string, aiResponse: string, his
 
   // ── Navigate to session intent ──
   const sessionWords = ["detail", "show", "view", "look at", "investigate", "attacker", "who is", "info"];
-  if (ip && sessionWords.some((w) => combined.includes(w))) {
+  if (ip && sessionWords.some((w) => userLower.includes(w))) {
     actions.push({
       type: "navigate_session",
       label: `View attacker ${ip}`,
@@ -208,9 +208,9 @@ export function detectIntentActions(userMessage: string, aiResponse: string, his
 
   // ── Navigate to page intent ──
   const navWords = ["go to", "navigate", "open", "switch to", "take me"];
-  if (navWords.some((w) => combined.includes(w))) {
+  if (navWords.some((w) => userLower.includes(w))) {
     for (const [keyword, path] of Object.entries(PAGE_KEYWORDS)) {
-      if (combined.includes(keyword)) {
+      if (userLower.includes(keyword)) {
         actions.push({
           type: "navigate_page",
           label: `Go to ${capitalize(keyword)}`,
@@ -223,17 +223,17 @@ export function detectIntentActions(userMessage: string, aiResponse: string, his
   }
 
   // ── Threat map intent ──
-  if (["threat map", "global map", "show map"].some((w) => combined.includes(w))) {
+  if (["threat map", "global map", "show map"].some((w) => userLower.includes(w))) {
     actions.push({ type: "show_threat_map", label: "Show Threat Map", description: "Navigate to War Room and focus the global map", params: {} });
   }
 
   // ── Export intent ──
-  if (["export", "download", "save data", "dump"].some((w) => combined.includes(w))) {
+  if (["export", "download", "save data", "dump"].some((w) => userLower.includes(w))) {
     actions.push({ type: "export_data", label: "Export Sensor Data", description: "Download the full sensor JSON payload", params: {} });
   }
 
   // ── Exposure toggle intent ──
-  if (["exposure", "pause honeypot", "resume honeypot", "toggle exposure"].some((w) => combined.includes(w))) {
+  if (["exposure", "pause honeypot", "resume honeypot", "toggle exposure"].some((w) => userLower.includes(w))) {
     actions.push({ type: "toggle_exposure", label: "Toggle Honeypot Exposure", description: "Pause or resume public traffic", params: {} });
   }
 
@@ -262,7 +262,7 @@ export function detectIntentActions(userMessage: string, aiResponse: string, his
   ];
 
   for (const cfg of settingsTargets) {
-    if (cfg.keywords.some((k) => combined.includes(k))) {
+    if (cfg.keywords.some((k) => userLower.includes(k))) {
       // Try to detect the value from user message
       let matchedValue = "";
       for (const [hint, val] of Object.entries(cfg.values)) {
@@ -284,47 +284,47 @@ export function detectIntentActions(userMessage: string, aiResponse: string, his
   }
 
   // ── Sessions filter intent ──
-  if (["active only", "show active", "filter active", "active sessions"].some((w) => combined.includes(w))) {
+  if (["active only", "show active", "filter active", "active sessions"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Filter active sessions", description: "Show only active sessions", params: { target: "sessions.filter", value: "active" } });
   }
-  if (["all sessions", "show all", "all logs"].some((w) => combined.includes(w))) {
+  if (["all sessions", "show all", "all logs"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Show all sessions", description: "Remove session filter", params: { target: "sessions.filter", value: "all" } });
   }
 
   // ── Sessions search intent ──
-  if (ip && ["search", "find", "look up", "filter"].some((w) => combined.includes(w))) {
+  if (ip && ["search", "find", "look up", "filter"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: `Search sessions for ${ip}`, description: "Set the sessions search query", params: { target: "sessions.search", value: ip } });
   }
 
   // ── Intelligence sort intent ──
-  if (["least used", "least common", "rare command"].some((w) => combined.includes(w))) {
+  if (["least used", "least common", "rare command"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Sort: least used commands", description: "Switch to least-used command sort", params: { target: "intel.sort", value: "least" } });
   }
-  if (["most used", "most common", "top command", "popular command"].some((w) => combined.includes(w))) {
+  if (["most used", "most common", "top command", "popular command"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Sort: most used commands", description: "Switch to most-used command sort", params: { target: "intel.sort", value: "most" } });
   }
 
   // ── Fullscreen intents ──
-  if (["fullscreen replay", "expand replay", "maximize replay"].some((w) => combined.includes(w))) {
+  if (["fullscreen replay", "expand replay", "maximize replay"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Toggle replay fullscreen", description: "Expand terminal replay to fullscreen", params: { target: "replay.fullscreen", value: "toggle" } });
   }
-  if (["fullscreen socket", "expand socket", "maximize telemetry", "fullscreen telemetry"].some((w) => combined.includes(w))) {
+  if (["fullscreen socket", "expand socket", "maximize telemetry", "fullscreen telemetry"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Toggle socket fullscreen", description: "Expand socket telemetry to fullscreen", params: { target: "socket.fullscreen", value: "toggle" } });
   }
 
   // ── Sidebar intents ──
-  if (["collapse sidebar", "hide sidebar", "minimize sidebar", "close sidebar"].some((w) => combined.includes(w))) {
+  if (["collapse sidebar", "hide sidebar", "minimize sidebar", "close sidebar"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Collapse sidebar", description: "Minimize the navigation sidebar", params: { target: "sidebar.toggle", value: "collapse" } });
   }
-  if (["expand sidebar", "show sidebar", "open sidebar", "maximize sidebar"].some((w) => combined.includes(w))) {
+  if (["expand sidebar", "show sidebar", "open sidebar", "maximize sidebar"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Expand sidebar", description: "Expand the navigation sidebar", params: { target: "sidebar.toggle", value: "expand" } });
   }
 
   // ── Theme intents ──
-  if (["dark mode", "dark theme", "switch to dark", "enable dark"].some((w) => combined.includes(w))) {
+  if (["dark mode", "dark theme", "switch to dark", "enable dark"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Switch to dark mode", description: "Change the dashboard theme to dark", params: { target: "sidebar.theme", value: "dark" } });
   }
-  if (["light mode", "light theme", "switch to light", "enable light"].some((w) => combined.includes(w))) {
+  if (["light mode", "light theme", "switch to light", "enable light"].some((w) => userLower.includes(w))) {
     actions.push({ type: "ui_command", label: "Switch to light mode", description: "Change the dashboard theme to light", params: { target: "sidebar.theme", value: "light" } });
   }
 
