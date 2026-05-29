@@ -354,7 +354,7 @@ GLOBAL CONTROLS (work from any page):
 
     return (
         <div
-            className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"}`}
+            className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-opacity duration-200 ${isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"}`}
         >
             <style>{`
                 @keyframes ai-gradient-pan {

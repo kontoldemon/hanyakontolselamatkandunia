@@ -30,7 +30,7 @@ export default function Sidebar() {
     }, [theme, setTheme]));
 
     const links = [
-        { name: "War Room", href: "/", icon: LayoutDashboard },
+        { name: "War Room", href: "/dashboard", icon: LayoutDashboard },
         { name: "Sessions", href: "/sessions", icon: Terminal },
         { name: "Intelligence", href: "/intelligence", icon: BrainCircuit },
         { name: "Settings", href: "/settings", icon: Settings },
