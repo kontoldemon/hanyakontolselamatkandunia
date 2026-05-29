@@ -136,24 +136,44 @@ export default function IntelligencePage() {
                         <ShieldAlert className="text-red-500" size={16} />
                         Attack Types Distribution
                     </h3>
-                    <div className="h-[200px] w-full relative">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="relative h-32 w-32 rounded-full"
-                                style={{
-                                    background: totalAttacks > 0 ? `conic-gradient(${attackTypes.map((item, index) => {
-                                        const start = attackTypes.slice(0, index).reduce((acc, current) => acc + Number(current.value || 0), 0) / totalAttacks * 100;
-                                        const end = start + Number(item.value || 0) / totalAttacks * 100;
-                                        return `${item.fill} ${start}% ${end}%`;
-                                    }).join(", ")})` : "conic-gradient(#334155 0% 100%)",
-                                }}
-                            >
-                                <div className="absolute inset-6 rounded-full bg-white dark:bg-[#0a0a0a] flex flex-col items-center justify-center">
-                                    <span className="text-xl font-bold text-slate-900 dark:text-white">{totalAttacks}</span>
-                                    <span className="text-[10px] font-medium text-slate-500">Events</span>
-                                </div>
+                    <div className="h-[200px] w-full flex flex-col items-center justify-center gap-4">
+                        <div className="relative h-32 w-32 shrink-0">
+                            <svg viewBox="-1 -1 2 2" className="w-full h-full" style={{ transform: "rotate(-90deg)" }}>
+                                {totalAttacks > 0 ? (() => {
+                                    let cumulativePercent = 0;
+                                    return attackTypes.map((item) => {
+                                        const slicePercent = Number(item.value || 0) / totalAttacks;
+                                        if (slicePercent === 0) return null;
+                                        if (slicePercent === 1) {
+                                            return <circle key={item.name} r="1" cx="0" cy="0" fill={item.fill} title={`${item.name}: ${item.value}`} className="hover:opacity-80 transition-opacity cursor-pointer" />;
+                                        }
+                                        const startX = Math.cos(2 * Math.PI * cumulativePercent);
+                                        const startY = Math.sin(2 * Math.PI * cumulativePercent);
+                                        cumulativePercent += slicePercent;
+                                        const endX = Math.cos(2 * Math.PI * cumulativePercent);
+                                        const endY = Math.sin(2 * Math.PI * cumulativePercent);
+                                        const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+                                        const pathData = `M ${startX} ${startY} A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY} L 0 0`;
+                                        return (
+                                            <path
+                                                key={item.name}
+                                                d={pathData}
+                                                fill={item.fill}
+                                                title={`${item.name}: ${item.value}`}
+                                                className="hover:opacity-80 transition-opacity cursor-pointer"
+                                            />
+                                        );
+                                    });
+                                })() : (
+                                    <circle r="1" cx="0" cy="0" fill="#334155" />
+                                )}
+                            </svg>
+                            <div className="absolute inset-[24%] rounded-full bg-white dark:bg-[#0a0a0a] flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-xl font-bold text-slate-900 dark:text-white leading-none">{totalAttacks}</span>
+                                <span className="text-[10px] font-medium text-slate-500 mt-1">Events</span>
                             </div>
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center gap-x-4 gap-y-1">
+                        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
                             {attackTypes.length === 0 && (
                                 <div className="text-[11px] text-slate-500">No live distribution from sensor.</div>
                             )}
