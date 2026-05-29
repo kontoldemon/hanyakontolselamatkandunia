@@ -145,7 +145,11 @@ export default function IntelligencePage() {
                                         const slicePercent = Number(item.value || 0) / totalAttacks;
                                         if (slicePercent === 0) return null;
                                         if (slicePercent === 1) {
-                                            return <circle key={item.name} r="1" cx="0" cy="0" fill={item.fill} title={`${item.name}: ${item.value}`} className="hover:opacity-80 transition-opacity cursor-pointer" />;
+                                            return (
+                                                <circle key={item.name} r="1" cx="0" cy="0" fill={item.fill} className="hover:opacity-80 transition-opacity cursor-pointer">
+                                                    <title>{`${item.name}: ${item.value}`}</title>
+                                                </circle>
+                                            );
                                         }
                                         const startX = Math.cos(2 * Math.PI * cumulativePercent);
                                         const startY = Math.sin(2 * Math.PI * cumulativePercent);
@@ -159,9 +163,10 @@ export default function IntelligencePage() {
                                                 key={item.name}
                                                 d={pathData}
                                                 fill={item.fill}
-                                                title={`${item.name}: ${item.value}`}
                                                 className="hover:opacity-80 transition-opacity cursor-pointer"
-                                            />
+                                            >
+                                                <title>{`${item.name}: ${item.value}`}</title>
+                                            </path>
                                         );
                                     });
                                 })() : (
