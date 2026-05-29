@@ -95,47 +95,6 @@ export default function LandingAnimations() {
       {/* ── Sleek Interactive HUD Sidebar Nav (Desktop Only) ────────────────── */}
       <div className="fixed right-6 top-[30%] z-50 hidden xl:flex flex-row items-center gap-4">
         
-        {/* Dynamic HUD pop-up telemetry card — slides in neatly next to dots */}
-        {showHUD && (
-          <div className="w-[200px] p-4 rounded-xl border border-blue-500/10 bg-[#07070a]/90 backdrop-blur-xl animate-fade-in-scale select-none shadow-[0_4px_24px_rgba(59,130,246,0.06)] relative overflow-hidden">
-            
-            {/* Corner cyber accent lines */}
-            <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-blue-500/30" />
-            <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-blue-500/30" />
-            
-            <div className="space-y-3 font-mono">
-              <div className="flex items-center gap-1.5 border-b border-white/5 pb-1.5">
-                <Radio size={10} className="text-blue-500 animate-pulse" />
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">SYS MONITOR</span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex flex-col">
-                  <span className="text-[7px] text-slate-500 tracking-wider font-semibold">MODULE</span>
-                  <span className="text-[10px] font-bold text-white flex items-center gap-1">
-                    {sectionDetails[activeSection].icon}
-                    {sectionDetails[activeSection].title}
-                  </span>
-                </div>
-
-                <div className="flex flex-col">
-                  <span className="text-[7px] text-slate-500 tracking-wider font-semibold">TELEMETRY</span>
-                  <span className="text-[9px] font-bold text-emerald-400 leading-tight">
-                    {sectionDetails[activeSection].status}
-                  </span>
-                </div>
-              </div>
-              
-              <button 
-                onClick={() => setShowHUD(false)}
-                className="w-full text-center text-[7px] text-slate-500 hover:text-white uppercase tracking-widest pt-1 border-t border-white/5 cursor-pointer block"
-              >
-                [ Minimize HUD ]
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Vertical Dot Navigation with radar pulses */}
         <div className="flex flex-col gap-4 py-3 px-2 rounded-full border border-white/5 bg-[#0a0a0c]/80 backdrop-blur-md">
           {sectionDetails.map((sec, idx) => (
@@ -143,7 +102,6 @@ export default function LandingAnimations() {
               key={idx}
               onClick={() => {
                 scrollToSection(idx);
-                setShowHUD(true);
               }}
               title={sec.title}
               className="relative flex items-center justify-center w-5 h-5 group cursor-pointer"

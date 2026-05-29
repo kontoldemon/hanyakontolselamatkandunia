@@ -269,7 +269,7 @@ function RotatingGlobe() {
       {/* Dense longitude & latitude wireframe grid — beautifully snapping nodes */}
       <mesh>
         <sphereGeometry args={[GLOBE_RADIUS * 0.999, GRID_WIDTH_SEGMENTS, GRID_HEIGHT_SEGMENTS]} />
-        <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.12} />
+        <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.32} />
       </mesh>
 
       {/* Origin glowing dots perfectly situated on intersections */}

