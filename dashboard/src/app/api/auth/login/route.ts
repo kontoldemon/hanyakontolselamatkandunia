@@ -129,13 +129,28 @@ export async function POST(request: Request) {
         to: [adminEmail],
         subject: "CloudSentinel - Dashboard Verification Code",
         html: `
-          <div style="font-family: sans-serif; max-w-md: 600px; margin: 0 auto; padding: 20px;">
-            <h2>CloudSentinel Dashboard Access</h2>
-            <p>A sign-in attempt was made to your CloudSentinel dashboard. Use the verification code below to proceed:</p>
-            <div style="background-color: #f3f4f6; padding: 24px; border-radius: 8px; text-align: center; margin: 24px 0;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2563eb;">${otp}</span>
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #050505; color: #f1f5f9; border-radius: 16px; border: 1px solid #1e293b; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <div style="display: inline-block; padding: 12px; background-color: #2563eb; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+              <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: #ffffff;">CloudSentinel</h1>
+              <p style="margin: 8px 0 0 0; font-size: 14px; color: #94a3b8;">Security Dashboard Verification</p>
             </div>
-            <p style="color: #6b7280; font-size: 14px;">If you did not request this code, you can safely ignore this email.</p>
+            
+            <div style="background-color: #0a0a0a; border: 1px solid #1e293b; border-radius: 12px; padding: 32px; text-align: center; margin-bottom: 24px;">
+              <p style="margin: 0 0 24px 0; font-size: 15px; color: #cbd5e1; line-height: 1.6;">A sign-in attempt was detected for your CloudSentinel administrator account. Use the authorization code below to proceed.</p>
+              
+              <div style="background: linear-gradient(145deg, #1e3a8a, #172554); border: 1px solid #1d4ed8; padding: 24px; border-radius: 8px; margin: 0 auto; max-width: 300px; box-shadow: inset 0 0 15px rgba(37,99,235,0.2);">
+                <span style="font-family: monospace; font-size: 36px; font-weight: 800; letter-spacing: 12px; color: #60a5fa; text-shadow: 0 0 10px rgba(96,165,250,0.5); margin-left: 12px;">${otp}</span>
+              </div>
+              
+              <p style="margin: 24px 0 0 0; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Code expires in 5 minutes</p>
+            </div>
+            
+            <div style="text-align: center; border-top: 1px solid #1e293b; padding-top: 24px;">
+              <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">If you did not request this authorization code, your dashboard may be under attack.<br/>You can safely ignore this email, but consider rotating your credentials.</p>
+            </div>
           </div>
         `
       });

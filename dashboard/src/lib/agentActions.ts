@@ -76,7 +76,7 @@ function labelForAction(type: AgentActionType, param: string): { label: string; 
     case "block_ip":
       return { label: `Block IP ${param}`, description: "Apply iptables firewall rule at the sensor" };
     case "navigate_page": {
-      const names: Record<string, string> = { "/": "War Room", "/sessions": "Sessions", "/intelligence": "Intelligence", "/settings": "Settings" };
+      const names: Record<string, string> = { "/dashboard": "War Room", "/sessions": "Sessions", "/intelligence": "Intelligence", "/settings": "Settings" };
       return { label: `Go to ${names[param] ?? capitalize(param)}`, description: `Navigate to the ${names[param] ?? param} page` };
     }
     case "show_threat_map":
@@ -123,8 +123,8 @@ export function parseActionsFromResponse(aiText: string): { cleanText: string; a
 const IP_RE = /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/;
 
 const PAGE_KEYWORDS: Record<string, string> = {
-  "war room": "/",
-  "dashboard": "/",
+  "war room": "/dashboard",
+  "dashboard": "/dashboard",
   "session": "/sessions",
   "sessions": "/sessions",
   "intelligence": "/intelligence",
