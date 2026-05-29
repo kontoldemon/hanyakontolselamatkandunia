@@ -78,14 +78,15 @@ export default function AIChatAgent() {
     const handleActionApprove = useCallback(
         async (msgIndex: number) => {
             const msg = messages[msgIndex];
-            if (!msg?.actions || msg.actions.length === 0) return;
+            const actions = msg?.actions;
+            if (!actions || actions.length === 0) return;
 
             // Mark as executing
             setMessages((prev) =>
                 prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "executing" as const } : m)),
             );
 
-            for (const action of msg.actions) {
+            for (const action of actions) {
                 await executeAction(action);
             }
 
@@ -99,7 +100,7 @@ export default function AIChatAgent() {
                 ...prev,
                 {
                     role: "ai",
-                    content: msg.actions.length > 1 ? "All actions completed successfully." : "Action completed.",
+                    content: actions.length > 1 ? "All actions completed successfully." : "Action completed.",
                 },
             ]);
         },
