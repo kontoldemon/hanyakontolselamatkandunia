@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Terminal, ShieldAlert, CheckCircle, Crosshair, Brain, Shield } from "lucide-react";
+import { Terminal, ShieldAlert, Crosshair, Brain } from "lucide-react";
 
 interface Simulation {
   command: string;
@@ -53,11 +53,15 @@ const SIMULATIONS: Record<string, Simulation> = {
   }
 };
 
+const SCENARIOS: ("stuffing" | "dropper" | "exploit")[] = ["stuffing", "dropper", "exploit"];
+
 export default function LiveThreatSandbox() {
   const [selected, setSelected] = useState<"stuffing" | "dropper" | "exploit">("stuffing");
   const [typingText, setTypingText] = useState("");
   const [consoleLines, setConsoleLines] = useState<string[]>([]);
-  const [step, setStep] = useState<"idle" | "typing" | "running" | "blocked">("idle");
+  const [step, setStep] = useState<"typing" | "running" | "blocked">("typing");
+  
+  const scenarioIndex = useRef(0);
   const typingTimer = useRef<NodeJS.Timeout | null>(null);
 
   const startSimulation = (type: "stuffing" | "dropper" | "exploit") => {
@@ -79,7 +83,7 @@ export default function LiveThreatSandbox() {
         setStep("running");
         runConsoleOutputs(type);
       }
-    }, 45);
+    }, 40);
   };
 
   const runConsoleOutputs = (type: "stuffing" | "dropper" | "exploit") => {
@@ -93,9 +97,14 @@ export default function LiveThreatSandbox() {
         clearInterval(interval);
         setTimeout(() => {
           setStep("blocked");
+          // Hold the blocked screen for 4.5 seconds before auto-cycling to next scenario
+          setTimeout(() => {
+            scenarioIndex.current = (scenarioIndex.current + 1) % SCENARIOS.length;
+            startSimulation(SCENARIOS[scenarioIndex.current]);
+          }, 4500);
         }, 600);
       }
-    }, 500);
+    }, 450);
   };
 
   useEffect(() => {
@@ -106,70 +115,21 @@ export default function LiveThreatSandbox() {
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col md:flex-row gap-5 font-mono select-none">
-      {/* Simulation Trigger Buttons Panel */}
-      <div className="w-full md:w-[240px] flex flex-col gap-2 shrink-0">
-        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest border-b border-white/5 pb-1">
-          Select Attack Vector
-        </div>
-        
-        <button
-          onClick={() => startSimulation("stuffing")}
-          className={`text-left p-3 rounded-lg border text-xs flex flex-col gap-1 transition-all cursor-pointer ${
-            selected === "stuffing" 
-              ? "border-blue-500/30 bg-blue-500/5 text-white" 
-              : "border-white/5 hover:border-white/10 bg-[#07070a] text-slate-400"
-          }`}
-        >
-          <span className="font-bold flex items-center gap-1.5">
-            <Crosshair size={12} className={selected === "stuffing" ? "text-blue-400" : "text-slate-500"} />
-            1. Credential Stuffing
-          </span>
-          <span className="text-[9px] text-slate-500">MITRE ATT&CK T1110</span>
-        </button>
-
-        <button
-          onClick={() => startSimulation("dropper")}
-          className={`text-left p-3 rounded-lg border text-xs flex flex-col gap-1 transition-all cursor-pointer ${
-            selected === "dropper" 
-              ? "border-cyan-500/30 bg-cyan-500/5 text-white" 
-              : "border-white/5 hover:border-white/10 bg-[#07070a] text-slate-400"
-          }`}
-        >
-          <span className="font-bold flex items-center gap-1.5">
-            <Brain size={12} className={selected === "dropper" ? "text-cyan-400" : "text-slate-500"} />
-            2. Malware Ingestion
-          </span>
-          <span className="text-[9px] text-slate-500">MITRE ATT&CK T1105</span>
-        </button>
-
-        <button
-          onClick={() => startSimulation("exploit")}
-          className={`text-left p-3 rounded-lg border text-xs flex flex-col gap-1 transition-all cursor-pointer ${
-            selected === "exploit" 
-              ? "border-purple-500/30 bg-purple-500/5 text-white" 
-              : "border-white/5 hover:border-white/10 bg-[#07070a] text-slate-400"
-          }`}
-        >
-          <span className="font-bold flex items-center gap-1.5">
-            <Terminal size={12} className={selected === "exploit" ? "text-purple-400" : "text-slate-500"} />
-            3. Interactive TTY Exploit
-          </span>
-          <span className="text-[9px] text-slate-500">MITRE ATT&CK T1059</span>
-        </button>
-      </div>
-
-      {/* Interactive Cyber Operations Console */}
-      <div className="flex-1 rounded-xl border border-white/5 bg-[#050508] p-4 flex flex-col gap-3 relative min-h-[220px] overflow-hidden shadow-inner">
+    <div className="w-full h-full flex flex-col font-mono select-none">
+      {/* 100% Width Interactive Cyber Operations Console */}
+      <div className="flex-1 rounded-xl border border-white/5 bg-[#050508] p-4 flex flex-col gap-3 relative min-h-[230px] overflow-hidden shadow-inner">
         {/* Terminal Header */}
         <div className="flex items-center justify-between border-b border-white/5 pb-2 text-[9px] text-slate-500 uppercase tracking-widest">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500/40" />
+            <span className="w-2 h-2 rounded-full bg-red-500/40 animate-pulse" />
             <span className="w-2 h-2 rounded-full bg-yellow-500/40" />
-            <span className="w-2 h-2 rounded-full bg-green-500/40" />
-            <span className="font-bold text-slate-400 ml-1.5">Intrusion Shell Simulator</span>
+            <span className="w-2 h-2 rounded-full bg-green-500/40 animate-ping" />
+            <span className="font-bold text-slate-400 ml-1.5 flex items-center gap-1">
+              <Terminal size={10} className="text-blue-500" />
+              LIVE TELEMETRY STREAM
+            </span>
           </div>
-          <span>NODE: SENTINEL-HONEYPOT-01</span>
+          <span className="text-blue-500 animate-pulse">[ AUTOMATED CYCLING ]</span>
         </div>
 
         {/* Live typing output */}
@@ -192,12 +152,12 @@ export default function LiveThreatSandbox() {
 
         {/* Live Attack Analysis Telemetry / active block screen overlay */}
         {step === "blocked" && (
-          <div className="absolute inset-0 bg-[#07070a]/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-fade-in-scale z-10">
+          <div className="absolute inset-0 bg-[#07070a]/92 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-fade-in-scale z-10">
             <ShieldAlert size={28} className="text-red-500 animate-bounce mb-2" />
             <span className="text-xs uppercase font-extrabold tracking-widest text-red-500">
               ADVERSARY DETECTED & NEUTRALIZED
             </span>
-            <span className="text-[10px] text-slate-400 mt-1 max-w-[280px]">
+            <span className="text-[10px] text-slate-400 mt-1 max-w-[320px]">
               Firewall Block Implemented. Attacker IP blocked via active iptables playbooks.
             </span>
 

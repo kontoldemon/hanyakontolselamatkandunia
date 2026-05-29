@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import HeroGlobe from "@/components/HeroGlobe";
 import LandingAnimations from "@/components/LandingAnimations";
 import LiveThreatSandbox from "@/components/LiveThreatSandbox";
+import MatrixCursorTrail from "@/components/MatrixCursorTrail";
 
 export const metadata: Metadata = {
   title: "CloudSentinel | Enterprise SSH Threat Detection System",
@@ -26,6 +27,8 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#050505] text-slate-100 font-sans selection:bg-blue-500/30 relative">
+      {/* Dynamic Cyber Cursor Matrix Falling Symbols Trail */}
+      <MatrixCursorTrail />
       {/* Scroll progress bar & intersection tracker */}
       <LandingAnimations />
 
@@ -60,7 +63,7 @@ export default function LandingPage() {
         {/* ── SECTION 1: Hero + Globe + Stats ───────────────────────────────── */}
         <section 
           id="hero" 
-          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-between relative overflow-hidden shrink-0 pt-[56px] pb-6"
+          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-between relative overflow-hidden shrink-0 pt-[56px] pb-18"
         >
           {/* Rotating Globe Background (fully unified, rotates in perfect lockstep) */}
           <HeroGlobe />
@@ -107,16 +110,14 @@ export default function LandingPage() {
                   <ChevronRight size={12} />
                 </a>
               </div>
-            </div>
-          </div>
 
-          {/* Stats Bar */}
-          <div className="relative z-10 px-6 md:px-12">
-            <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard value="50,000+" label="Threats Analyzed" icon={<Crosshair size={16} className="text-red-400" />} delay="anim-delay-100" />
-              <StatCard value="190+" label="Countries Tracked" icon={<Globe size={16} className="text-blue-400" />} delay="anim-delay-200" />
-              <StatCard value="<15ms" label="Avg MTTB" icon={<Zap size={16} className="text-amber-400" />} delay="anim-delay-300" />
-              <StatCard value="24/7" label="Active Monitoring" icon={<Activity size={16} className="text-emerald-400" />} delay="anim-delay-400" />
+              {/* Stats Bar Integrated Directly In The Central Hero Stack — 100% Safe From Overlapping! */}
+              <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 pt-10 px-4 md:px-8">
+                <StatCard value="50,000+" label="Threats Analyzed" icon={<Crosshair size={16} className="text-red-400" />} delay="anim-delay-100" />
+                <StatCard value="190+" label="Countries Tracked" icon={<Globe size={16} className="text-blue-400" />} delay="anim-delay-200" />
+                <StatCard value="<15ms" label="Avg MTTB" icon={<Zap size={16} className="text-amber-400" />} delay="anim-delay-300" />
+                <StatCard value="24/7" label="Active Monitoring" icon={<Activity size={16} className="text-emerald-400" />} delay="anim-delay-400" />
+              </div>
             </div>
           </div>
 
