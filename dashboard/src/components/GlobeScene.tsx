@@ -11,8 +11,8 @@ const GLOBE_RADIUS = 2;
 const HQ_LAT = 4.5;
 const HQ_LNG = 101.69;
 const ARC_SEGMENTS = 64;
-const MAX_ARCS = 12;
-const SPAWN_INTERVAL = 1800;
+const MAX_ARCS = 18;
+const SPAWN_INTERVAL = 900; // faster spawn
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -26,30 +26,33 @@ function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
   );
 }
 
-function randomOrigin(): { lat: number; lng: number } {
-  const origins = [
-    { lat: 39.9, lng: 116.4 },   // Beijing
-    { lat: 55.75, lng: 37.62 },   // Moscow
-    { lat: -23.55, lng: -46.63 }, // São Paulo
-    { lat: 40.71, lng: -74.01 },  // New York
-    { lat: 51.51, lng: -0.13 },   // London
-    { lat: 35.68, lng: 139.69 },  // Tokyo
-    { lat: 28.61, lng: 77.21 },   // Delhi
-    { lat: -33.87, lng: 151.21 }, // Sydney
-    { lat: 48.86, lng: 2.35 },    // Paris
-    { lat: 37.57, lng: 126.98 },  // Seoul
-    { lat: 30.04, lng: 31.24 },   // Cairo
-    { lat: 19.43, lng: -99.13 },  // Mexico City
-    { lat: -34.6, lng: -58.38 },  // Buenos Aires
-    { lat: 1.35, lng: 103.82 },   // Singapore
-    { lat: 52.52, lng: 13.41 },   // Berlin
-    { lat: 41.01, lng: 28.98 },   // Istanbul
-    { lat: 33.69, lng: 73.04 },   // Islamabad
-    { lat: -1.29, lng: 36.82 },   // Nairobi
-    { lat: 14.6, lng: 120.98 },   // Manila
-    { lat: 10.82, lng: 106.63 },  // Ho Chi Minh
-  ];
-  return origins[Math.floor(Math.random() * origins.length)];
+interface OriginCity { lat: number; lng: number; color: string }
+
+const ORIGINS: OriginCity[] = [
+  { lat: 39.9, lng: 116.4, color: "#f43f5e" },   // Beijing
+  { lat: 55.75, lng: 37.62, color: "#8b5cf6" },   // Moscow
+  { lat: -23.55, lng: -46.63, color: "#10b981" },  // São Paulo
+  { lat: 40.71, lng: -74.01, color: "#3b82f6" },   // New York
+  { lat: 51.51, lng: -0.13, color: "#06b6d4" },    // London
+  { lat: 35.68, lng: 139.69, color: "#f59e0b" },   // Tokyo
+  { lat: 28.61, lng: 77.21, color: "#ec4899" },    // Delhi
+  { lat: -33.87, lng: 151.21, color: "#14b8a6" },  // Sydney
+  { lat: 48.86, lng: 2.35, color: "#a855f7" },     // Paris
+  { lat: 37.57, lng: 126.98, color: "#06b6d4" },   // Seoul
+  { lat: 30.04, lng: 31.24, color: "#f43f5e" },    // Cairo
+  { lat: 19.43, lng: -99.13, color: "#10b981" },   // Mexico City
+  { lat: -34.6, lng: -58.38, color: "#8b5cf6" },   // Buenos Aires
+  { lat: 1.35, lng: 103.82, color: "#3b82f6" },    // Singapore
+  { lat: 52.52, lng: 13.41, color: "#f59e0b" },    // Berlin
+  { lat: 41.01, lng: 28.98, color: "#ec4899" },    // Istanbul
+  { lat: 33.69, lng: 73.04, color: "#14b8a6" },    // Islamabad
+  { lat: -1.29, lng: 36.82, color: "#a855f7" },    // Nairobi
+  { lat: 14.6, lng: 120.98, color: "#f43f5e" },    // Manila
+  { lat: 10.82, lng: 106.63, color: "#06b6d4" },   // Ho Chi Minh
+];
+
+function randomOrigin(): OriginCity {
+  return ORIGINS[Math.floor(Math.random() * ORIGINS.length)];
 }
 
 // ─── Globe Mesh ──────────────────────────────────────────────────────────────
@@ -59,23 +62,20 @@ function GlobeWireframe() {
   const glowRef = useRef<THREE.Mesh>(null);
 
   useFrame((_, delta) => {
-    if (meshRef.current) meshRef.current.rotation.y += delta * 0.05;
-    if (glowRef.current) glowRef.current.rotation.y += delta * 0.05;
+    if (meshRef.current) meshRef.current.rotation.y += delta * 0.06;
+    if (glowRef.current) glowRef.current.rotation.y += delta * 0.06;
   });
 
   return (
     <group>
-      {/* Wireframe sphere */}
       <mesh ref={meshRef}>
         <sphereGeometry args={[GLOBE_RADIUS, 48, 48]} />
         <meshBasicMaterial color="#1e3a5f" wireframe transparent opacity={0.25} />
       </mesh>
-      {/* Inner solid dark sphere */}
       <mesh>
         <sphereGeometry args={[GLOBE_RADIUS * 0.99, 48, 48]} />
         <meshBasicMaterial color="#050a14" transparent opacity={0.9} />
       </mesh>
-      {/* Outer glow shell */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[GLOBE_RADIUS * 1.005, 48, 48]} />
         <meshBasicMaterial color="#1a4a7a" wireframe transparent opacity={0.08} />
@@ -84,23 +84,66 @@ function GlobeWireframe() {
   );
 }
 
+// ─── Origin Dots — glowing dots at attack cities ─────────────────────────────
+
+function OriginDots() {
+  return (
+    <group>
+      {ORIGINS.map((city, i) => (
+        <OriginDot key={i} lat={city.lat} lng={city.lng} color={city.color} />
+      ))}
+    </group>
+  );
+}
+
+function OriginDot({ lat, lng, color }: { lat: number; lng: number; color: string }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const position = useMemo(() => latLngToVec3(lat, lng, GLOBE_RADIUS * 1.008), [lat, lng]);
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    const pulse = 0.7 + Math.sin(clock.elapsedTime * 2 + lat) * 0.3;
+    meshRef.current.scale.setScalar(pulse);
+  });
+
+  return (
+    <mesh ref={meshRef} position={position}>
+      <sphereGeometry args={[0.018, 8, 8]} />
+      <meshBasicMaterial color={color} transparent opacity={0.8} />
+    </mesh>
+  );
+}
+
 // ─── HQ Point ────────────────────────────────────────────────────────────────
 
 function HQPoint() {
   const meshRef = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
   const position = useMemo(() => latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.01), []);
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
     const pulse = 1 + Math.sin(clock.elapsedTime * 3) * 0.3;
     meshRef.current.scale.setScalar(pulse);
+    if (ringRef.current) {
+      const ringPulse = 1 + Math.sin(clock.elapsedTime * 1.5) * 0.5;
+      ringRef.current.scale.setScalar(ringPulse);
+      (ringRef.current.material as THREE.MeshBasicMaterial).opacity = 0.3 - Math.sin(clock.elapsedTime * 1.5) * 0.15;
+    }
   });
 
   return (
-    <mesh ref={meshRef} position={position}>
-      <sphereGeometry args={[0.04, 16, 16]} />
-      <meshBasicMaterial color="#3b82f6" />
-    </mesh>
+    <group position={position}>
+      <mesh ref={meshRef}>
+        <sphereGeometry args={[0.05, 16, 16]} />
+        <meshBasicMaterial color="#3b82f6" />
+      </mesh>
+      {/* Pulsing ring */}
+      <mesh ref={ringRef}>
+        <ringGeometry args={[0.06, 0.1, 32]} />
+        <meshBasicMaterial color="#3b82f6" transparent opacity={0.3} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
   );
 }
 
@@ -115,8 +158,6 @@ interface ArcData {
   fading: boolean;
   opacity: number;
 }
-
-const ARC_COLORS = ["#3b82f6", "#06b6d4", "#8b5cf6", "#f43f5e", "#10b981", "#f59e0b"];
 
 function createArcData(id: number): ArcData {
   const origin = randomOrigin();
@@ -136,9 +177,9 @@ function createArcData(id: number): ArcData {
   return {
     id,
     curve: new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end),
-    color: ARC_COLORS[Math.floor(Math.random() * ARC_COLORS.length)],
+    color: origin.color,
     progress: 0,
-    speed: 0.4 + Math.random() * 0.3,
+    speed: 0.35 + Math.random() * 0.35,
     fading: false,
     opacity: 1,
   };
@@ -165,7 +206,7 @@ function AttackArc({ arc, onDone }: { arc: ArcData; onDone: (id: number) => void
       const visiblePoints = fullPoints.slice(0, count);
       geometry.setFromPoints(visiblePoints);
     } else {
-      opacityRef.current -= delta * 1.5;
+      opacityRef.current -= delta * 1.2;
       if (opacityRef.current <= 0) {
         onDone(arc.id);
         return;
@@ -184,9 +225,8 @@ function AttackArcs() {
   const nextId = useRef(0);
 
   useEffect(() => {
-    // Spawn initial batch
     const initial: ArcData[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       initial.push(createArcData(nextId.current++));
     }
     setArcs(initial);
@@ -222,14 +262,16 @@ function Scene() {
       <ambientLight intensity={0.15} />
       <pointLight position={[10, 10, 10]} intensity={0.5} color="#3b82f6" />
       <pointLight position={[-10, -5, -10]} intensity={0.2} color="#8b5cf6" />
+      <pointLight position={[0, 8, -5]} intensity={0.15} color="#06b6d4" />
       <GlobeWireframe />
       <HQPoint />
+      <OriginDots />
       <AttackArcs />
       <OrbitControls
         enableZoom={false}
         enablePan={false}
         autoRotate
-        autoRotateSpeed={0.3}
+        autoRotateSpeed={0.4}
         minPolarAngle={Math.PI * 0.3}
         maxPolarAngle={Math.PI * 0.7}
       />
