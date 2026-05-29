@@ -10,11 +10,8 @@ import * as THREE from "three";
 const GLOBE_RADIUS = 2;
 const HQ_LAT = 4.5;
 const HQ_LNG = 101.69;
-const ARC_SEGMENTS = 64;
-const MAX_ARCS = 18;
-const SPAWN_INTERVAL = 900;
 
-// Grid Segment segment settings to align intersections mathematically
+// Grid segments segment settings to align intersections mathematically
 const GRID_WIDTH_SEGMENTS = 48;
 const GRID_HEIGHT_SEGMENTS = 24;
 
@@ -66,10 +63,6 @@ const ORIGINS: OriginCity[] = [
   { lat: 10.82, lng: 106.63, color: "#06b6d4" },   // Ho Chi Minh
 ];
 
-function randomOrigin(): OriginCity {
-  return ORIGINS[Math.floor(Math.random() * ORIGINS.length)];
-}
-
 // ─── Origin Dots — glowing dots perfectly snapped to grid intersections ───────
 
 function OriginDots() {
@@ -84,7 +77,8 @@ function OriginDots() {
 
 function OriginDot({ lat, lng, color }: { lat: number; lng: number; color: string }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const position = useMemo(() => latLngToVec3(lat, lng, GLOBE_RADIUS * 1.002), [lat, lng]);
+  // Placed slightly above wireframe grid (1.02)
+  const position = useMemo(() => latLngToVec3(lat, lng, GLOBE_RADIUS * 1.02), [lat, lng]);
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
@@ -94,7 +88,7 @@ function OriginDot({ lat, lng, color }: { lat: number; lng: number; color: strin
 
   return (
     <mesh ref={meshRef} position={position}>
-      <sphereGeometry args={[0.012, 12, 12]} />
+      <sphereGeometry args={[0.015, 12, 12]} />
       <meshBasicMaterial color={color} transparent opacity={0.9} />
     </mesh>
   );
@@ -105,7 +99,7 @@ function OriginDot({ lat, lng, color }: { lat: number; lng: number; color: strin
 function HQPoint() {
   const meshRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
-  const position = useMemo(() => latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.004), []);
+  const position = useMemo(() => latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.022), []);
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
@@ -121,7 +115,7 @@ function HQPoint() {
   return (
     <group position={position}>
       <mesh ref={meshRef}>
-        <sphereGeometry args={[0.025, 16, 16]} />
+        <sphereGeometry args={[0.028, 16, 16]} />
         <meshBasicMaterial color="#3b82f6" />
       </mesh>
       {/* Pulsing ring */}
@@ -129,120 +123,6 @@ function HQPoint() {
         <ringGeometry args={[0.03, 0.06, 32]} />
         <meshBasicMaterial color="#3b82f6" transparent opacity={0.4} side={THREE.DoubleSide} />
       </mesh>
-    </group>
-  );
-}
-
-// ─── Attack Arc — optimized buffer geometry initialization to prevent glitches ──
-
-interface ArcData {
-  id: number;
-  curve: THREE.CubicBezierCurve3;
-  color: string;
-  progress: number;
-  speed: number;
-  fading: boolean;
-  opacity: number;
-}
-
-function createArcData(id: number): ArcData {
-  const origin = randomOrigin();
-  const start = latLngToVec3(origin.lat, origin.lng, GLOBE_RADIUS * 1.004);
-  const end = latLngToVec3(HQ_LAT, HQ_LNG, GLOBE_RADIUS * 1.004);
-
-  const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-  const dist = start.distanceTo(end);
-  const altitude = GLOBE_RADIUS + dist * 0.4;
-  mid.normalize().multiplyScalar(altitude);
-
-  const ctrl1 = new THREE.Vector3().lerpVectors(start, mid, 0.33);
-  ctrl1.normalize().multiplyScalar(GLOBE_RADIUS + dist * 0.25);
-  const ctrl2 = new THREE.Vector3().lerpVectors(mid, end, 0.33);
-  ctrl2.normalize().multiplyScalar(GLOBE_RADIUS + dist * 0.25);
-
-  return {
-    id,
-    curve: new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end),
-    color: origin.color,
-    progress: 0,
-    speed: 0.35 + Math.random() * 0.35,
-    fading: false,
-    opacity: 1,
-  };
-}
-
-function AttackArc({ arc, onDone }: { arc: ArcData; onDone: (id: number) => void }) {
-  const progressRef = useRef(arc.progress);
-  const fadingRef = useRef(arc.fading);
-  const opacityRef = useRef(arc.opacity);
-
-  const fullPoints = useMemo(() => arc.curve.getPoints(ARC_SEGMENTS), [arc.curve]);
-  
-  // Safe geometry initialization with starting vertex so it is never empty or glitched to 0,0,0
-  const geometry = useMemo(() => {
-    const geom = new THREE.BufferGeometry();
-    geom.setFromPoints([fullPoints[0], fullPoints[0]]);
-    return geom;
-  }, [fullPoints]);
-
-  const material = useMemo(() => new THREE.LineBasicMaterial({ color: arc.color, transparent: true, opacity: 1 }), [arc.color]);
-  const lineObj = useMemo(() => new THREE.Line(geometry, material), [geometry, material]);
-
-  useFrame((_, delta) => {
-    if (!fadingRef.current) {
-      progressRef.current += delta * arc.speed;
-      if (progressRef.current >= 1) {
-        progressRef.current = 1;
-        fadingRef.current = true;
-      }
-      const count = Math.max(2, Math.floor(progressRef.current * fullPoints.length));
-      const visiblePoints = fullPoints.slice(0, count);
-      geometry.setFromPoints(visiblePoints);
-    } else {
-      opacityRef.current -= delta * 1.2;
-      if (opacityRef.current <= 0) {
-        onDone(arc.id);
-        return;
-      }
-      material.opacity = opacityRef.current;
-    }
-  });
-
-  return <primitive object={lineObj} />;
-}
-
-// ─── Attack System ───────────────────────────────────────────────────────────
-
-function AttackArcs() {
-  const [arcs, setArcs] = useState<ArcData[]>([]);
-  const nextId = useRef(0);
-
-  useEffect(() => {
-    const initial: ArcData[] = [];
-    for (let i = 0; i < 6; i++) {
-      initial.push(createArcData(nextId.current++));
-    }
-    setArcs(initial);
-
-    const interval = setInterval(() => {
-      setArcs((prev) => {
-        if (prev.length >= MAX_ARCS) return prev;
-        return [...prev, createArcData(nextId.current++)];
-      });
-    }, SPAWN_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleDone = (id: number) => {
-    setArcs((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  return (
-    <group>
-      {arcs.map((arc) => (
-        <AttackArc key={arc.id} arc={arc} onDone={handleDone} />
-      ))}
     </group>
   );
 }
@@ -266,10 +146,10 @@ function RotatingGlobe() {
         <meshBasicMaterial color="#050a14" transparent opacity={0.96} />
       </mesh>
 
-      {/* Dense longitude & latitude wireframe grid — beautifully snapping nodes */}
+      {/* Dense longitude & latitude wireframe grid — perfectly sitting on top (1.012) */}
       <mesh>
-        <sphereGeometry args={[GLOBE_RADIUS * 0.999, GRID_WIDTH_SEGMENTS, GRID_HEIGHT_SEGMENTS]} />
-        <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.32} />
+        <sphereGeometry args={[GLOBE_RADIUS * 1.012, GRID_WIDTH_SEGMENTS, GRID_HEIGHT_SEGMENTS]} />
+        <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.35} />
       </mesh>
 
       {/* Origin glowing dots perfectly situated on intersections */}
@@ -277,9 +157,6 @@ function RotatingGlobe() {
 
       {/* HQ Point */}
       <HQPoint />
-
-      {/* Attack arcs */}
-      <AttackArcs />
     </group>
   );
 }

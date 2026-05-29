@@ -7,6 +7,7 @@ import {
 import type { Metadata } from "next";
 import HeroGlobe from "@/components/HeroGlobe";
 import LandingAnimations from "@/components/LandingAnimations";
+import LiveThreatSandbox from "@/components/LiveThreatSandbox";
 
 export const metadata: Metadata = {
   title: "CloudSentinel | Enterprise SSH Threat Detection System",
@@ -119,8 +120,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Live Intrusion Telemetry Ticker Bar (makes page feel extremely alive!) */}
-          <div className="relative z-10 w-full bg-[#07070a]/80 border-t border-white/5 py-2.5 overflow-hidden select-none backdrop-blur-md">
+          {/* Live Intrusion Telemetry Ticker Bar (absolute bottom guarantees zero vertical pushing!) */}
+          <div className="absolute bottom-0 left-0 right-0 z-20 w-full bg-[#07070a]/90 border-t border-white/5 py-2.5 overflow-hidden select-none backdrop-blur-md">
             <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-[10px] font-mono">
               <div className="flex items-center gap-2 text-red-500 font-bold shrink-0">
                 <span className="relative flex h-1.5 w-1.5">
@@ -222,13 +223,44 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="reveal-on-scroll"><FeatureCard icon={<Globe className="text-blue-400" size={20} />} title="Global Threat Map" description="Interactive D3.js world map with real-time attack line animations. Click any country to filter by region." tags={["D3.js", "GeoIP", "Real-Time"]} /></div>
-              <div className="reveal-on-scroll"><FeatureCard icon={<Terminal className="text-emerald-400" size={20} />} title="Live Session Replay" description="Watch attacker commands execute in a terminal emulator. See both attacker input and honeypot responses." tags={["WebSocket", "Terminal", "Replay"]} /></div>
-              <div className="reveal-on-scroll"><FeatureCard icon={<Brain className="text-purple-400" size={20} />} title="MITRE ATT&CK Mapping" description="Automated technique classification maps each session to the MITRE framework. Identify attacker techniques." tags={["MITRE", "TTP"]} /></div>
-              <div className="reveal-on-scroll"><FeatureCard icon={<Shield className="text-red-400" size={20} />} title="SOAR Automated Response" description="Security Orchestration triggers iptables blocks within milliseconds of detection. Mean Time To Block averages under 15ms." tags={["SOAR", "iptables"]} /></div>
-              <div className="reveal-on-scroll"><FeatureCard icon={<Fingerprint className="text-amber-400" size={20} />} title="HASSH Fingerprinting" description="Unique SSH client fingerprinting identifies attacker toolkits before credentials are even attempted." tags={["HASSH", "Fingerprint"]} /></div>
-              <div className="reveal-on-scroll"><FeatureCard icon={<Cpu className="text-cyan-400" size={20} />} title="AI-Powered Analysis" description="Built-in AI assistant explains attacker behavior, suggests MITRE mappings, and can block active IPs." tags={["GPT-4o", "Agent"]} /></div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              
+              {/* Left Side: Key Capabilities Cards */}
+              <div className="lg:col-span-5 flex flex-col gap-4">
+                <div className="reveal-on-scroll">
+                  <FeatureCard 
+                    icon={<Globe className="text-blue-400" size={20} />} 
+                    title="Global Threat Map" 
+                    description="Interactive D3.js world map showing attack origins and geographic densities live." 
+                    tags={["D3.js", "GeoIP"]} 
+                  />
+                </div>
+                <div className="reveal-on-scroll">
+                  <FeatureCard 
+                    icon={<Terminal className="text-emerald-400" size={20} />} 
+                    title="Live Session Replay" 
+                    description="Replay full attacker CLI terminal sessions in a simulated terminal environment." 
+                    tags={["WebSocket", "Replay"]} 
+                  />
+                </div>
+                <div className="reveal-on-scroll">
+                  <FeatureCard 
+                    icon={<Shield className="text-red-400" size={20} />} 
+                    title="SOAR Response" 
+                    description="Security Orchestration triggers iptables blocks within 15ms of malicious detection." 
+                    tags={["SOAR", "iptables"]} 
+                  />
+                </div>
+              </div>
+
+              {/* Right Side: Live Interactive Sandbox Simulator Playground! */}
+              <div className="lg:col-span-7 reveal-on-scroll">
+                <div className="p-5 rounded-2xl border border-white/10 bg-[#07070a]/60 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+                  <div className="absolute -top-16 -right-16 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
+                  <LiveThreatSandbox />
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
