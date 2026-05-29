@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState, useRef, useEffect } from "react";
+import { FormEvent, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, ShieldCheck, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -216,7 +216,7 @@ export default function SignInPage() {
               </div>
               <h2 className="text-xl font-bold mb-2">Check your email</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                We've sent a 6-digit verification code to your registered email address.
+                We&apos;ve sent a 6-digit verification code to your registered email address.
               </p>
             </div>
 

@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     if (!turnstileData.success) {
       return NextResponse.json({ ok: false, error: "captcha verification failed" }, { status: 400 });
     }
-  } catch (e) {
+  } catch {
     return NextResponse.json({ ok: false, error: "captcha service unavailable" }, { status: 500 });
   }
 
