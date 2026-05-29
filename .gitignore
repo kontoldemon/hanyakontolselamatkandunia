@@ -10,7 +10,9 @@ out/
 build/
 .env
 .env.local
+.env.prod
 .env.production
+.env.vercel
 .DS_Store
 dist/
 *.log

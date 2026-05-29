@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessionCookieName, verifySessionToken } from "@/lib/auth";
 
 const publicPaths = [
+  "/",
   "/signin",
   "/api/auth/login",
+  "/api/auth/verify",
   "/api/auth/logout",
   "/505",
   "/favicon.ico",
@@ -28,6 +30,7 @@ function securityHeaders(response: NextResponse) {
 }
 
 function isPublicPath(pathname: string) {
+  if (pathname === "/") return true;
   return (
     publicPaths.includes(pathname) ||
     pathname.startsWith("/_next/") ||
@@ -42,7 +45,7 @@ export async function proxy(request: NextRequest) {
     const session = await verifySessionToken(request.cookies.get(sessionCookieName())?.value);
     if (session) {
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = "/dashboard";
       url.search = "";
       return securityHeaders(NextResponse.redirect(url));
     }
