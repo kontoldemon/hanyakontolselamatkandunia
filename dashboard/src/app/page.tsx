@@ -53,13 +53,13 @@ export default function LandingPage() {
       {/* ── Snap Scroll Container ──────────────────────────────────────────── */}
       <div 
         id="snap-container" 
-        className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth pt-[56px]"
+        className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth pt-0"
       >
         
         {/* ── SECTION 1: Hero + Globe + Stats ───────────────────────────────── */}
         <section 
           id="hero" 
-          className="snap-start snap-always w-full h-[calc(100vh-56px)] min-h-[calc(100vh-56px)] flex flex-col justify-between relative overflow-hidden shrink-0 pb-6"
+          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-between relative overflow-hidden shrink-0 pt-[56px] pb-6"
         >
           {/* Rotating Globe Background (fully unified, rotates in perfect lockstep) */}
           <HeroGlobe />
@@ -123,7 +123,7 @@ export default function LandingPage() {
         {/* ── SECTION 2: How It Works ────────────────────────────────────────── */}
         <section 
           id="how-it-works" 
-          className="snap-start snap-always w-full h-[calc(100vh-56px)] min-h-[calc(100vh-56px)] flex flex-col justify-center items-center py-6 px-6 md:px-12 relative overflow-hidden shrink-0"
+          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-center items-center pt-[56px] pb-6 px-6 md:px-12 relative overflow-hidden shrink-0"
         >
           <div className="max-w-5xl mx-auto w-full space-y-8">
             <div className="text-center reveal-on-scroll">
@@ -177,7 +177,7 @@ export default function LandingPage() {
         {/* ── SECTION 3: Capabilities ────────────────────────────────────────── */}
         <section 
           id="features" 
-          className="snap-start snap-always w-full h-[calc(100vh-56px)] min-h-[calc(100vh-56px)] flex flex-col justify-center items-center py-6 px-6 md:px-12 bg-[#0a0a0a]/30 relative overflow-hidden shrink-0"
+          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-center items-center pt-[56px] pb-6 px-6 md:px-12 bg-[#0a0a0a]/30 relative overflow-hidden shrink-0"
         >
           <div className="max-w-5xl mx-auto w-full space-y-6">
             <div className="text-center reveal-on-scroll">
@@ -204,7 +204,7 @@ export default function LandingPage() {
         {/* ── SECTION 4: Architecture ────────────────────────────────────────── */}
         <section 
           id="architecture" 
-          className="snap-start snap-always w-full h-[calc(100vh-56px)] min-h-[calc(100vh-56px)] flex flex-col justify-center items-center py-6 px-6 md:px-12 relative overflow-hidden shrink-0"
+          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-center items-center pt-[56px] pb-6 px-6 md:px-12 relative overflow-hidden shrink-0"
         >
           <div className="max-w-5xl mx-auto w-full space-y-8">
             <div className="text-center reveal-on-scroll">
@@ -237,7 +237,7 @@ export default function LandingPage() {
         {/* ── SECTION 5: CTA + Footer ────────────────────────────────────────── */}
         <section 
           id="cta" 
-          className="snap-start snap-always w-full h-[calc(100vh-56px)] min-h-[calc(100vh-56px)] flex flex-col justify-between pt-12 pb-6 px-6 md:px-12 relative overflow-hidden shrink-0"
+          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-between pt-[72px] pb-6 px-6 md:px-12 relative overflow-hidden shrink-0"
         >
           <div className="flex-1 flex items-center justify-center">
             <div className="max-w-4xl mx-auto text-center reveal-on-scroll w-full">

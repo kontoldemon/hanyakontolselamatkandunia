@@ -244,6 +244,12 @@ function RotatingGlobe() {
         <meshBasicMaterial color="#050a14" transparent opacity={0.96} />
       </mesh>
 
+      {/* Subtlest blue wireframe grid to reveal physical globe volume */}
+      <mesh>
+        <sphereGeometry args={[GLOBE_RADIUS * 0.999, 36, 36]} />
+        <meshBasicMaterial color="#3b82f6" wireframe transparent opacity={0.07} />
+      </mesh>
+
       {/* Origin glowing dots */}
       <OriginDots />
 
