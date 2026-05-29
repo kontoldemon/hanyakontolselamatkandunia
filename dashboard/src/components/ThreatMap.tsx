@@ -566,7 +566,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     }, [selectedRegion, sources]);
 
     const land = theme === "dark" ? "#171717" : "#dbeafe";
-    const selectedLand = theme === "dark" ? "#1d4ed8" : "#93c5fd";
+    const selectedLand = theme === "dark" ? "#2563eb" : "#3b82f6";
     const landStroke = theme === "dark" ? "#2f3747" : "#ffffff";
     const ocean = theme === "dark" ? "#050505" : "#f8fafc";
 
@@ -672,7 +672,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                             const val = source?.topIp || cc;
                                             onRegionClick?.(selectedRegion === val ? null : val);
                                         }}
-                                        className="cursor-pointer transition-colors duration-200 hover:fill-blue-500/10 dark:hover:fill-blue-400/10"
+                                        className={`cursor-pointer transition-colors duration-200 ${!selected ? "hover:fill-blue-500/10 dark:hover:fill-blue-400/10" : ""}`}
                                     >
                                         <title>{name}</title>
                                     </path>
