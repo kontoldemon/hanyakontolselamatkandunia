@@ -3,13 +3,23 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+function resolveLimit(raw: string | null): number {
+  const parsed = Number(raw ?? "");
+  if (!Number.isFinite(parsed)) {
+    return 100;
+  }
+  return Math.min(20000, Math.max(50, Math.floor(parsed)));
+}
+
+export async function GET(request: Request) {
   const envUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim();
   const baseUrl = envUrl && envUrl !== "http://localhost:8080" ? envUrl : "https://188.166.184.42.sslip.io";
+  const { searchParams } = new URL(request.url);
+  const limit = resolveLimit(searchParams.get("limit"));
 
   try {
     const token = process.env.CLOUDSENTINEL_ADMIN_TOKEN;
-    const response = await fetch(new URL("/events?limit=100", baseUrl), {
+    const response = await fetch(new URL(`/events?limit=${limit}`, baseUrl), {
       cache: "no-store",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       signal: AbortSignal.timeout(8000),
@@ -50,6 +60,7 @@ export async function GET() {
         authoritative: data.authoritative ?? true,
         sourceBreakdown: data.sourceBreakdown ?? { events: "clickhouse" },
         events: data.events ?? [],
+        limit,
       },
       { status: 200 },
     );

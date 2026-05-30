@@ -189,7 +189,7 @@ const EMPTY_STATS: DashboardStats = {
 
 const LIVE_LOG_RETENTION_MS = 24 * 60 * 60 * 1000;
 const LIVE_LOG_BATCH_MS = 250;
-const SESSION_ACTIVE_WINDOW_MS = 3 * 60 * 1000;
+const SESSION_ACTIVE_WINDOW_MS = 90 * 1000;
 
 const socketTelemetryState: SocketTelemetrySnapshot = {
   socketUrl: "",
@@ -217,7 +217,7 @@ function snapshotSocketTelemetry(): SocketTelemetrySnapshot {
   };
 }
 
-type CloudSentinelEvent = {
+export type CloudSentinelEvent = {
   eventid?: string;
   timestamp?: string;
   id?: string;
@@ -374,7 +374,7 @@ function normalizeCountryCode(
   return { code: "XX", name: undefined };
 }
 
-function toThreatLog(event: CloudSentinelEvent): ThreatLog {
+export function toThreatLog(event: CloudSentinelEvent): ThreatLog {
   const ts = parseEventTime(event.timestamp);
   const country = normalizeCountryCode(event.country_code, event.country_name, event.country);
   const blocked = ["iptables_block", "dry_run_block"].includes(
@@ -675,6 +675,14 @@ export function useDashboardStats() {
           return;
         }
         if (!response.ok) {
+          if (!cancelled) {
+            setStats((prev) => ({
+              ...prev,
+              source: "offline",
+              attackActive: false,
+              authoritative: false,
+            }));
+          }
           return;
         }
         const data = (await response.json()) as SummaryResponse;
@@ -774,6 +782,18 @@ export function useSensorOperations() {
           return;
         }
         if (!response.ok) {
+          if (!cancelled) {
+            setOperations((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    source: "offline",
+                    status: "offline",
+                    authoritative: false,
+                  }
+                : null,
+            );
+          }
           return;
         }
         const data = (await response.json()) as SensorOperations;
@@ -788,7 +808,16 @@ export function useSensorOperations() {
         }
       } catch {
         if (!cancelled) {
-          setOperations(null);
+          setOperations((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  source: "offline",
+                  status: "offline",
+                  authoritative: false,
+                }
+              : null,
+          );
         }
       }
     }

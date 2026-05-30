@@ -1,8 +1,8 @@
 "use client";
 
 import { BrainCircuit, ShieldAlert, Fingerprint, ChevronDown, ChevronUp } from "lucide-react";
-import { useLiveThreatLogs, useSensorOperations, useCapturedSessions, useDashboardStats } from "@/lib/liveEvents";
-import { useState, useCallback } from "react";
+import { useLiveThreatLogs, useSensorOperations, useCapturedSessions, useDashboardStats, toThreatLog, type CloudSentinelEvent, type ThreatLog } from "@/lib/liveEvents";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAgentCommand } from "@/lib/AgentContext";
 import { useIntelStats } from "@/lib/intelStats";
 import CustomDropdown from "@/components/CustomDropdown";
@@ -16,7 +16,6 @@ import KpiStrip from "@/components/KpiStrip";
 import TimeSeriesPanel from "@/components/TimeSeriesPanel";
 import SessionDepthPanel from "@/components/SessionDepthPanel";
 import AnomalyDetectionPanel from "@/components/AnomalyDetectionPanel";
-import { Activity } from "lucide-react";
 
 type GlobalTimeline = "15m" | "1h" | "6h" | "24h" | "7d" | "all";
 
@@ -37,6 +36,15 @@ const TIMELINE_TO_MS: Record<Exclude<GlobalTimeline, "all">, number> = {
     "7d": 7 * 24 * 60 * 60 * 1000,
 };
 
+const TIMELINE_FETCH_LIMIT: Record<GlobalTimeline, number> = {
+    "15m": 500,
+    "1h": 1500,
+    "6h": 5000,
+    "24h": 10000,
+    "7d": 20000,
+    "all": 20000,
+};
+
 function toNumber(value: unknown): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -55,6 +63,11 @@ function normalizeRiskScore(rawRisk: number, sessionWeight: number): number {
     }
     return clampPercent(rawRisk / Math.max(1, sessionWeight));
 }
+
+type EventsApiResponse = {
+    ok?: boolean;
+    events?: CloudSentinelEvent[];
+};
 
 export default function IntelligencePage() {
     const [commandMode, setCommandMode] = useState<"most" | "least">("most");
@@ -114,13 +127,65 @@ export default function IntelligencePage() {
     const dashboardStats = useDashboardStats();
     const liveLogs = useLiveThreatLogs();
     const sessions = useCapturedSessions();
+    const [nowMs, setNowMs] = useState(0);
+    const [timelineEvents, setTimelineEvents] = useState<ThreatLog[] | null>(null);
     const windowMs = timeline === "all" ? Number.MAX_SAFE_INTEGER : TIMELINE_TO_MS[timeline];
-    const nowMs = Date.now();
     const cutoffMs = nowMs - windowMs;
 
+    useEffect(() => {
+        const tick = () => setNowMs(Date.now());
+        tick();
+        const timer = window.setInterval(tick, 5000);
+        return () => window.clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadTimelineEvents = async () => {
+            try {
+                const limit = TIMELINE_FETCH_LIMIT[timeline];
+                const response = await fetch(`/api/cloudsentinel/events?limit=${limit}`, { cache: "no-store" });
+                if (!response.ok) {
+                    if (!cancelled) {
+                        setTimelineEvents(null);
+                    }
+                    return;
+                }
+                const payload = (await response.json()) as EventsApiResponse;
+                const mapped = (payload.events ?? []).map(toThreatLog);
+                if (!cancelled) {
+                    setTimelineEvents(mapped);
+                }
+            } catch {
+                if (!cancelled) {
+                    setTimelineEvents(null);
+                }
+            }
+        };
+
+        void loadTimelineEvents();
+        const timer = window.setInterval(() => void loadTimelineEvents(), 12000);
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, [timeline]);
+
+    const baseLogs = useMemo(() => {
+        if (!timelineEvents) {
+            return liveLogs;
+        }
+        const deduped = new Map<string, ThreatLog>();
+        for (const item of [...timelineEvents, ...liveLogs]) {
+            deduped.set(item.id, item);
+        }
+        return [...deduped.values()].sort((a, b) => b.epochMs - a.epochMs);
+    }, [timelineEvents, liveLogs]);
+
     const filteredLiveLogs = timeline === "all"
-        ? liveLogs
-        : liveLogs.filter((log) => log.epochMs >= cutoffMs);
+        ? baseLogs
+        : baseLogs.filter((log) => log.epochMs >= cutoffMs);
     const filteredSessions = timeline === "all"
         ? sessions
         : sessions.filter((session) => {
@@ -147,19 +212,8 @@ export default function IntelligencePage() {
     }
     const attackTypes = [...attackTypeMap.values()].sort((a, b) => b.value - a.value);
     const totalAttacks = attackTypes.reduce((acc, item) => acc + Number(item.value || 0), 0);
-    const graphNodes = operations?.sensor.attackGraph.data?.nodes ?? [];
-    
-    const mitreFromGraph = graphNodes
-        .filter((node) => typeof node === "object" && node !== null && "type" in node && node.type === "technique")
-        .map((node) => {
-            const record = node as { label?: string };
-            return record.label ?? "Technique";
-        });
-        
+
     const mitreCounts = new Map<string, number>();
-    for (const tech of mitreFromGraph) {
-        mitreCounts.set(tech, (mitreCounts.get(tech) ?? 0) + 1);
-    }
     for (const session of filteredSessions) {
         for (const tech of session.mitreTechniques ?? []) {
             mitreCounts.set(tech, (mitreCounts.get(tech) ?? 0) + 1);
@@ -424,7 +478,7 @@ export default function IntelligencePage() {
                     >
                         <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60vh] w-full space-y-3 overflow-y-auto pr-2 terminal-scrollbar relative" onMouseLeave={() => setHoveredMitre(null)}>
                             {mitreData.length === 0 ? (
-                                <div className="text-xs text-slate-500 text-center h-full flex items-center justify-center">No MITRE graph nodes.</div>
+                                <div className="text-xs text-slate-500 text-center h-full flex items-center justify-center">No MITRE techniques in selected window.</div>
                             ) : mitreData.map((item) => {
                                 const width = `${Math.round((item.count / Math.max(1, mitreData.length)) * 100)}%`;
                                 return (
