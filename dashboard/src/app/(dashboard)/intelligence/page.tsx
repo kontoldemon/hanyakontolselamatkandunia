@@ -85,6 +85,7 @@ export default function IntelligencePage() {
         timing: false,
         network: false,
         commands: false,
+        passwords: false,
         fingerprints: false,
         risk: false,
         soar: false,
@@ -102,6 +103,7 @@ export default function IntelligencePage() {
             timing: expand,
             network: expand,
             commands: expand,
+            passwords: expand,
             fingerprints: expand,
             risk: expand,
             soar: expand,
@@ -266,6 +268,21 @@ export default function IntelligencePage() {
         .map(([command, count]) => ({ command, count }))
         .sort((a, b) => (a.count - b.count) || a.command.localeCompare(b.command));
     const uniqueCommandCount = commandCounts.size;
+    const passwordCounts = new Map<string, number>();
+    for (const log of filteredLiveLogs) {
+        const payload = String(log.payload || "").trim();
+        if (!payload.toLowerCase().startsWith("[auth]")) continue;
+        const match = payload.match(/\/\s*([^\s]+)\s*(?:attempt\s+\d+)?$/i);
+        if (!match) continue;
+        const word = match[1]?.trim();
+        if (!word || word.toLowerCase() === "unknown") continue;
+        passwordCounts.set(word, (passwordCounts.get(word) ?? 0) + 1);
+    }
+    const passwordWords = [...passwordCounts.entries()]
+        .map(([word, count]) => ({ word, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 60);
+    const maxPasswordCount = Math.max(1, ...passwordWords.map((item) => item.count));
 
     const sourceCommands = commandMode === "most" ? topCommands : leastCommands;
     const commandQuery = commandSearch.trim().toLowerCase();
@@ -361,11 +378,6 @@ export default function IntelligencePage() {
                 <div>
                     <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">Threat Intelligence</h2>
                     <p className="text-slate-500 text-xs mt-0.5">Advanced TTP Analytics & Fingerprinting</p>
-                    <div className="mt-1 flex items-center gap-2 text-[10px]">
-                        <span className={`uppercase font-bold tracking-wide ${dashboardStats.authoritative ? "text-emerald-500" : "text-amber-500"}`}>
-                            {dashboardStats.authoritative ? "Authoritative" : "Partial"}
-                        </span>
-                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <CustomDropdown
@@ -527,7 +539,7 @@ export default function IntelligencePage() {
                 </div>
 
                 {/* Row 3: Tables */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
                     <CollapsiblePanel
                         expanded={panels.commands}
                         onToggle={() => togglePanel("commands")}
@@ -576,6 +588,41 @@ export default function IntelligencePage() {
                                     ))}
                                 </div>
                             </div>
+                        </div>
+                    </CollapsiblePanel>
+
+                    <CollapsiblePanel
+                        expanded={panels.passwords}
+                        onToggle={() => togglePanel("passwords")}
+                        icon={ShieldAlert}
+                        iconColor="text-fuchsia-500"
+                        title="Password Word Cloud"
+                        summary={`${passwordWords.length} Tokens`}
+                    >
+                        <div className="h-[300px] overflow-y-auto border border-slate-100 dark:border-white/5 rounded-md p-3">
+                            {passwordWords.length === 0 ? (
+                                <div className="text-xs text-slate-500 text-center h-full flex items-center justify-center">
+                                    No captured password words in selected window.
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    {passwordWords.map((item) => {
+                                        const scale = item.count / maxPasswordCount;
+                                        const fontSize = Math.round(12 + scale * 20);
+                                        const opacity = 0.55 + scale * 0.45;
+                                        return (
+                                            <span
+                                                key={item.word}
+                                                title={`${item.word} (${item.count})`}
+                                                className="font-mono leading-none px-2 py-1 rounded border border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300"
+                                                style={{ fontSize: `${fontSize}px`, opacity }}
+                                            >
+                                                {item.word}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </CollapsiblePanel>
 

@@ -276,11 +276,6 @@ export default function Dashboard() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm">
-            <span className={`text-[10px] uppercase font-bold tracking-wide ${warRoom.authoritative ? "text-emerald-500" : "text-amber-500"}`}>
-              {warRoom.authoritative ? "Authoritative" : "Partial"}
-            </span>
-          </div>
         </div>
       </div>
 

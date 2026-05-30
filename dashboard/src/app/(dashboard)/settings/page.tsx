@@ -91,13 +91,7 @@ export default function SettingsPage() {
                             <Shield size={16} />
                             Telemetry Truth
                         </h3>
-                        <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div className="rounded border border-slate-200 dark:border-white/10 p-2">
-                                <div className="text-slate-500 uppercase text-[10px]">Authoritative</div>
-                                <div className={operations?.authoritative ? "font-bold text-emerald-500" : "font-bold text-amber-500"}>
-                                    {operations?.authoritative ? "Yes" : "Partial"}
-                                </div>
-                            </div>
+                        <div className="grid grid-cols-1 gap-2 text-[11px]">
                             <div className="rounded border border-slate-200 dark:border-white/10 p-2">
                                 <div className="text-slate-500 uppercase text-[10px]">Primary Source</div>
                                 <div className="font-bold text-slate-700 dark:text-slate-300">{operations?.telemetrySource ?? "mixed"}</div>
