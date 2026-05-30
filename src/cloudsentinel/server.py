@@ -28,6 +28,7 @@ import structlog
 from .admin_api import create_admin_app
 from .anomaly import CommandAnomalyDetector
 from .auth import get_auth
+from .commands import CommandAdapter
 from .commands.base import commands as cmd_registry
 from .config import Settings, load_settings
 from .geoip import enrich as geo_enrich
@@ -824,8 +825,6 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             cls = self._resolve_command(cmd_name)
             if cls is not None:
                 try:
-                    from .commands import CommandAdapter
-
                     adapter = CommandAdapter(
                         username=self.server.username,
                         hostname=self.server.settings.honeypot.hostname,
