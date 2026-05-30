@@ -1081,7 +1081,7 @@ export function useWarRoomState() {
 export function useCapturedSessions() {
   const operations = useSensorOperations();
   const liveLogs = useLiveThreatLogs();
-  const [nowMs, setNowMs] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     const tick = () => setNowMs(Date.now());

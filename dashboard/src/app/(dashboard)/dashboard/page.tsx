@@ -176,9 +176,12 @@ export default function Dashboard() {
   const backendUnderAttack = warRoom.state === "under_attack";
   const backendStateStale = now > 0 && warRoom.updatedAt > 0 && (now - warRoom.updatedAt) > 60_000;
   const useEmergencyFallback = !warRoom.ok || (warRoom.degraded && backendStateStale);
-  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = useEmergencyFallback
+  const derivedWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = useEmergencyFallback
     ? inferredWarRoomState
     : ((backendWarRoomState === "LIVE" && hasRealtimeAttackHint) ? "UNDER ATTACK" : backendWarRoomState);
+  const initialUnknownState = !warRoom.ok && warRoom.updatedAt <= 0;
+  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
+    initialUnknownState && derivedWarRoomState === "OFFLINE" ? "LIVE" : derivedWarRoomState;
   const underAttack = useEmergencyFallback ? inferredUnderAttack : (backendUnderAttack || hasRealtimeAttackHint);
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
