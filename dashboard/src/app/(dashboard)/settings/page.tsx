@@ -83,7 +83,7 @@ export default function SettingsPage() {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-y-auto pr-1 terminal-scrollbar">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-hidden pr-1">
                 
                 {/* Left Column: Telemetry & Controls */}
                 <div className="space-y-6 flex flex-col">
@@ -108,12 +108,9 @@ export default function SettingsPage() {
                                     Exposure Control
                                 </h3>
                                 <p className="text-[10px] text-slate-500 mt-1">
-                                    {sensorOnline ? "Sensor online. Toggle public honeypot traffic." : "Sensor offline. API unreachable."}
+                                    {sensorOnline ? "Admin API connected. Toggle public honeypot traffic." : "Sensor API unreachable."}
                                 </p>
                             </div>
-                            <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded border ${sensorOnline ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"}`}>
-                                {sensorOnline ? "Online" : "Offline"}
-                            </span>
                             <button
                                 type="button"
                                 disabled={exposureBusy || !sensorOnline}
@@ -121,7 +118,7 @@ export default function SettingsPage() {
                                 className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
                             >
                                 <Power size={12} />
-                                {exposurePaused ? "Resume" : "Pause"}
+                                {exposurePaused ? "Offline" : "Online"}
                             </button>
                         </div>
                     </div>
@@ -149,7 +146,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Right Column (Span 2): Configurations & Socket Logs */}
-                <div className="lg:col-span-2 space-y-6 flex flex-col">
+                <div className="lg:col-span-2 space-y-6 flex flex-col min-h-0">
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
                         {/* Deception Sensor */}
@@ -251,7 +248,7 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Socket Logs */}
-                    <div className={isSocketFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col overflow-hidden" : "bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm h-[400px] lg:h-auto lg:flex-1 flex flex-col overflow-hidden"}>
+                    <div className={isSocketFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col overflow-hidden" : "bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 min-h-[280px] lg:min-h-0 flex flex-col overflow-hidden"}>
                         {isSocketFullScreen && <div className="fixed inset-0 z-[-1] bg-black/60 backdrop-blur-sm" onClick={() => setIsSocketFullScreen(false)} />}
                         <div className="p-3 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center shrink-0">
                             <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Socket Telemetry</h3>

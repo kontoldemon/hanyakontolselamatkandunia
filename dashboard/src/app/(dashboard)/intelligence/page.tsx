@@ -537,7 +537,43 @@ export default function IntelligencePage() {
                     <TimingHeatmapPanel expanded={panels.timing} onToggle={() => togglePanel("timing")} heatmap={stats.heatmap} />
                 </div>
 
-                {/* Row 3: Tables */}
+                {/* Row 3: Network + Fingerprints */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                    <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
+                    <CollapsiblePanel
+                        expanded={panels.fingerprints}
+                        onToggle={() => togglePanel("fingerprints")}
+                        icon={Fingerprint}
+                        iconColor="text-purple-500"
+                        title="HASSH Fingerprints"
+                        summary={`${fingerprints.length} Signatures`}
+                    >
+                        <div className="h-[300px] overflow-y-auto border border-slate-100 dark:border-white/5 rounded-md">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 dark:bg-white/5 text-[10px] text-slate-500 sticky top-0 backdrop-blur-md">
+                                    <tr>
+                                        <th className="px-4 py-2 font-medium">Hash</th>
+                                        <th className="px-4 py-2 font-medium">Client Info</th>
+                                        <th className="px-4 py-2 font-medium w-16 text-right">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
+                                    {fingerprints.length === 0 ? (
+                                        <tr><td className="px-4 py-3 text-slate-500 text-center" colSpan={3}>No fingerprints captured.</td></tr>
+                                    ) : fingerprints.map((item) => (
+                                        <tr className="hover:bg-slate-50 dark:hover:bg-white/5" key={item.hash}>
+                                            <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{item.hash}</td>
+                                            <td className="px-4 py-2 text-blue-500 font-mono text-[10px] truncate max-w-[120px]" title={item.client}>{item.client}</td>
+                                            <td className="px-4 py-2 text-slate-500 font-mono text-right">{item.count}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CollapsiblePanel>
+                </div>
+
+                {/* Row 4: Tables */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <CollapsiblePanel
                         expanded={panels.commands}
@@ -622,42 +658,6 @@ export default function IntelligencePage() {
                                     })}
                                 </div>
                             )}
-                        </div>
-                    </CollapsiblePanel>
-                </div>
-
-                {/* Row 4: Network + Fingerprints */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                    <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
-                    <CollapsiblePanel
-                        expanded={panels.fingerprints}
-                        onToggle={() => togglePanel("fingerprints")}
-                        icon={Fingerprint}
-                        iconColor="text-purple-500"
-                        title="HASSH Fingerprints"
-                        summary={`${fingerprints.length} Signatures`}
-                    >
-                        <div className="h-[300px] overflow-y-auto border border-slate-100 dark:border-white/5 rounded-md">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 dark:bg-white/5 text-[10px] text-slate-500 sticky top-0 backdrop-blur-md">
-                                    <tr>
-                                        <th className="px-4 py-2 font-medium">Hash</th>
-                                        <th className="px-4 py-2 font-medium">Client Info</th>
-                                        <th className="px-4 py-2 font-medium w-16 text-right">Count</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
-                                    {fingerprints.length === 0 ? (
-                                        <tr><td className="px-4 py-3 text-slate-500 text-center" colSpan={3}>No fingerprints captured.</td></tr>
-                                    ) : fingerprints.map((item) => (
-                                        <tr className="hover:bg-slate-50 dark:hover:bg-white/5" key={item.hash}>
-                                            <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{item.hash}</td>
-                                            <td className="px-4 py-2 text-blue-500 font-mono text-[10px] truncate max-w-[120px]" title={item.client}>{item.client}</td>
-                                            <td className="px-4 py-2 text-slate-500 font-mono text-right">{item.count}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
                         </div>
                     </CollapsiblePanel>
                 </div>
