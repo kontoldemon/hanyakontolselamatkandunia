@@ -175,10 +175,10 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     )}
                 </div>
 
-                <div className="flex-1 w-full bg-slate-50 dark:bg-black/40 rounded-lg p-2.5 border border-slate-200/50 dark:border-white/5 flex items-start overflow-hidden min-h-[44px] max-h-[44px]">
+                <div className="flex-1 w-full bg-slate-50 dark:bg-black/40 rounded-lg p-2.5 border border-slate-200/50 dark:border-white/5 flex items-center overflow-hidden min-h-[44px] max-h-[44px] mb-1">
                     {preview.tag ? (
-                        <div className="flex items-start gap-2 w-full">
-                            <span className="shrink-0 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-blue-600 dark:text-blue-400 mt-0.5">
+                        <div className="flex items-center gap-2 w-full">
+                            <span className="shrink-0 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-blue-600 dark:text-blue-400">
                                 {preview.tag}
                             </span>
                             <span
