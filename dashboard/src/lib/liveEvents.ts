@@ -190,6 +190,8 @@ const EMPTY_STATS: DashboardStats = {
 const LIVE_LOG_RETENTION_MS = 24 * 60 * 60 * 1000;
 const LIVE_LOG_BATCH_MS = 250;
 const SESSION_ACTIVE_WINDOW_MS = 90 * 1000;
+const OFFLINE_GRACE_MS = 20_000;
+const OFFLINE_FAILURE_THRESHOLD = 2;
 
 const socketTelemetryState: SocketTelemetrySnapshot = {
   socketUrl: "",
@@ -662,9 +664,31 @@ export function useDashboardStats() {
   const lastTotalsRef = useRef({ auth: 0, commands: 0, blocks: 0, conns: 0 });
   const initializedRef = useRef(false);
   const activeUntilRef = useRef(0);
+  const lastSuccessAtRef = useRef(0);
+  const consecutiveFailuresRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+
+    const maybeSetOffline = () => {
+      const now = Date.now();
+      const staleFor = now - lastSuccessAtRef.current;
+      if (
+        lastSuccessAtRef.current > 0 &&
+        staleFor < OFFLINE_GRACE_MS &&
+        consecutiveFailuresRef.current < OFFLINE_FAILURE_THRESHOLD
+      ) {
+        return;
+      }
+      if (!cancelled) {
+        setStats((prev) => ({
+          ...prev,
+          source: "offline",
+          attackActive: false,
+          authoritative: false,
+        }));
+      }
+    };
 
     async function loadStats() {
       try {
@@ -674,20 +698,16 @@ export function useDashboardStats() {
           return;
         }
         if (!response.ok) {
-          if (!cancelled) {
-            setStats((prev) => ({
-              ...prev,
-              source: "offline",
-              attackActive: false,
-              authoritative: false,
-            }));
-          }
+          consecutiveFailuresRef.current += 1;
+          maybeSetOffline();
           return;
         }
         const data = (await response.json()) as SummaryResponse;
         if (cancelled) {
           return;
         }
+        consecutiveFailuresRef.current = 0;
+        lastSuccessAtRef.current = Date.now();
         const metrics = data.metrics ?? {};
         const totalAuthFailures = metrics.totalAuthFailures ?? 0;
         const totalConnections = metrics.totalConnections ?? 0;
@@ -752,7 +772,8 @@ export function useDashboardStats() {
           sourceBreakdown: data.sourceBreakdown,
         });
       } catch {
-        // Keep visible offline state instead of pretending traffic exists.
+        consecutiveFailuresRef.current += 1;
+        maybeSetOffline();
       }
     }
 
@@ -769,9 +790,35 @@ export function useDashboardStats() {
 
 export function useSensorOperations() {
   const [operations, setOperations] = useState<SensorOperations | null>(null);
+  const lastSuccessAtRef = useRef(0);
+  const consecutiveFailuresRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+
+    const maybeSetOffline = () => {
+      const now = Date.now();
+      const staleFor = now - lastSuccessAtRef.current;
+      if (
+        lastSuccessAtRef.current > 0 &&
+        staleFor < OFFLINE_GRACE_MS &&
+        consecutiveFailuresRef.current < OFFLINE_FAILURE_THRESHOLD
+      ) {
+        return;
+      }
+      if (!cancelled) {
+        setOperations((prev) =>
+          prev
+            ? {
+                ...prev,
+                source: "offline",
+                status: "offline",
+                authoritative: false,
+              }
+            : null,
+        );
+      }
+    };
 
     async function loadOperations() {
       try {
@@ -781,22 +828,14 @@ export function useSensorOperations() {
           return;
         }
         if (!response.ok) {
-          if (!cancelled) {
-            setOperations((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    source: "offline",
-                    status: "offline",
-                    authoritative: false,
-                  }
-                : null,
-            );
-          }
+          consecutiveFailuresRef.current += 1;
+          maybeSetOffline();
           return;
         }
         const data = (await response.json()) as SensorOperations;
         if (!cancelled) {
+          consecutiveFailuresRef.current = 0;
+          lastSuccessAtRef.current = Date.now();
           const payload = data as unknown as Record<string, unknown>;
           const telemetrySource = normalizeTelemetrySource(payload.telemetrySource ?? payload.source);
           setOperations({
@@ -806,18 +845,8 @@ export function useSensorOperations() {
           });
         }
       } catch {
-        if (!cancelled) {
-          setOperations((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  source: "offline",
-                  status: "offline",
-                  authoritative: false,
-                }
-              : null,
-          );
-        }
+        consecutiveFailuresRef.current += 1;
+        maybeSetOffline();
       }
     }
 

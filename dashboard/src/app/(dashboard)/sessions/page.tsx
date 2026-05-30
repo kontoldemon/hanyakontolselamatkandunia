@@ -77,6 +77,21 @@ function formatDurationLive(session: { duration: string; status: string; started
     return `${minutes}m ${seconds}s`;
 }
 
+function formatSeenTime(epochMs?: number): string {
+    if (!epochMs || !Number.isFinite(epochMs) || epochMs <= 0) {
+        return "N/A";
+    }
+    return new Date(epochMs).toLocaleString([], {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+    });
+}
+
 type SessionRowData = {
     sessions: CapturedSession[];
     selectedSessionId: string | null;
@@ -86,7 +101,7 @@ type SessionRowData = {
     onSelect: (session: CapturedSession) => void;
 };
 
-const SESSION_ROW_HEIGHT = 88;
+const SESSION_ROW_HEIGHT = 116;
 const SESSION_ROW_GAP = 8;
 
 function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs, searchQuery, onSelect }: RowComponentProps<SessionRowData>) {
@@ -123,6 +138,10 @@ function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs,
                     <span className="text-[9px] uppercase px-1.5 py-0.5 rounded border border-slate-300/60 dark:border-white/20 text-slate-500">
                         {session.source ?? "clickhouse"}
                     </span>
+                </div>
+                <div className="mt-1 grid grid-cols-1 gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    <span className="truncate">First: {formatSeenTime(session.firstSeenEpochMs ?? session.startedAtEpochMs)}</span>
+                    <span className="truncate">Last: {formatSeenTime(session.lastSeenEpochMs ?? session.firstSeenEpochMs ?? session.startedAtEpochMs)}</span>
                 </div>
             </div>
         </div>
@@ -418,6 +437,10 @@ export default function SessionsPage() {
                                             source: {selectedSession.source ?? "clickhouse"}
                                         </span>
                                     </p>
+                                    <p className="text-[10px] text-slate-500 mt-1 font-mono flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5">
+                                        <span>First seen: {formatSeenTime(selectedSession.firstSeenEpochMs ?? selectedSession.startedAtEpochMs)}</span>
+                                        <span>Last update: {formatSeenTime(selectedSession.lastSeenEpochMs ?? selectedSession.firstSeenEpochMs ?? selectedSession.startedAtEpochMs)}</span>
+                                    </p>
                                 </div>
                             </div>
                             <button
@@ -516,3 +539,4 @@ export default function SessionsPage() {
         </div>
     );
 }
+
