@@ -62,7 +62,11 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
     const isSelected = !!target && (log.country === target || log.ip === target);
     const isDimmed = !!target && log.country !== target && log.ip !== target;
     const normalizePreview = (payload: string, type: string) => {
-        const normalized = (payload || "").trim().toLowerCase();
+        const original = (payload || "").trim();
+        const normalized = original.toLowerCase();
+        if (normalized.startsWith("[auth]")) {
+            return { text: original, tag: "AUTH" };
+        }
         if (normalized.startsWith("cloudsentinel.session.connect")) {
             return { text: "Session opened", tag: "OPEN" };
         }
@@ -80,7 +84,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
         ) {
             return { text: "Authentication event", tag: "AUTH" };
         }
-        return { text: payload, tag: "" };
+        return { text: original, tag: "" };
     };
     const preview = normalizePreview(log.latestPayload, log.latestType);
     const compactPreviewText = (preview.text || "").replace(/\s+/g, " ").trim();

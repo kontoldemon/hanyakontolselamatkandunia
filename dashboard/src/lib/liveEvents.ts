@@ -327,6 +327,19 @@ function eventType(eventid = "") {
 }
 
 function payloadFor(event: CloudSentinelEvent) {
+  const user = (event.username || "").trim();
+  const pass = (event.password || "").trim();
+  const hasCredential = !!user || !!pass;
+  const safeUser = user || "unknown";
+  const safePass = pass || "unknown";
+
+  if (hasCredential && event.eventid?.includes("login.failed")) {
+    return `[AUTH] Failed login for ${safeUser} / ${safePass}`;
+  }
+  if (hasCredential && event.eventid?.includes("login.success")) {
+    return `[AUTH] Login success for ${safeUser} / ${safePass}`;
+  }
+
   if (event.eventid?.includes("command.output")) {
     const response = (event.output || event.reason || "").trim();
     if (response) {
@@ -336,8 +349,8 @@ function payloadFor(event: CloudSentinelEvent) {
   if (event.input) {
     return event.input;
   }
-  if (event.username || event.password) {
-    return "auth-attempt";
+  if (hasCredential) {
+    return `[AUTH] Authentication event for ${safeUser} / ${safePass}`;
   }
   const hassh = event.hassh_md5 ?? event.hassh;
   if (hassh) {

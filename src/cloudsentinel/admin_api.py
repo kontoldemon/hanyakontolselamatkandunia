@@ -188,7 +188,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                 anyIf(version, version != '') AS client_version,
                 argMax(cloudsentinel_soar_action, timestamp) AS last_soar_action,
                 max(mttb_ms) AS max_mttb_ms,
-                groupArray((timestamp, eventid, input, reason, username, attempt, auth_type, version, duration)) AS replay_timeline,
+                groupArray((timestamp, eventid, input, reason, username, password, attempt, auth_type, version, duration)) AS replay_timeline,
                 arrayDistinct(arrayFlatten(groupArray(cloudsentinel_mitre_techniques))) AS techniques,
                 max(cloudsentinel_risk_score) AS max_risk
             FROM {settings.clickhouse.table}
@@ -265,7 +265,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
 
             replay: list[dict[str, str]] = []
             commands: list[str] = []
-            normalized_timeline: list[tuple[float, str, str, str, str, int, str, str, str]] = []
+            normalized_timeline: list[tuple[float, str, str, str, str, str, int, str, str, str]] = []
             latest_input = ""
             for item in timeline_items:
                 try:
@@ -274,14 +274,15 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                     input_value = item[2]
                     reason = item[3]
                     username = item[4] if len(item) > 4 else ""
-                    attempt_raw = item[5] if len(item) > 5 else 0
+                    password_value = item[5] if len(item) > 5 else ""
+                    attempt_raw = item[6] if len(item) > 6 else 0
                     try:
                         attempt = int(attempt_raw or 0)
                     except Exception:
                         attempt = 0
-                    auth_type = item[6] if len(item) > 6 else ""
-                    version = item[7] if len(item) > 7 else ""
-                    duration = item[8] if len(item) > 8 else ""
+                    auth_type = item[7] if len(item) > 7 else ""
+                    version = item[8] if len(item) > 8 else ""
+                    duration = item[9] if len(item) > 9 else ""
                 except Exception:
                     continue
                 if hasattr(ts_raw, "timestamp"):
@@ -295,6 +296,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                         str(input_value or ""),
                         str(reason or ""),
                         str(username or ""),
+                        str(password_value or ""),
                         attempt,
                         str(auth_type or ""),
                         str(version or ""),
@@ -310,6 +312,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                 input_value,
                 reason,
                 username,
+                password_value,
                 attempt,
                 auth_type,
                 version,
@@ -330,15 +333,17 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                     )
                 elif eventid == "cloudsentinel.login.failed":
                     user = username.strip() or "unknown"
+                    password = password_value.strip() or "unknown"
                     attempt_suffix = f" attempt {attempt}" if attempt > 0 else ""
                     method = auth_type.strip()
                     if method and method != "password":
-                        info_text = f"[AUTH] Failed login for {user} via {method}{attempt_suffix}"
+                        info_text = f"[AUTH] Failed login for {user} / {password} via {method}{attempt_suffix}"
                     else:
-                        info_text = f"[AUTH] Failed login for {user}{attempt_suffix}"
+                        info_text = f"[AUTH] Failed login for {user} / {password}{attempt_suffix}"
                 elif eventid == "cloudsentinel.login.success":
                     user = username.strip() or "unknown"
-                    info_text = f"[AUTH] Login success for {user}"
+                    password = password_value.strip() or "unknown"
+                    info_text = f"[AUTH] Login success for {user} / {password}"
                 elif eventid == "cloudsentinel.client.version":
                     version_value = version.strip() or client_version.strip()
                     info_text = f"[VERSION] {version_value}" if version_value else "[VERSION] Client banner observed"
@@ -471,6 +476,7 @@ def _load_recent_events_from_clickhouse(settings: Settings, limit: int = 100) ->
                 timezone,
                 input,
                 username,
+                password,
                 hassh_md5,
                 hassh_algorithms,
                 version,
@@ -500,7 +506,7 @@ def _load_recent_events_from_clickhouse(settings: Settings, limit: int = 100) ->
         events: list[dict[str, Any]] = []
         enrich_cache: dict[str, dict[str, str]] = {}
         for row in result.result_rows:
-            ts = row[20]
+            ts = row[21]
             if hasattr(ts, "timestamp"):
                 epoch = float(ts.replace(tzinfo=UTC).timestamp() if getattr(ts, "tzinfo", None) is None else ts.timestamp())
             else:
@@ -519,11 +525,11 @@ def _load_recent_events_from_clickhouse(settings: Settings, limit: int = 100) ->
                 if value and value not in {"0", "Unknown"}:
                     enriched[key] = value
             input_value = str(row[8] or "")
-            reason_value = str(row[13] or "")
+            reason_value = str(row[14] or "")
             if _is_noise_text(input_value) and _is_noise_text(reason_value):
                 continue
-            source_value = str(row[14] or "")
-            response_mode_value = str(row[15] or "")
+            source_value = str(row[15] or "")
+            response_mode_value = str(row[16] or "")
             derived_mode = _derive_response_mode(eventid, source_value, reason_value, input_value)
             events.append(
                 {
@@ -543,17 +549,18 @@ def _load_recent_events_from_clickhouse(settings: Settings, limit: int = 100) ->
                     "timezone": enriched.get("timezone", "UTC"),
                     "input": input_value,
                     "username": str(row[9] or ""),
-                    "hassh_md5": str(row[10] or ""),
-                    "hassh_algorithms": str(row[11] or ""),
-                    "version": str(row[12] or ""),
+                    "password": str(row[10] or ""),
+                    "hassh_md5": str(row[11] or ""),
+                    "hassh_algorithms": str(row[12] or ""),
+                    "version": str(row[13] or ""),
                     "ja4s": "",
                     "reason": reason_value,
                     "source": source_value,
                     "response_mode": response_mode_value or derived_mode,
-                    "cloudsentinel_mitre_techniques": [str(v) for v in (row[16] or []) if str(v)],
-                    "cloudsentinel_soar_action": str(row[17] or "none"),
-                    "cloudsentinel_risk_score": int(row[18] or 0),
-                    "mttb_ms": float(row[19] or 0),
+                    "cloudsentinel_mitre_techniques": [str(v) for v in (row[17] or []) if str(v)],
+                    "cloudsentinel_soar_action": str(row[18] or "none"),
+                    "cloudsentinel_risk_score": int(row[19] or 0),
+                    "mttb_ms": float(row[20] or 0),
                     "timestamp": epoch,
                 }
             )
