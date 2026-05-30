@@ -714,6 +714,8 @@ export function useDashboardStats() {
   const activeUntilRef = useRef(0);
   const lastSuccessAtRef = useRef(0);
   const consecutiveFailuresRef = useRef(0);
+  const uptimeBaseSecondsRef = useRef<number | null>(null);
+  const uptimeBaseAtMsRef = useRef<number>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -819,6 +821,13 @@ export function useDashboardStats() {
           authoritative: data.authoritative,
           sourceBreakdown: data.sourceBreakdown,
         });
+        if (typeof metrics.uptimeSeconds === "number" && metrics.uptimeSeconds > 0) {
+          uptimeBaseSecondsRef.current = metrics.uptimeSeconds;
+          uptimeBaseAtMsRef.current = Date.now();
+        } else {
+          uptimeBaseSecondsRef.current = null;
+          uptimeBaseAtMsRef.current = 0;
+        }
       } catch {
         consecutiveFailuresRef.current += 1;
         maybeSetOffline();
@@ -831,6 +840,25 @@ export function useDashboardStats() {
       cancelled = true;
       window.clearInterval(interval);
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const base = uptimeBaseSecondsRef.current;
+      const baseAt = uptimeBaseAtMsRef.current;
+      if (base == null || baseAt <= 0) {
+        return;
+      }
+      const elapsed = Math.max(0, Math.floor((Date.now() - baseAt) / 1000));
+      const next = formatUptime(base + elapsed);
+      setStats((prev) => {
+        if (prev.source === "offline" || prev.systemUptime === next) {
+          return prev;
+        }
+        return { ...prev, systemUptime: next };
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   return stats;
