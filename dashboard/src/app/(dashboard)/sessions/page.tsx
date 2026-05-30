@@ -162,6 +162,9 @@ export default function SessionsPage() {
     const listRef = useListRef(null);
     const listContainerRef = useRef<HTMLDivElement | null>(null);
     const [listHeight, setListHeight] = useState(500);
+    const [displayedSessions, setDisplayedSessions] = useState<CapturedSession[]>([]);
+    const lastNonEmptySessionsAtRef = useRef(0);
+    const lastSelectedSnapshotRef = useRef<CapturedSession | null>(null);
 
     const filteredSessions = useMemo(() => {
         const byIp = new Map<string, CapturedSession[]>();
@@ -254,23 +257,43 @@ export default function SessionsPage() {
         return selected.sort((a, b) => lastSeenMs(b) - lastSeenMs(a));
     }, [sessions, searchQuery, filterStatus]);
 
+    useEffect(() => {
+        if (filteredSessions.length > 0) {
+            setDisplayedSessions(filteredSessions);
+            lastNonEmptySessionsAtRef.current = Date.now();
+            return;
+        }
+        const staleFor = Date.now() - lastNonEmptySessionsAtRef.current;
+        if (staleFor > 12000) {
+            setDisplayedSessions([]);
+        }
+    }, [filteredSessions]);
+
     const selectSession = useCallback((session: CapturedSession) => {
         setSelectedSessionId(session.id);
         setLastSelectedIp(session.ip);
+        lastSelectedSnapshotRef.current = session;
     }, []);
 
     useAgentCommand("sessions.search", useCallback((v: string) => setSearchQuery(v), []));
     useAgentCommand("sessions.filter", useCallback((v: string) => setFilterStatus(v as "all" | "active"), []));
     useAgentCommand("sessions.select", useCallback((ip: string) => {
-        const index = filteredSessions.findIndex((s) => s.ip === ip);
+        const index = displayedSessions.findIndex((s) => s.ip === ip);
         if (index >= 0) {
-            selectSession(filteredSessions[index]);
+            selectSession(displayedSessions[index]);
             listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
         }
-    }, [filteredSessions, selectSession, listRef]));
+    }, [displayedSessions, selectSession, listRef]));
 
     const exactMatch = selectedSessionId ? sessions.find((s) => s.id === selectedSessionId) : null;
-    const selectedSession = exactMatch || (lastSelectedIp ? sessions.find((s) => s.ip === lastSelectedIp) : null);
+    const selectedByIp = lastSelectedIp ? sessions.find((s) => s.ip === lastSelectedIp) : null;
+    const selectedSession = exactMatch || selectedByIp || lastSelectedSnapshotRef.current;
+
+    useEffect(() => {
+        if (selectedSession) {
+            lastSelectedSnapshotRef.current = selectedSession;
+        }
+    }, [selectedSession]);
 
     useEffect(() => {
         if (!exactMatch && selectedSession && selectedSessionId !== selectedSession.id) {
@@ -319,16 +342,16 @@ export default function SessionsPage() {
     }, [focusIp]);
 
     useEffect(() => {
-        if (!focusIp || filteredSessions.length === 0) {
+        if (!focusIp || displayedSessions.length === 0) {
             return;
         }
-        const index = filteredSessions.findIndex((session) => session.ip === focusIp);
+        const index = displayedSessions.findIndex((session) => session.ip === focusIp);
         if (index >= 0) {
-            selectSession(filteredSessions[index]);
+            selectSession(displayedSessions[index]);
             listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
             setFocusIp("");
         }
-    }, [focusIp, filteredSessions, selectSession, listRef]);
+    }, [focusIp, displayedSessions, selectSession, listRef]);
 
     async function executeBlockIp(ip: string) {
         setBlockingIp(ip);
@@ -351,7 +374,7 @@ export default function SessionsPage() {
     }
 
     const rowData: SessionRowData = {
-        sessions: filteredSessions,
+        sessions: displayedSessions,
         selectedSessionId,
         focusIp,
         nowMs,
@@ -396,14 +419,14 @@ export default function SessionsPage() {
                 </div>
 
                 <div ref={listContainerRef} className="flex-1 min-h-0 overflow-hidden p-2">
-                    {filteredSessions.length === 0 ? (
+                    {displayedSessions.length === 0 ? (
                         <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
                             No captured sessions.
                         </div>
                     ) : (
                         <List
                             listRef={listRef}
-                            rowCount={filteredSessions.length}
+                            rowCount={displayedSessions.length}
                             rowHeight={SESSION_ROW_HEIGHT + SESSION_ROW_GAP}
                             rowProps={rowData}
                             rowComponent={SessionRow}
