@@ -953,6 +953,7 @@ def test_admin_api_exposure_parses_boolean_string(monkeypatch: pytest.MonkeyPatc
 
 
 def test_admin_api_sessions_fallback_enriches_ip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLOUDSENTINEL_STRICT_TRUTH", "0")
     settings = load_settings(
         Path("src/cloudsentinel/configs/usas-production.yaml"),
         Path("src/cloudsentinel/.env"),
