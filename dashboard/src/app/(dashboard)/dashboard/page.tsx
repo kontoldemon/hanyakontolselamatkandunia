@@ -13,6 +13,7 @@ const REALTIME_ATTACK_HINT_MS = 20 * 1000;
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [displayConnections, setDisplayConnections] = useState(0);
 
   const stats = useDashboardStats();
   const threatLogs = useLiveThreatLogs();
@@ -30,6 +31,20 @@ export default function Dashboard() {
       clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setDisplayConnections((prev) => {
+        if (prev === liveConnectionCount) {
+          return prev;
+        }
+        const delta = liveConnectionCount - prev;
+        const step = Math.max(1, Math.ceil(Math.abs(delta) / 4));
+        return delta > 0 ? prev + step : prev - step;
+      });
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [liveConnectionCount]);
 
   const combinedLogs = useMemo(() => {
     if (now <= 0) {
@@ -222,7 +237,7 @@ export default function Dashboard() {
           <div className="flex bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-lg shadow-sm text-sm overflow-x-auto w-full md:w-auto scrollbar-hide">
             <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
               <span className="text-slate-500 text-xs mr-2">Connections</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{liveConnectionCount.toLocaleString()}</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{displayConnections.toLocaleString()}</span>
             </div>
             <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
               <span className="text-slate-500 text-xs mr-2">MTTB</span>
