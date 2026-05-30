@@ -65,7 +65,7 @@ async function fetchAdmin<T>(path: string): Promise<AdminResult<T>> {
 }
 
 export async function GET() {
-  const [readiness, metrics, stats, sessions, distribution, attackGraph, anomaly, llm] =
+  const [readiness, metrics, stats, sessions, distribution, attackGraph, anomaly, llm, truthSummary] =
     await Promise.all([
       fetchAdmin<Record<string, unknown>>("/readiness"),
       fetchAdmin<Record<string, unknown>>("/metrics/json"),
@@ -75,6 +75,7 @@ export async function GET() {
       fetchAdmin<{ nodes?: unknown[]; edges?: unknown[] }>("/attack-graph"),
       fetchAdmin<Record<string, unknown>>("/anomaly-stats"),
       fetchAdmin<Record<string, unknown>>("/llm/status"),
+      fetchAdmin<Record<string, unknown>>("/truth-summary"),
     ]);
 
   const live =
@@ -113,6 +114,7 @@ export async function GET() {
   const readinessSource = inferSource("/readiness", readiness);
   const anomalySource = inferSource("/anomaly-stats", anomaly);
   const llmSource = inferSource("/llm/status", llm);
+  const truthSummarySource = inferSource("/truth-summary", truthSummary);
 
   const sourceBreakdown = {
     readiness: readinessSource,
@@ -123,11 +125,22 @@ export async function GET() {
     attackGraph: graphSource,
     anomaly: anomalySource,
     llm: llmSource,
+    truthSummary: truthSummarySource,
   };
 
   const uniqueSources = new Set<SourceKind>(Object.values(sourceBreakdown));
   const source: SourceKind = uniqueSources.size === 1 ? (Object.values(sourceBreakdown)[0] as SourceKind) : "mixed";
+  const telemetryTruthSources: SourceKind[] = [
+    truthSummarySource,
+    sessionsSource,
+    distributionSource,
+    graphSource,
+  ];
+  const telemetrySource: SourceKind = telemetryTruthSources.every((value) => value === "clickhouse")
+    ? "clickhouse"
+    : (telemetryTruthSources.every((value) => value === "runtime") ? "runtime" : "mixed");
   const authoritative =
+    truthSummarySource === "clickhouse" &&
     sessionsSource === "clickhouse" &&
     distributionSource === "clickhouse" &&
     graphSource === "clickhouse";
@@ -136,6 +149,7 @@ export async function GET() {
     ok: live,
     status: live ? "live" : "offline",
     source,
+    telemetrySource,
     authoritative,
     sourceBreakdown,
     telemetry: {
