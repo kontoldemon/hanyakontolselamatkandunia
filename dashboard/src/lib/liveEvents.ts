@@ -240,6 +240,41 @@ const SESSION_ACTIVE_WINDOW_MS = 90 * 1000;
 const OFFLINE_GRACE_MS = 20_000;
 const OFFLINE_FAILURE_THRESHOLD = 2;
 let WAR_ROOM_SNAPSHOT_CACHE: WarRoomState | null = null;
+const WAR_ROOM_STATE_STORAGE_KEY = "cloudsentinel.war_room_state";
+
+function loadPersistedWarRoomState(): WarRoomState | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const raw = window.sessionStorage.getItem(WAR_ROOM_STATE_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as Partial<WarRoomState>;
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    return {
+      ...EMPTY_WAR_ROOM_STATE,
+      ...parsed,
+      source: normalizeTelemetrySource(parsed.source) ?? "runtime",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistWarRoomState(value: WarRoomState): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.sessionStorage.setItem(WAR_ROOM_STATE_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // ignore persistence errors
+  }
+}
 
 const socketTelemetryState: SocketTelemetrySnapshot = {
   socketUrl: "",
@@ -951,9 +986,17 @@ export function useSensorOperations() {
 }
 
 export function useWarRoomState() {
-  const [warRoomState, setWarRoomState] = useState<WarRoomState>(
-    WAR_ROOM_SNAPSHOT_CACHE ?? EMPTY_WAR_ROOM_STATE,
-  );
+  const [warRoomState, setWarRoomState] = useState<WarRoomState>(() => {
+    if (WAR_ROOM_SNAPSHOT_CACHE) {
+      return WAR_ROOM_SNAPSHOT_CACHE;
+    }
+    const persisted = loadPersistedWarRoomState();
+    if (persisted) {
+      WAR_ROOM_SNAPSHOT_CACHE = persisted;
+      return persisted;
+    }
+    return EMPTY_WAR_ROOM_STATE;
+  });
   const lastSuccessAtRef = useRef(
     WAR_ROOM_SNAPSHOT_CACHE?.updatedAt && WAR_ROOM_SNAPSHOT_CACHE.updatedAt > 0
       ? WAR_ROOM_SNAPSHOT_CACHE.updatedAt
@@ -975,7 +1018,8 @@ export function useWarRoomState() {
         return;
       }
       if (!cancelled) {
-        setWarRoomState((prev) => ({
+        setWarRoomState((prev) => {
+          const next = {
           ...prev,
           ok: false,
           state: "offline",
@@ -983,7 +1027,11 @@ export function useWarRoomState() {
           authoritative: false,
           source: "runtime",
           updatedAt: Date.now(),
-        }));
+          } as WarRoomState;
+          WAR_ROOM_SNAPSHOT_CACHE = next;
+          persistWarRoomState(next);
+          return next;
+        });
       }
     };
 
@@ -1011,6 +1059,7 @@ export function useWarRoomState() {
           source: normalizeTelemetrySource(data.source) ?? "runtime",
         };
         WAR_ROOM_SNAPSHOT_CACHE = nextState;
+        persistWarRoomState(nextState);
         setWarRoomState(nextState);
       } catch {
         consecutiveFailuresRef.current += 1;
