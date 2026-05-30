@@ -365,7 +365,6 @@ export default function IntelligencePage() {
                         <span className={`uppercase font-bold tracking-wide ${dashboardStats.authoritative ? "text-emerald-500" : "text-amber-500"}`}>
                             {dashboardStats.authoritative ? "Authoritative" : "Partial"}
                         </span>
-                        <span className="font-mono text-slate-500">source: {dashboardStats.telemetrySource ?? "mixed"}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">

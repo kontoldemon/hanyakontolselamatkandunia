@@ -280,9 +280,6 @@ export default function Dashboard() {
             <span className={`text-[10px] uppercase font-bold tracking-wide ${warRoom.authoritative ? "text-emerald-500" : "text-amber-500"}`}>
               {warRoom.authoritative ? "Authoritative" : "Partial"}
             </span>
-            <span className="text-[10px] font-mono text-slate-500">
-              source: {warRoom.source ?? stats.telemetrySource ?? "mixed"}
-            </span>
           </div>
         </div>
       </div>

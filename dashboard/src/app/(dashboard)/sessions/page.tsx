@@ -135,9 +135,6 @@ function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs,
                     </span>
                     <span className="flex items-center gap-1"><Clock size={10} /> {formatDurationLive(session, nowMs)}</span>
                     <span className="flex items-center gap-1 font-mono text-[10px] truncate max-w-[100px]"><HighlightText text={session.client || "Unknown"} highlight={searchQuery} /></span>
-                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded border border-slate-300/60 dark:border-white/20 text-slate-500">
-                        {session.source ?? "clickhouse"}
-                    </span>
                 </div>
                 <div className="mt-1 grid grid-cols-1 gap-0.5 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     <span className="truncate">First: {formatSeenTime(session.firstSeenEpochMs ?? session.startedAtEpochMs)}</span>
@@ -456,9 +453,6 @@ export default function SessionsPage() {
                                         <span className="whitespace-nowrap">ASN: {selectedSession.asn || "N/A"}</span>
                                         <span className="hidden sm:inline">•</span>
                                         <span className="whitespace-nowrap truncate max-w-[120px] sm:max-w-none">HASSH: {selectedSession.fingerprint?.slice(0, 16) || "N/A"}...</span>
-                                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded border border-slate-300/60 dark:border-white/20 text-slate-500">
-                                            source: {selectedSession.source ?? "clickhouse"}
-                                        </span>
                                     </p>
                                     <p className="text-[10px] text-slate-500 mt-1 font-mono flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5">
                                         <span>First seen: {formatSeenTime(selectedSession.firstSeenEpochMs ?? selectedSession.startedAtEpochMs)}</span>
