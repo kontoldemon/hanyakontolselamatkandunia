@@ -538,6 +538,7 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
         logger.info("Auth success: %s from %s", self.username, self.src_ip)
         asyncio.create_task(self._emit_event("cloudsentinel.login.success", {
             "username": self.username,
+            "password": self.password,
         }))
         try:
             from .metrics import get_metrics

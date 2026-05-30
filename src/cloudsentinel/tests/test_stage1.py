@@ -527,7 +527,7 @@ async def test_soar_forces_block_on_persistence_attempt() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stream_emits_sanitized_event_without_password() -> None:
+async def test_stream_emits_sanitized_event_with_password() -> None:
     emitted: list[dict] = []
 
     class FakeSio:
@@ -545,9 +545,9 @@ async def test_stream_emits_sanitized_event_without_password() -> None:
         "input": "id",
     })
     assert emitted[0]["username"] == "root"
-    assert "password" not in emitted[0]
+    assert emitted[0]["password"] == "secret"
     assert "log_raw" not in emitted[0]
-    assert "password" not in stream._buffer[0]
+    assert stream._buffer[0]["password"] == "secret"
 
 
 # ═══════════════════════════════════════════════════════════════════

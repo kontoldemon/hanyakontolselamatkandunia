@@ -141,9 +141,8 @@ class LiveStream:
         if not self._started or not self._sio:
             return
 
-        # Clean sensitive fields for dashboard
+        # Clean raw/internal fields for dashboard
         safe = dict(event)
-        safe.pop("password", None)
         safe.pop("system", None)
         for k in list(safe):
             if k.startswith("log_"):
@@ -159,7 +158,6 @@ class LiveStream:
         if not self._started or not self._sio:
             return
         safe = dict(event)
-        safe.pop("password", None)
         safe.pop("system", None)
         for k in list(safe):
             if k.startswith("log_"):
