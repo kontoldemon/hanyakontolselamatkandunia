@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import json
 import os
 import subprocess
 import time
@@ -31,6 +32,11 @@ WAR_ROOM_REDIS_TTL_SECONDS = 24 * 60 * 60
 WAR_ROOM_DEGRADED_HOLD_MS = 60_000
 WAR_ROOM_STATE_REDIS_KEY = "cloudsentinel:war_room_state:v1"
 WAR_ROOM_EVIDENCE_LOOKBACK_MINUTES = 30
+HOT_CACHE_PREFIX = "cloudsentinel:hotcache:v1"
+HOT_CACHE_TTL_SUMMARY_SECONDS = 5
+HOT_CACHE_TTL_SESSIONS_SECONDS = 5
+HOT_CACHE_TTL_ATTACK_DISTRIBUTION_SECONDS = 8
+HOT_CACHE_TTL_ATTACK_GRAPH_SECONDS = 8
 WAR_ROOM_ATTACK_EVENT_IDS = (
     "cloudsentinel.login.failed",
     "cloudsentinel.command.input",
@@ -1045,6 +1051,31 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         await redis_client.expire(WAR_ROOM_STATE_REDIS_KEY, WAR_ROOM_REDIS_TTL_SECONDS)
         return round((time.perf_counter() - started) * 1000, 3), redis_mode
 
+    def _hot_cache_key(name: str) -> str:
+        return f"{HOT_CACHE_PREFIX}:{name}"
+
+    async def _hot_cache_get(name: str) -> tuple[Any | None, str]:
+        try:
+            redis_client, redis_mode = await _resolve_war_room_redis()
+            raw = await redis_client.get(_hot_cache_key(name))
+            if not raw:
+                return None, redis_mode
+            return json.loads(raw), redis_mode
+        except Exception:
+            return None, "memory"
+
+    async def _hot_cache_set(name: str, payload: Any, ttl_seconds: int) -> str:
+        try:
+            redis_client, redis_mode = await _resolve_war_room_redis()
+            await redis_client.set(
+                _hot_cache_key(name),
+                json.dumps(payload, separators=(",", ":"), ensure_ascii=True),
+                ex=max(1, int(ttl_seconds)),
+            )
+            return redis_mode
+        except Exception:
+            return "memory"
+
     async def _compute_war_room_state(force: bool = False) -> dict[str, Any]:
         nonlocal war_room_last_snapshot
         nonlocal war_room_last_refresh_ms
@@ -1268,6 +1299,11 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     @app.get("/sessions", dependencies=[Depends(require_auth)])
     async def sessions() -> dict[str, Any]:
         strict_truth = _strict_truth_mode_enabled()
+        if strict_truth:
+            cached_payload, _ = await _hot_cache_get("sessions:strict")
+            if isinstance(cached_payload, dict) and isinstance(cached_payload.get("sessions"), list):
+                await _compute_war_room_state(force=False)
+                return cached_payload
         sessions_list = _load_recent_sessions_from_clickhouse(settings)
         existing = {str(item.get("ip", "")) for item in sessions_list}
         if not strict_truth and soar is not None:
@@ -1330,6 +1366,8 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 "memory_fallback_enabled": not strict_truth,
             },
         }
+        if strict_truth:
+            await _hot_cache_set("sessions:strict", payload, HOT_CACHE_TTL_SESSIONS_SECONDS)
         await _compute_war_room_state(force=False)
         return payload
 
@@ -1346,6 +1384,10 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
 
     @app.get("/truth-summary", dependencies=[Depends(require_auth)])
     async def truth_summary() -> dict[str, Any]:
+        cached_payload, _ = await _hot_cache_get("truth-summary")
+        if isinstance(cached_payload, dict) and isinstance(cached_payload.get("metrics"), dict):
+            await _compute_war_room_state(force=False)
+            return cached_payload
         summary = _load_truth_summary_from_clickhouse(settings)
         if summary is None:
             payload = {
@@ -1364,6 +1406,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             "metrics": summary,
             "sourceBreakdown": {"metrics": "clickhouse"},
         }
+        await _hot_cache_set("truth-summary", payload, HOT_CACHE_TTL_SUMMARY_SECONDS)
         await _compute_war_room_state(force=False)
         return payload
 
@@ -1480,6 +1523,10 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     @app.get("/attack-distribution", dependencies=[Depends(require_auth)])
     async def attack_distribution() -> list[dict[str, Any]]:
         strict_truth = _strict_truth_mode_enabled()
+        if strict_truth:
+            cached_payload, _ = await _hot_cache_get("attack-distribution:strict")
+            if isinstance(cached_payload, list):
+                return cached_payload
         metrics_data = _load_attack_distribution_from_clickhouse(settings)
         if not strict_truth:
             try:
@@ -1496,7 +1543,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 )
             except Exception:
                 pass
-        return [
+        payload = [
             {"name": "Brute Force", "value": metrics_data["Brute Force"], "fill": "#ef4444"},
             {
                 "name": "Command Injection",
@@ -1506,10 +1553,21 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             {"name": "Port Scanning", "value": metrics_data["Port Scanning"], "fill": "#eab308"},
             {"name": "Malware Upload", "value": metrics_data["Malware Upload"], "fill": "#8b5cf6"},
         ]
+        if strict_truth:
+            await _hot_cache_set(
+                "attack-distribution:strict",
+                payload,
+                HOT_CACHE_TTL_ATTACK_DISTRIBUTION_SECONDS,
+            )
+        return payload
 
     @app.get("/attack-graph", dependencies=[Depends(require_auth)])
     async def attack_graph() -> dict[str, Any]:
         strict_truth = _strict_truth_mode_enabled()
+        if strict_truth:
+            cached_payload, _ = await _hot_cache_get("attack-graph:strict")
+            if isinstance(cached_payload, dict) and isinstance(cached_payload.get("nodes"), list):
+                return cached_payload
         nodes: list[dict[str, Any]] = [
             {"id": "honeypot", "type": "honeypot", "label": settings.honeypot.hostname}
         ]
@@ -1549,7 +1607,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             clickhouse_graph = _load_attack_graph_from_clickhouse(settings)
             nodes.extend(clickhouse_graph.get("nodes", []))
             edges.extend(clickhouse_graph.get("edges", []))
-        return {
+        payload = {
             "nodes": nodes,
             "edges": edges,
             "source": "clickhouse" if strict_truth else ("mixed" if used_soar else "clickhouse"),
@@ -1558,6 +1616,9 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 "graph": "clickhouse" if strict_truth else ("mixed" if used_soar else "clickhouse")
             },
         }
+        if strict_truth:
+            await _hot_cache_set("attack-graph:strict", payload, HOT_CACHE_TTL_ATTACK_GRAPH_SECONDS)
+        return payload
 
     @app.get("/anomaly-stats", dependencies=[Depends(require_auth)])
     async def anomaly_stats() -> dict[str, Any]:
