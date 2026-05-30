@@ -47,7 +47,7 @@ const offlineFallback: WarRoomStatePayload = {
     storage: "memory",
   },
   windows: {
-    onlineGraceMs: 25_000,
+    onlineGraceMs: 45_000,
     attackCooldownMs: 90_000,
     activeFreshnessMs: 90_000,
   },
@@ -111,7 +111,7 @@ async function loadCompatibilityWarRoomState(baseUrl: string, token?: string): P
     }
   }
 
-  const onlineGraceMs = 25_000;
+  const onlineGraceMs = 45_000;
   const attackCooldownMs = 90_000;
   const activeFreshnessMs = 90_000;
   const cooldownUntil = lastAttackAt > 0 ? lastAttackAt + attackCooldownMs : 0;

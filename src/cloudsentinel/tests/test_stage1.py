@@ -1060,7 +1060,7 @@ def test_war_room_state_transitions(monkeypatch: pytest.MonkeyPatch) -> None:
     assert fourth.status_code == 200
     assert fourth.json()["state"] == "live"
 
-    clock["now"] += 30_000
+    clock["now"] += 50_000
     fifth = client.get("/war-room-state", headers=headers)
     assert fifth.status_code == 200
     assert fifth.json()["state"] == "offline"
