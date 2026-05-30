@@ -86,7 +86,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-hidden pr-1">
                 
                 {/* Left Column: Telemetry & Controls */}
-                <div className="space-y-6 flex flex-col">
+                <div className="space-y-6 flex flex-col min-h-0">
                     <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col gap-3">
                         <h3 className="font-semibold text-sm flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
                             <Shield size={16} />
@@ -123,7 +123,7 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 flex flex-col overflow-hidden">
+                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
                         <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] shrink-0">
                             <h3 className="font-semibold text-sm flex items-center gap-2 text-slate-800 dark:text-slate-200">
                                 <Activity size={16} className="text-blue-500" />
@@ -248,7 +248,7 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Socket Logs */}
-                    <div className={isSocketFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col overflow-hidden" : "bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 min-h-[280px] lg:min-h-0 flex flex-col overflow-hidden"}>
+                    <div className={isSocketFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col overflow-hidden" : "bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden"}>
                         {isSocketFullScreen && <div className="fixed inset-0 z-[-1] bg-black/60 backdrop-blur-sm" onClick={() => setIsSocketFullScreen(false)} />}
                         <div className="p-3 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center shrink-0">
                             <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Socket Telemetry</h3>
