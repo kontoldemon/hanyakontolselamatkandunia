@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 168;
+const ROW_HEIGHT = 160;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -98,7 +98,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     }
                 }}
                 className={clsx(
-                    "relative overflow-hidden h-full w-full min-w-0 px-3 pt-3 pb-4 bg-white dark:bg-white/5 rounded-xl transition-all duration-300 cursor-pointer group flex flex-col",
+                    "relative overflow-hidden h-full w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-xl transition-all duration-300 cursor-pointer group flex flex-col",
                     isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10",
                     underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-xl before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
                     isDimmed ? "opacity-30 grayscale" : "opacity-100",
@@ -156,7 +156,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 mb-auto">
+                <div className="flex flex-wrap items-center gap-1.5 mb-auto pb-1.5">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-medium">
                         {log.eventCount} events
                     </span>
