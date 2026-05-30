@@ -995,3 +995,132 @@ def test_admin_api_sessions_fallback_enriches_ip(monkeypatch: pytest.MonkeyPatch
     assert sessions[0]["countryCode"] == "US"
     assert sessions[0]["isp"] == "Google"
     assert sessions[0]["city"] == "Mountain View"
+
+
+def test_war_room_state_transitions(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+
+    class FakeRedis:
+        def __init__(self) -> None:
+            self.data: dict[str, dict[str, str]] = {}
+
+        async def hgetall(self, key: str) -> dict[str, str]:
+            return dict(self.data.get(key, {}))
+
+        async def hset(self, key: str, mapping: dict[str, str]) -> None:
+            self.data[key] = {**self.data.get(key, {}), **mapping}
+
+        async def expire(self, key: str, ttl: int) -> None:
+            _ = (key, ttl)
+
+    pipeline._redis = FakeRedis()  # type: ignore[attr-defined]
+
+    clock = {"now": 1_000_000}
+    evidence = {"last_online_at": 0, "last_attack_at": 0}
+
+    monkeypatch.setattr("cloudsentinel.admin_api._now_ms", lambda: int(clock["now"]))
+    monkeypatch.setattr(
+        "cloudsentinel.admin_api._load_war_room_evidence_from_clickhouse",
+        lambda _settings: {
+            "source": "clickhouse",
+            "authoritative": True,
+            "last_online_at": int(evidence["last_online_at"]),
+            "last_attack_at": int(evidence["last_attack_at"]),
+        },
+    )
+
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer test-token"}
+
+    first = client.get("/war-room-state", headers=headers)
+    assert first.status_code == 200
+    assert first.json()["state"] == "offline"
+
+    clock["now"] += 3_000
+    evidence["last_online_at"] = clock["now"]
+    second = client.get("/war-room-state", headers=headers)
+    assert second.status_code == 200
+    assert second.json()["state"] == "live"
+
+    clock["now"] += 3_000
+    evidence["last_attack_at"] = clock["now"]
+    third = client.get("/war-room-state", headers=headers)
+    assert third.status_code == 200
+    assert third.json()["state"] == "under_attack"
+
+    clock["now"] += 95_000
+    evidence["last_online_at"] = clock["now"]
+    fourth = client.get("/war-room-state", headers=headers)
+    assert fourth.status_code == 200
+    assert fourth.json()["state"] == "live"
+
+    clock["now"] += 30_000
+    fifth = client.get("/war-room-state", headers=headers)
+    assert fifth.status_code == 200
+    assert fifth.json()["state"] == "offline"
+
+
+def test_war_room_state_degraded_hold(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+
+    class FakeRedis:
+        def __init__(self) -> None:
+            self.data: dict[str, dict[str, str]] = {}
+
+        async def hgetall(self, key: str) -> dict[str, str]:
+            return dict(self.data.get(key, {}))
+
+        async def hset(self, key: str, mapping: dict[str, str]) -> None:
+            self.data[key] = {**self.data.get(key, {}), **mapping}
+
+        async def expire(self, key: str, ttl: int) -> None:
+            _ = (key, ttl)
+
+    pipeline._redis = FakeRedis()  # type: ignore[attr-defined]
+
+    clock = {"now": 2_000_000}
+    evidence = {"last_online_at": clock["now"], "last_attack_at": 0}
+
+    monkeypatch.setattr("cloudsentinel.admin_api._now_ms", lambda: int(clock["now"]))
+    monkeypatch.setattr(
+        "cloudsentinel.admin_api._load_war_room_evidence_from_clickhouse",
+        lambda _settings: {
+            "source": "clickhouse",
+            "authoritative": True,
+            "last_online_at": int(evidence["last_online_at"]),
+            "last_attack_at": int(evidence["last_attack_at"]),
+        },
+    )
+
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer test-token"}
+
+    baseline = client.get("/war-room-state", headers=headers)
+    assert baseline.status_code == 200
+    assert baseline.json()["state"] == "live"
+    assert baseline.json()["degraded"] is False
+
+    pipeline._redis = None  # type: ignore[attr-defined]
+    clock["now"] += 5_000
+    held = client.get("/war-room-state", headers=headers)
+    assert held.status_code == 200
+    assert held.json()["state"] == "live"
+    assert held.json()["degraded"] is True
+
+    clock["now"] += 70_000
+    expired = client.get("/war-room-state", headers=headers)
+    assert expired.status_code == 200
+    assert expired.json()["state"] == "offline"
+    assert expired.json()["degraded"] is True

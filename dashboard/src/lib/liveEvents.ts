@@ -60,6 +60,30 @@ export type DashboardStats = {
   sourceBreakdown?: Record<string, TelemetrySource>;
 };
 
+export type WarRoomState = {
+  ok: boolean;
+  state: "offline" | "live" | "under_attack";
+  lastOnlineAt: number | null;
+  lastAttackAt: number | null;
+  cooldownUntil: number | null;
+  updatedAt: number;
+  degraded: boolean;
+  authoritative: boolean;
+  source: TelemetrySource;
+  sourceBreakdown: Record<string, string | boolean>;
+  windows: {
+    onlineGraceMs: number;
+    attackCooldownMs: number;
+    activeFreshnessMs: number;
+  };
+  stats?: {
+    stateTransitions?: number;
+    degradedTransitions?: number;
+    redisReadLatencyMs?: number;
+    redisWriteLatencyMs?: number;
+  };
+};
+
 export type CapturedSession = {
   id: string;
   ip: string;
@@ -185,6 +209,29 @@ const EMPTY_STATS: DashboardStats = {
   systemUptime: "offline",
   attackActive: false,
   source: "offline",
+};
+
+const EMPTY_WAR_ROOM_STATE: WarRoomState = {
+  ok: false,
+  state: "offline",
+  lastOnlineAt: null,
+  lastAttackAt: null,
+  cooldownUntil: null,
+  updatedAt: 0,
+  degraded: true,
+  authoritative: false,
+  source: "runtime",
+  sourceBreakdown: {
+    state: "runtime",
+    onlineEvidence: "runtime",
+    attackEvidence: "runtime",
+    storage: "memory",
+  },
+  windows: {
+    onlineGraceMs: 25_000,
+    attackCooldownMs: 90_000,
+    activeFreshnessMs: 90_000,
+  },
 };
 
 const LIVE_LOG_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -859,6 +906,77 @@ export function useSensorOperations() {
   }, []);
 
   return operations;
+}
+
+export function useWarRoomState() {
+  const [warRoomState, setWarRoomState] = useState<WarRoomState>(EMPTY_WAR_ROOM_STATE);
+  const lastSuccessAtRef = useRef(0);
+  const consecutiveFailuresRef = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const maybeSetOffline = () => {
+      const now = Date.now();
+      const staleFor = now - lastSuccessAtRef.current;
+      if (
+        lastSuccessAtRef.current > 0 &&
+        staleFor < OFFLINE_GRACE_MS &&
+        consecutiveFailuresRef.current < OFFLINE_FAILURE_THRESHOLD
+      ) {
+        return;
+      }
+      if (!cancelled) {
+        setWarRoomState((prev) => ({
+          ...prev,
+          ok: false,
+          state: "offline",
+          degraded: true,
+          authoritative: false,
+          source: "runtime",
+          updatedAt: Date.now(),
+        }));
+      }
+    };
+
+    async function loadWarRoomState() {
+      try {
+        const response = await fetch("/api/cloudsentinel/war-room-state", { cache: "no-store" });
+        if (response.status === 401) {
+          handleUnauthorizedApi("war-room-state");
+          return;
+        }
+        if (!response.ok) {
+          consecutiveFailuresRef.current += 1;
+          maybeSetOffline();
+          return;
+        }
+        const data = (await response.json()) as WarRoomState;
+        if (cancelled) {
+          return;
+        }
+        consecutiveFailuresRef.current = 0;
+        lastSuccessAtRef.current = Date.now();
+        setWarRoomState({
+          ...EMPTY_WAR_ROOM_STATE,
+          ...data,
+          source: normalizeTelemetrySource(data.source) ?? "runtime",
+        });
+      } catch {
+        consecutiveFailuresRef.current += 1;
+        maybeSetOffline();
+      }
+    }
+
+    loadWarRoomState();
+    const interval = window.setInterval(loadWarRoomState, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  return warRoomState;
 }
 
 export function useCapturedSessions() {

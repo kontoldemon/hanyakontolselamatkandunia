@@ -3,7 +3,7 @@
 import { Activity, Globe, Download } from "lucide-react";
 import ThreatMap from "@/components/ThreatMap";
 import AttackLog from "@/components/AttackLog";
-import { useDashboardStats, useLiveThreatLogs, useSensorOperations, useCapturedSessions } from "@/lib/liveEvents";
+import { useDashboardStats, useLiveThreatLogs, useSensorOperations, useCapturedSessions, useWarRoomState } from "@/lib/liveEvents";
 import { useMemo, useState, useEffect, useCallback } from "react";
 
 const LIVE_ACTIVITY_WINDOW_MS = 90 * 1000;
@@ -17,6 +17,7 @@ export default function Dashboard() {
   const threatLogs = useLiveThreatLogs();
   const operations = useSensorOperations();
   const sessions = useCapturedSessions();
+  const warRoom = useWarRoomState();
   const liveConnectionCount = stats.activeSessions;
   const [now, setNow] = useState<number>(0);
 
@@ -126,13 +127,23 @@ export default function Dashboard() {
     return log.type === "SSH_AUTH_FAIL" || log.type === "COMMAND_EXEC" || log.type === "HASSH_DNA";
   });
 
-  const warRoomOnline = rawOnlineSignal || hasRecentConnectivityEvidence;
-  const underAttack = warRoomOnline && (rawAttackSignal || hasRecentAttackEvidence);
-  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = !warRoomOnline && !hasRecentThreatActivity
+  const inferredWarRoomOnline = rawOnlineSignal || hasRecentConnectivityEvidence;
+  const inferredUnderAttack = inferredWarRoomOnline && (rawAttackSignal || hasRecentAttackEvidence);
+  const inferredWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = !inferredWarRoomOnline && !hasRecentThreatActivity
     ? "OFFLINE"
-    : underAttack
+    : inferredUnderAttack
       ? "UNDER ATTACK"
       : "LIVE";
+  const backendWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = warRoom.state === "under_attack"
+    ? "UNDER ATTACK"
+    : warRoom.state === "live"
+      ? "LIVE"
+      : "OFFLINE";
+  const backendUnderAttack = warRoom.state === "under_attack";
+  const backendStateStale = now > 0 && warRoom.updatedAt > 0 && (now - warRoom.updatedAt) > 60_000;
+  const useEmergencyFallback = !warRoom.ok || (warRoom.degraded && backendStateStale);
+  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = useEmergencyFallback ? inferredWarRoomState : backendWarRoomState;
+  const underAttack = useEmergencyFallback ? inferredUnderAttack : backendUnderAttack;
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;
@@ -226,13 +237,18 @@ export default function Dashboard() {
             <span className="text-xs font-semibold tracking-wide">
               {warRoomState}
             </span>
+            {warRoom.degraded && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                degraded
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm">
-            <span className={`text-[10px] uppercase font-bold tracking-wide ${stats.authoritative ? "text-emerald-500" : "text-amber-500"}`}>
-              {stats.authoritative ? "Authoritative" : "Partial"}
+            <span className={`text-[10px] uppercase font-bold tracking-wide ${warRoom.authoritative ? "text-emerald-500" : "text-amber-500"}`}>
+              {warRoom.authoritative ? "Authoritative" : "Partial"}
             </span>
             <span className="text-[10px] font-mono text-slate-500">
-              source: {stats.telemetrySource ?? "mixed"}
+              source: {warRoom.source ?? stats.telemetrySource ?? "mixed"}
             </span>
           </div>
         </div>

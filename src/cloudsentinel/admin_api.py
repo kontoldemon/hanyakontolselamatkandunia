@@ -10,6 +10,7 @@ import time
 from datetime import UTC
 from typing import Any
 
+import structlog
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -23,6 +24,21 @@ security = HTTPBearer(auto_error=False)
 EXPOSURE_RULE_COMMENT = "cloudsentinel-dashboard-pause"
 ACTIVE_FRESHNESS_WINDOW_SECONDS = 90
 SYNTHETIC_ACTIVE_WINDOW_SECONDS = ACTIVE_FRESHNESS_WINDOW_SECONDS
+WAR_ROOM_ONLINE_GRACE_MS = 25_000
+WAR_ROOM_ATTACK_COOLDOWN_MS = 90_000
+WAR_ROOM_ACTIVE_FRESHNESS_MS = ACTIVE_FRESHNESS_WINDOW_SECONDS * 1000
+WAR_ROOM_REDIS_TTL_SECONDS = 24 * 60 * 60
+WAR_ROOM_DEGRADED_HOLD_MS = 60_000
+WAR_ROOM_STATE_REDIS_KEY = "cloudsentinel:war_room_state:v1"
+WAR_ROOM_EVIDENCE_LOOKBACK_MINUTES = 30
+WAR_ROOM_ATTACK_EVENT_IDS = (
+    "cloudsentinel.login.failed",
+    "cloudsentinel.command.input",
+    "cloudsentinel.command.failed",
+    "cloudsentinel.client.version",
+    "cloudsentinel.http.request",
+)
+logger = structlog.get_logger("cloudsentinel.admin_api")
 
 
 def _strict_truth_mode_enabled() -> bool:
@@ -770,6 +786,134 @@ def _load_truth_summary_from_clickhouse(settings: Settings) -> dict[str, Any] | 
         return None
 
 
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _as_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except Exception:
+        return 0
+
+
+def _load_war_room_evidence_from_clickhouse(settings: Settings) -> dict[str, Any]:
+    if not settings.clickhouse.enabled:
+        return {
+            "source": "runtime",
+            "authoritative": False,
+            "last_online_at": 0,
+            "last_attack_at": 0,
+        }
+    try:
+        import clickhouse_connect
+
+        attack_filters = ", ".join(f"'{event_id}'" for event_id in WAR_ROOM_ATTACK_EVENT_IDS)
+        query = f"""
+            SELECT
+                maxIf(
+                    toUnixTimestamp64Milli(timestamp),
+                    src_ip != '' AND src_ip != '0.0.0.0'
+                ) AS last_online_ms,
+                maxIf(
+                    toUnixTimestamp64Milli(timestamp),
+                    src_ip != '' AND src_ip != '0.0.0.0'
+                    AND eventid IN ({attack_filters})
+                ) AS last_attack_ms
+            FROM {settings.clickhouse.table}
+            WHERE timestamp >= now() - INTERVAL {WAR_ROOM_EVIDENCE_LOOKBACK_MINUTES} MINUTE
+        """
+        client = clickhouse_connect.get_client(
+            host=settings.clickhouse.host,
+            port=settings.clickhouse.port,
+            username=settings.clickhouse.username,
+            password=secret_to_str(settings.clickhouse.password),
+            database=settings.clickhouse.database,
+        )
+        rows = client.query(query).result_rows
+        if not rows:
+            return {
+                "source": "clickhouse",
+                "authoritative": True,
+                "last_online_at": 0,
+                "last_attack_at": 0,
+            }
+        return {
+            "source": "clickhouse",
+            "authoritative": True,
+            "last_online_at": _as_int(rows[0][0]),
+            "last_attack_at": _as_int(rows[0][1]),
+        }
+    except Exception:
+        return {
+            "source": "runtime",
+            "authoritative": False,
+            "last_online_at": 0,
+            "last_attack_at": 0,
+        }
+
+
+def _state_to_public(value: str) -> str:
+    normalized = (value or "").strip().lower()
+    if normalized in {"under_attack", "under attack"}:
+        return "under_attack"
+    if normalized == "live":
+        return "live"
+    return "offline"
+
+
+def _compose_war_room_state(
+    now_ms: int,
+    persisted: dict[str, Any] | None,
+    evidence: dict[str, Any],
+    degraded: bool,
+    source: str,
+    authoritative: bool,
+) -> dict[str, Any]:
+    current = persisted or {}
+    persisted_last_online = _as_int(current.get("last_online_at"))
+    persisted_last_attack = _as_int(current.get("last_attack_at"))
+    evidence_last_online = _as_int(evidence.get("last_online_at"))
+    evidence_last_attack = _as_int(evidence.get("last_attack_at"))
+    last_online_at = max(persisted_last_online, evidence_last_online)
+    last_attack_at = max(persisted_last_attack, evidence_last_attack)
+    cooldown_until = (
+        last_attack_at + WAR_ROOM_ATTACK_COOLDOWN_MS
+        if last_attack_at > 0
+        else 0
+    )
+    online = last_online_at > 0 and (now_ms - last_online_at) <= WAR_ROOM_ONLINE_GRACE_MS
+    under_attack = online and cooldown_until > 0 and now_ms <= cooldown_until
+    if not online:
+        state = "offline"
+    elif under_attack:
+        state = "under_attack"
+    else:
+        state = "live"
+    return {
+        "ok": True,
+        "state": state,
+        "lastOnlineAt": last_online_at or None,
+        "lastAttackAt": last_attack_at or None,
+        "cooldownUntil": cooldown_until or None,
+        "updatedAt": now_ms,
+        "degraded": degraded,
+        "authoritative": authoritative,
+        "source": source,
+        "sourceBreakdown": {
+            "state": source,
+            "onlineEvidence": evidence.get("source", source),
+            "attackEvidence": evidence.get("source", source),
+            "storage": "memory" if degraded else "redis",
+        },
+        "windows": {
+            "onlineGraceMs": WAR_ROOM_ONLINE_GRACE_MS,
+            "attackCooldownMs": WAR_ROOM_ATTACK_COOLDOWN_MS,
+            "activeFreshnessMs": WAR_ROOM_ACTIVE_FRESHNESS_MS,
+        },
+    }
+
+
 def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = None) -> FastAPI:
     app = FastAPI(
         title="CloudSentinel Admin API",
@@ -802,6 +946,166 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             raise
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Authentication unavailable") from exc
+
+    war_room_last_snapshot: dict[str, Any] | None = None
+    war_room_last_refresh_ms = 0
+    war_room_degraded_mode = False
+    war_room_degraded_started_ms = 0
+    war_room_state_transitions = 0
+    war_room_degraded_transitions = 0
+
+    async def _load_war_room_persisted_state() -> tuple[dict[str, Any], float]:
+        redis_client = getattr(pipeline, "_redis", None)
+        if redis_client is None:
+            raise RuntimeError("redis_unavailable")
+        started = time.perf_counter()
+        raw = await redis_client.hgetall(WAR_ROOM_STATE_REDIS_KEY)
+        latency_ms = round((time.perf_counter() - started) * 1000, 3)
+        if not raw:
+            return {}, latency_ms
+        return {
+            "state": _state_to_public(raw.get("state", "offline")),
+            "last_online_at": _as_int(raw.get("last_online_at")),
+            "last_attack_at": _as_int(raw.get("last_attack_at")),
+            "cooldown_until": _as_int(raw.get("cooldown_until")),
+            "updated_at": _as_int(raw.get("updated_at")),
+        }, latency_ms
+
+    async def _persist_war_room_state(payload: dict[str, Any]) -> float:
+        redis_client = getattr(pipeline, "_redis", None)
+        if redis_client is None:
+            raise RuntimeError("redis_unavailable")
+        fields = {
+            "state": str(payload.get("state") or "offline"),
+            "last_online_at": str(_as_int(payload.get("lastOnlineAt"))),
+            "last_attack_at": str(_as_int(payload.get("lastAttackAt"))),
+            "cooldown_until": str(_as_int(payload.get("cooldownUntil"))),
+            "updated_at": str(_as_int(payload.get("updatedAt"))),
+            "degraded": "1" if bool(payload.get("degraded")) else "0",
+        }
+        started = time.perf_counter()
+        await redis_client.hset(WAR_ROOM_STATE_REDIS_KEY, mapping=fields)
+        await redis_client.expire(WAR_ROOM_STATE_REDIS_KEY, WAR_ROOM_REDIS_TTL_SECONDS)
+        return round((time.perf_counter() - started) * 1000, 3)
+
+    async def _compute_war_room_state(force: bool = False) -> dict[str, Any]:
+        nonlocal war_room_last_snapshot
+        nonlocal war_room_last_refresh_ms
+        nonlocal war_room_degraded_mode
+        nonlocal war_room_degraded_started_ms
+        nonlocal war_room_state_transitions
+        nonlocal war_room_degraded_transitions
+
+        now_ms = _now_ms()
+        if (
+            not force
+            and war_room_last_snapshot is not None
+            and (now_ms - war_room_last_refresh_ms) < 2000
+        ):
+            return war_room_last_snapshot
+
+        war_room_last_refresh_ms = now_ms
+        try:
+            evidence = _load_war_room_evidence_from_clickhouse(settings)
+            persisted, redis_read_latency_ms = await _load_war_room_persisted_state()
+            state = _compose_war_room_state(
+                now_ms=now_ms,
+                persisted=persisted,
+                evidence=evidence,
+                degraded=False,
+                source="clickhouse" if evidence.get("authoritative") else "runtime",
+                authoritative=bool(evidence.get("authoritative")),
+            )
+            previous_state = (
+                _state_to_public(str(persisted.get("state")))
+                if persisted
+                else _state_to_public(str((war_room_last_snapshot or {}).get("state")))
+            )
+            if state["state"] != previous_state:
+                war_room_state_transitions += 1
+                logger.info(
+                    "war_room_state_transition",
+                    prev_state=previous_state,
+                    next_state=state["state"],
+                    reason="evidence_refresh",
+                    evidence_ts=max(_as_int(state.get("lastOnlineAt")), _as_int(state.get("lastAttackAt"))),
+                    cooldown_until=_as_int(state.get("cooldownUntil")),
+                )
+            redis_write_latency_ms = await _persist_war_room_state(state)
+            state["stats"] = {
+                "stateTransitions": war_room_state_transitions,
+                "degradedTransitions": war_room_degraded_transitions,
+                "redisReadLatencyMs": redis_read_latency_ms,
+                "redisWriteLatencyMs": redis_write_latency_ms,
+            }
+            war_room_last_snapshot = state
+            if war_room_degraded_mode:
+                war_room_degraded_mode = False
+                war_room_degraded_started_ms = 0
+                logger.info("war_room_state_degraded_recovered")
+            return state
+        except Exception as exc:
+            if not war_room_degraded_mode:
+                war_room_degraded_mode = True
+                war_room_degraded_started_ms = now_ms
+                war_room_degraded_transitions += 1
+                logger.warning(
+                    "war_room_state_degraded_enter",
+                    error=str(exc),
+                )
+
+            hold_allowed = (
+                war_room_last_snapshot is not None
+                and (now_ms - war_room_degraded_started_ms) <= WAR_ROOM_DEGRADED_HOLD_MS
+            )
+            if hold_allowed and war_room_last_snapshot is not None:
+                held = dict(war_room_last_snapshot)
+                held["degraded"] = True
+                held["authoritative"] = False
+                held["source"] = "runtime"
+                held["sourceBreakdown"] = {
+                    **dict(held.get("sourceBreakdown") or {}),
+                    "storage": "memory",
+                    "state": "runtime",
+                }
+                held["stats"] = {
+                    "stateTransitions": war_room_state_transitions,
+                    "degradedTransitions": war_room_degraded_transitions,
+                    "redisReadLatencyMs": 0.0,
+                    "redisWriteLatencyMs": 0.0,
+                }
+                return held
+
+            fallback = {
+                "ok": True,
+                "state": "offline",
+                "lastOnlineAt": None,
+                "lastAttackAt": None,
+                "cooldownUntil": None,
+                "updatedAt": now_ms,
+                "degraded": True,
+                "authoritative": False,
+                "source": "runtime",
+                "sourceBreakdown": {
+                    "state": "runtime",
+                    "onlineEvidence": "runtime",
+                    "attackEvidence": "runtime",
+                    "storage": "memory",
+                },
+                "windows": {
+                    "onlineGraceMs": WAR_ROOM_ONLINE_GRACE_MS,
+                    "attackCooldownMs": WAR_ROOM_ATTACK_COOLDOWN_MS,
+                    "activeFreshnessMs": WAR_ROOM_ACTIVE_FRESHNESS_MS,
+                },
+                "stats": {
+                    "stateTransitions": war_room_state_transitions,
+                    "degradedTransitions": war_room_degraded_transitions,
+                    "redisReadLatencyMs": 0.0,
+                    "redisWriteLatencyMs": 0.0,
+                },
+            }
+            war_room_last_snapshot = fallback
+            return fallback
 
     @app.get("/healthz")
     async def healthz() -> dict[str, Any]:
@@ -945,7 +1249,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                         "source": "memory",
                     }
                 )
-        return {
+        payload = {
             "sessions": sessions_list,
             "source": "clickhouse" if strict_truth else ("mixed" if any(s.get("source") == "memory" for s in sessions_list) else "clickhouse"),
             "authoritative": strict_truth,
@@ -954,34 +1258,46 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 "memory_fallback_enabled": not strict_truth,
             },
         }
+        await _compute_war_room_state(force=False)
+        return payload
 
     @app.get("/events", dependencies=[Depends(require_auth)])
     async def events(limit: int = 100) -> dict[str, Any]:
-        return {
+        payload = {
             "events": _load_recent_events_from_clickhouse(settings, limit=limit),
             "source": "clickhouse",
             "authoritative": True,
             "sourceBreakdown": {"events": "clickhouse"},
         }
+        await _compute_war_room_state(force=False)
+        return payload
 
     @app.get("/truth-summary", dependencies=[Depends(require_auth)])
     async def truth_summary() -> dict[str, Any]:
         summary = _load_truth_summary_from_clickhouse(settings)
         if summary is None:
-            return {
+            payload = {
                 "ok": False,
                 "source": "runtime",
                 "authoritative": False,
                 "metrics": {},
                 "sourceBreakdown": {"metrics": "runtime"},
             }
-        return {
+            await _compute_war_room_state(force=False)
+            return payload
+        payload = {
             "ok": True,
             "source": "clickhouse",
             "authoritative": True,
             "metrics": summary,
             "sourceBreakdown": {"metrics": "clickhouse"},
         }
+        await _compute_war_room_state(force=False)
+        return payload
+
+    @app.get("/war-room-state", dependencies=[Depends(require_auth)])
+    async def war_room_state() -> dict[str, Any]:
+        return await _compute_war_room_state(force=True)
 
     @app.post("/admin/block-ip", dependencies=[Depends(require_auth)])
     async def manual_block_ip(body: dict[str, Any]) -> dict[str, Any]:
