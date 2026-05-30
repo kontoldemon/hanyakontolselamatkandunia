@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 168;
+const ROW_HEIGHT = 170;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -125,14 +125,14 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </span>
                     </div>
                 </div>
-                <div className="mt-0.5 pb-0 flex flex-col gap-0.5">
+                <div className="mt-0.5 flex flex-col gap-1">
                     <div className="min-w-0 flex flex-wrap items-center gap-1.5 text-xs font-mono text-slate-700 dark:text-slate-300">
                         <Globe size={12} className="text-slate-500" />
                         <span className="break-all">{log.ip}</span>
                         <span className="opacity-50 whitespace-nowrap">({log.countryName ?? log.country})</span>
-                        {log.isp && <span className="opacity-60 truncate max-w-[180px]" title={log.isp}>{log.isp}</span>}
+                        {log.isp && <span className="opacity-60 truncate max-w-[170px]" title={log.isp}>{log.isp}</span>}
                     </div>
-                    <div className="flex items-center gap-1 flex-wrap">
+                    <div className="flex items-center gap-1 overflow-hidden min-h-6 max-h-6">
                         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                             {log.eventCount} events
                         </span>
@@ -143,7 +143,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         )}
                         {log.latestMitreId && (
                             <span
-                                className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap truncate max-w-[80px] sm:max-w-none"
+                                className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap truncate max-w-[70px]"
                                 title={log.latestMitreId}
                             >
                                 {log.latestMitreId}
@@ -163,7 +163,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </button>
                     </div>
                 </div>
-                <div className="mt-1 pt-0 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded flex items-center border border-slate-200/70 dark:border-white/10">
+                <div className="mt-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded flex items-center border border-slate-200/70 dark:border-white/10">
                     {preview.tag ? (
                         <div className="flex items-center gap-1.5 w-full">
                             <span className="rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
