@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 176;
+const ROW_HEIGHT = 168;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -98,7 +98,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     }
                 }}
                 className={clsx(
-                    "relative overflow-hidden h-full w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-lg transition-all duration-300 cursor-pointer group flex flex-col",
+                    "relative overflow-hidden h-full w-full min-w-0 p-2.5 bg-white dark:bg-white/5 rounded-lg transition-all duration-300 cursor-pointer group flex flex-col",
                     isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10",
                     underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-lg before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
                     isDimmed ? "opacity-30 grayscale" : "opacity-100",
@@ -125,7 +125,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </span>
                     </div>
                 </div>
-                <div className="mt-1 flex-1 min-h-0 pb-0 flex flex-col gap-1">
+                <div className="mt-0.5 flex-1 min-h-0 pb-0 flex flex-col gap-0.5">
                     <div className="min-w-0 flex flex-wrap items-center gap-1.5 text-xs font-mono text-slate-700 dark:text-slate-300">
                         <Globe size={12} className="text-slate-500" />
                         <span className="break-all">{log.ip}</span>
@@ -163,7 +163,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </button>
                     </div>
                 </div>
-                <div className="mt-auto pt-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded flex items-center border border-slate-200/70 dark:border-white/10">
+                <div className="mt-auto pt-0.5 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded flex items-center border border-slate-200/70 dark:border-white/10">
                     {preview.tag ? (
                         <div className="flex items-center gap-1.5 w-full">
                             <span className="rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
