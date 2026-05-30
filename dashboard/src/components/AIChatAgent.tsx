@@ -406,7 +406,6 @@ GLOBAL CONTROLS (work from any page):
                     <Bot size={18} />
                     <div className="flex flex-col leading-tight">
                         <span className="font-semibold text-sm">CloudSentinel AI</span>
-                        <span className="text-[9px] uppercase tracking-wide text-white/80">LLM analysis only, not telemetry source</span>
                     </div>
                     {isExecuting && (
                         <span className="flex items-center gap-1 text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
