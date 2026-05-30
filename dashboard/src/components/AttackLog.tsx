@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 176;
+const ROW_HEIGHT = 166;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -131,6 +131,8 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         <span className="break-all">{log.ip}</span>
                         <span className="opacity-50 whitespace-nowrap">({log.countryName ?? log.country})</span>
                         {log.isp && <span className="opacity-60 truncate max-w-[180px]" title={log.isp}>{log.isp}</span>}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1 flex-nowrap">
                         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                             {log.eventCount} events
                         </span>
@@ -139,8 +141,6 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                                 HASSH {log.hassh.slice(0, 8)}
                             </span>
                         )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
                         {log.latestMitreId && (
                             <span
                                 className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap truncate max-w-[80px] sm:max-w-none"
