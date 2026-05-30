@@ -9,6 +9,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 const LIVE_ACTIVITY_WINDOW_MS = 90 * 1000;
 const ONLINE_GRACE_MS = 25 * 1000;
 const UNDER_ATTACK_COOLDOWN_MS = 90 * 1000;
+const REALTIME_ATTACK_HINT_MS = 20 * 1000;
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
@@ -135,6 +136,12 @@ export default function Dashboard() {
     }
     return log.type === "SSH_AUTH_FAIL" || log.type === "COMMAND_EXEC" || log.type === "HASSH_DNA";
   });
+  const hasRealtimeAttackHint = now > 0 && combinedLogs.some((log) => {
+    if (log.epochMs < now - REALTIME_ATTACK_HINT_MS) {
+      return false;
+    }
+    return log.type === "SSH_AUTH_FAIL" || log.type === "COMMAND_EXEC" || log.type === "HASSH_DNA";
+  });
 
   const inferredWarRoomOnline = rawOnlineSignal || hasRecentConnectivityEvidence;
   const inferredUnderAttack = inferredWarRoomOnline && (rawAttackSignal || hasRecentAttackEvidence);
@@ -151,8 +158,10 @@ export default function Dashboard() {
   const backendUnderAttack = warRoom.state === "under_attack";
   const backendStateStale = now > 0 && warRoom.updatedAt > 0 && (now - warRoom.updatedAt) > 60_000;
   const useEmergencyFallback = !warRoom.ok || (warRoom.degraded && backendStateStale);
-  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = useEmergencyFallback ? inferredWarRoomState : backendWarRoomState;
-  const underAttack = useEmergencyFallback ? inferredUnderAttack : backendUnderAttack;
+  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = useEmergencyFallback
+    ? inferredWarRoomState
+    : ((backendWarRoomState === "LIVE" && hasRealtimeAttackHint) ? "UNDER ATTACK" : backendWarRoomState);
+  const underAttack = useEmergencyFallback ? inferredUnderAttack : (backendUnderAttack || hasRealtimeAttackHint);
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;
