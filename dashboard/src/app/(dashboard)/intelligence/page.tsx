@@ -532,14 +532,14 @@ export default function IntelligencePage() {
                 </div>
 
                 {/* Row 2: NEW Analytics */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <CountryStatsPanel expanded={panels.countries} onToggle={() => togglePanel("countries")} countries={stats.countries} />
                     <TimingHeatmapPanel expanded={panels.timing} onToggle={() => togglePanel("timing")} heatmap={stats.heatmap} />
                     <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
                 </div>
 
                 {/* Row 3: Tables */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <CollapsiblePanel
                         expanded={panels.commands}
                         onToggle={() => togglePanel("commands")}
@@ -625,7 +625,10 @@ export default function IntelligencePage() {
                             )}
                         </div>
                     </CollapsiblePanel>
+                </div>
 
+                {/* Row 4: Fingerprints */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <CollapsiblePanel
                         expanded={panels.fingerprints}
                         onToggle={() => togglePanel("fingerprints")}
@@ -659,13 +662,13 @@ export default function IntelligencePage() {
                     </CollapsiblePanel>
                 </div>
 
-                {/* Row 4: NEW Deep Analytics */}
+                {/* Row 5: NEW Deep Analytics */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <RiskScorePanel expanded={panels.risk} onToggle={() => togglePanel("risk")} risk={stats.risk} />
                     <SoarBreakdownPanel expanded={panels.soar} onToggle={() => togglePanel("soar")} soar={stats.soar} />
                 </div>
 
-                {/* Row 5: Advanced Time-Series Analytics */}
+                {/* Row 6: Advanced Time-Series Analytics */}
                 <div className="grid grid-cols-1 gap-4 items-start">
                     <TimeSeriesPanel 
                         expanded={panels.timeSeries} 
@@ -674,7 +677,7 @@ export default function IntelligencePage() {
                     />
                 </div>
 
-                {/* Row 6: Behavioral & Anomaly Analytics */}
+                {/* Row 7: Behavioral & Anomaly Analytics */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <SessionDepthPanel 
                         expanded={panels.sessionDepth} 

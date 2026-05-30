@@ -165,11 +165,14 @@ export default function Dashboard() {
     : inferredUnderAttack
       ? "UNDER ATTACK"
       : "LIVE";
-  const backendWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = warRoom.state === "under_attack"
+  const sensorReachable = bridgeLive || summaryLive || operations?.sensor.readiness.ok === true;
+  const backendWarRoomStateRaw: "OFFLINE" | "LIVE" | "UNDER ATTACK" = warRoom.state === "under_attack"
     ? "UNDER ATTACK"
     : warRoom.state === "live"
       ? "LIVE"
       : "OFFLINE";
+  const backendWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
+    backendWarRoomStateRaw === "OFFLINE" && sensorReachable ? "LIVE" : backendWarRoomStateRaw;
   const backendUnderAttack = warRoom.state === "under_attack";
   const backendStateStale = now > 0 && warRoom.updatedAt > 0 && (now - warRoom.updatedAt) > 60_000;
   const useEmergencyFallback = !warRoom.ok || (warRoom.degraded && backendStateStale);
