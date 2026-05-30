@@ -98,7 +98,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     }
                 }}
                 className={clsx(
-                    "relative overflow-hidden h-full w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-lg transition-all duration-300 cursor-pointer group",
+                    "relative overflow-hidden h-full w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-lg transition-all duration-300 cursor-pointer group flex flex-col",
                     isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10",
                     underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-lg before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
                     isDimmed ? "opacity-30 grayscale" : "opacity-100",
@@ -125,7 +125,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </span>
                     </div>
                 </div>
-                <div className="flex items-start justify-between gap-2 mt-1">
+                <div className="flex items-start justify-between gap-2 mt-1 flex-1 min-h-0">
                     <div className="min-w-0 flex flex-wrap items-center gap-2 text-xs font-mono text-slate-700 dark:text-slate-300">
                         <Globe size={12} className="text-slate-500" />
                         <span className="break-all">{log.ip}</span>
@@ -163,7 +163,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </button>
                     </div>
                 </div>
-                <div className="mt-2 mb-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded">
+                <div className="mt-auto pt-2 mb-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded">
                     {preview.tag ? (
                         <div className="flex items-start gap-1.5">
                             <span className="mr-1.5 rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
