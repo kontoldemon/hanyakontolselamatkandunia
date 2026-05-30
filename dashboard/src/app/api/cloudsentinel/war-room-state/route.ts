@@ -118,9 +118,7 @@ async function loadCompatibilityWarRoomState(baseUrl: string, token?: string): P
   const online = lastOnlineAt > 0 && (now - lastOnlineAt) <= onlineGraceMs;
   const underAttack = online && cooldownUntil > 0 && now <= cooldownUntil;
   const state: WarRoomStateKind = !online ? "offline" : (underAttack ? "under_attack" : "live");
-  const source = (truth.source === "clickhouse" || truth.source === "mixed" || truth.source === "memory" || truth.source === "runtime")
-    ? truth.source
-    : "mixed";
+  const source: SourceKind = truth.authoritative === false ? "runtime" : "clickhouse";
 
   return {
     ok: truth.ok ?? true,
@@ -133,7 +131,7 @@ async function loadCompatibilityWarRoomState(baseUrl: string, token?: string): P
     authoritative: truth.authoritative ?? false,
     source,
     sourceBreakdown: {
-      state: "mixed",
+      state: source,
       onlineEvidence: "clickhouse",
       attackEvidence: "clickhouse",
       storage: "compat",

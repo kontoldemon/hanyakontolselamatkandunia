@@ -138,7 +138,7 @@ export async function GET() {
     const truthMetrics = truthPayload.metrics ?? {};
     const truthOk = truthPayload.ok === true;
     const authoritative = truthOk && truthPayload.authoritative !== false;
-    const source: SourceKind = authoritative ? "clickhouse" : (truthPayload.source ?? "mixed");
+    const source: SourceKind = authoritative ? "clickhouse" : "runtime";
 
     const summary: Summary = {
       ok: truthOk,
@@ -146,19 +146,19 @@ export async function GET() {
       source,
       authoritative,
       sourceBreakdown: {
-        totalEvents: authoritative ? "clickhouse" : "mixed",
-        uniqueIps: authoritative ? "clickhouse" : "mixed",
-        uniqueCountries: authoritative ? "clickhouse" : "mixed",
-        uniqueCommands: authoritative ? "clickhouse" : "mixed",
-        avgRisk: authoritative ? "clickhouse" : "mixed",
-        blockRate: authoritative ? "clickhouse" : "mixed",
-        activeSessions: authoritative ? "clickhouse" : "mixed",
-        mttbMs: authoritative ? "clickhouse" : "mixed",
-        totalConnections: authoritative ? "clickhouse" : "mixed",
-        totalAuthFailures: authoritative ? "clickhouse" : "mixed",
-        totalCommands: authoritative ? "clickhouse" : "mixed",
-        totalBlocks: authoritative ? "clickhouse" : "mixed",
-        blockedIpsCurrent: authoritative ? "clickhouse" : "mixed",
+        totalEvents: authoritative ? "clickhouse" : "runtime",
+        uniqueIps: authoritative ? "clickhouse" : "runtime",
+        uniqueCountries: authoritative ? "clickhouse" : "runtime",
+        uniqueCommands: authoritative ? "clickhouse" : "runtime",
+        avgRisk: authoritative ? "clickhouse" : "runtime",
+        blockRate: authoritative ? "clickhouse" : "runtime",
+        activeSessions: authoritative ? "clickhouse" : "runtime",
+        mttbMs: authoritative ? "clickhouse" : "runtime",
+        totalConnections: authoritative ? "clickhouse" : "runtime",
+        totalAuthFailures: authoritative ? "clickhouse" : "runtime",
+        totalCommands: authoritative ? "clickhouse" : "runtime",
+        totalBlocks: authoritative ? "clickhouse" : "runtime",
+        blockedIpsCurrent: authoritative ? "clickhouse" : "runtime",
         uptimeSeconds: "runtime",
       },
       metrics: {
