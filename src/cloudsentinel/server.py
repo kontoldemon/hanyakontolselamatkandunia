@@ -39,6 +39,7 @@ from .pipeline import ClickHouseForwarder, EventPipeline
 from .soar import SOAREngine
 from .stream import LiveStream
 from .tls import generate_self_signed_cert
+from .vfs import VirtualFileSystem
 from .vfs_agent import VFSAgent, VFSContext
 
 logger = structlog.get_logger("cloudsentinel.server")
@@ -680,6 +681,8 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             cwd=server.settings.honeypot.prompt_path,
         )
         self.vfs = VFSAgent(server.settings.llm, context)
+        # Fast local filesystem for command registry commands (ls/cat/pwd/etc).
+        self._command_fs = VirtualFileSystem.build_default()
         self._anomaly_detector = server.anomaly_detector
 
     def connection_made(self, chan: asyncssh.SSHServerChannel) -> None:
@@ -832,6 +835,8 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                         realClientIP=self.server.src_ip,
                         logintime=self.server.started_at,
                         starttime=self.server.started_at,
+                        cwd=self._adapter_cwd(),
+                        fs=self._command_fs,
                     )
                     cmd_instance = cls(adapter, *parts[1:])
                     cmd_instance.start()
@@ -899,6 +904,12 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             if prefix + name in cmd_registry:
                 return cmd_registry[prefix + name]
         return None
+
+    def _adapter_cwd(self) -> str:
+        cwd = (self.vfs.context.cwd or "").strip()
+        if not cwd or cwd == "~":
+            return "/root"
+        return cwd
 
     def _handle_cd(self, args: list[str]) -> str:
         target = args[0] if args else "~"
