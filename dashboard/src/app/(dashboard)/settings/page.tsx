@@ -30,6 +30,7 @@ export default function SettingsPage() {
     useAgentCommand("settings.soar_execution", useCallback((v: string) => setSoarExecution(v), []));
     useAgentCommand("socket.fullscreen", useCallback(() => setIsSocketFullScreen((p) => !p), []));
     const upstreamLatency = operations?.telemetry?.upstreamLatencyMs ?? {};
+    const sensorOnline = operations?.source === "live" || operations?.sensor.readiness.ok === true;
     const latencyRows = [
         { name: "Readiness", value: Number(upstreamLatency.readiness ?? 0) },
         { name: "Metrics", value: Number(upstreamLatency.metrics ?? 0) },
@@ -107,12 +108,15 @@ export default function SettingsPage() {
                                     Exposure Control
                                 </h3>
                                 <p className="text-[10px] text-slate-500 mt-1">
-                                    {operations?.source === "live" ? "Admin API connected. Toggle public honeypot traffic." : "Sensor API offline."}
+                                    {sensorOnline ? "Sensor online. Toggle public honeypot traffic." : "Sensor offline. API unreachable."}
                                 </p>
                             </div>
+                            <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded border ${sensorOnline ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"}`}>
+                                {sensorOnline ? "Online" : "Offline"}
+                            </span>
                             <button
                                 type="button"
-                                disabled={exposureBusy || operations?.source !== "live"}
+                                disabled={exposureBusy || !sensorOnline}
                                 onClick={toggleExposure}
                                 className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
                             >
