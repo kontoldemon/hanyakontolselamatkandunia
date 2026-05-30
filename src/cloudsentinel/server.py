@@ -497,29 +497,8 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
             logger.warning("Max auth attempts exceeded: %s (%d)", self.src_ip, self._auth_attempts)
             return False
 
-        # Believable but attacker-friendly flow:
-        # - First attempt fails
-        # - Second and later attempts succeed
-        should_succeed = self._auth_attempts >= 2
-
-        if not should_succeed:
-            asyncio.create_task(self._emit_event("cloudsentinel.login.failed", {
-                "username": username,
-                "password": password,
-                "attempt": self._auth_attempts,
-            }))
-            try:
-                from .metrics import get_metrics
-                get_metrics().record_auth_fail()
-            except Exception:
-                pass
-            if self._auth_attempts >= 8 and self.conn is not None:
-                try:
-                    self.conn.close()
-                except Exception:
-                    pass
-            return False
-
+        # Data-collection mode: always allow on first password attempt.
+        # Keep auth-failed signals for non-password methods only.
         return True
 
     def validate_public_key(self, username: str, key: asyncssh.SSHKey) -> bool:
