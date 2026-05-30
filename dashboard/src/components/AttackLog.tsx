@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 180;
+const ROW_HEIGHT = 160;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -175,14 +175,14 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     )}
                 </div>
 
-                <div className="flex-1 w-full bg-slate-50 dark:bg-black/40 rounded-lg p-2.5 border border-slate-200/50 dark:border-white/5 flex items-start overflow-hidden">
+                <div className="flex-1 w-full bg-slate-50 dark:bg-black/40 rounded-lg p-2.5 border border-slate-200/50 dark:border-white/5 flex items-start overflow-hidden min-h-[44px] max-h-[44px]">
                     {preview.tag ? (
                         <div className="flex items-start gap-2 w-full">
                             <span className="shrink-0 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-blue-600 dark:text-blue-400 mt-0.5">
                                 {preview.tag}
                             </span>
                             <span
-                                className="text-xs font-mono text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2 break-all"
+                                className="text-xs font-mono text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-1 break-all"
                                 title={compactPreviewText}
                             >
                                 {compactPreviewText || "-"}
@@ -190,7 +190,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </div>
                     ) : (
                         <span
-                            className="text-xs font-mono text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2 break-all w-full"
+                            className="text-xs font-mono text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-1 break-all w-full"
                             title={compactPreviewText}
                         >
                             <span className="text-slate-400 dark:text-slate-500 mr-1.5">$</span>
