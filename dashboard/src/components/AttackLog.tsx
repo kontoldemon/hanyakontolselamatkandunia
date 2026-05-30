@@ -131,11 +131,11 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         <span className="break-all">{log.ip}</span>
                         <span className="opacity-50">({log.countryName ?? log.country})</span>
                         {log.isp && <span className="opacity-60 break-words">{log.isp}</span>}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                             {log.eventCount} events
                         </span>
                         {log.hassh && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                            <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20">
                                 HASSH {log.hassh.slice(0, 8)}
                             </span>
                         )}
@@ -163,10 +163,10 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </button>
                     </div>
                 </div>
-                <div className="mt-auto pt-2 mb-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded">
+                <div className="mt-auto pt-2 mb-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded flex items-center">
                     {preview.tag ? (
-                        <div className="flex items-start gap-1.5">
-                            <span className="mr-1.5 rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                        <div className="flex items-center gap-1.5 w-full">
+                            <span className="rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
                                 {preview.tag}
                             </span>
                             <span
@@ -183,7 +183,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </div>
                     ) : (
                         <span
-                            className="block overflow-hidden break-words whitespace-pre-wrap"
+                            className="block overflow-hidden break-words whitespace-pre-wrap w-full"
                             style={{
                                 display: "-webkit-box",
                                 WebkitLineClamp: 2,
