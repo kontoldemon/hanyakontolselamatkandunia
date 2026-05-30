@@ -804,10 +804,10 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             return ""
 
         # Emit command input for SOAR scoring + pipeline
-        await self.server._emit_event("cloudsentinel.command.input", {
+        asyncio.create_task(self.server._emit_event("cloudsentinel.command.input", {
             "input": command,
             "username": self.server.username,
-        })
+        }))
         try:
             from .metrics import get_metrics
             get_metrics().record_command()
@@ -851,22 +851,22 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                     if not str(output).strip():
                         output, response_mode = await self.vfs.run_command_with_mode(command)
                         mitre_annotation = score_command(command)
-                        await self.server._emit_event("cloudsentinel.command.output", {
+                        asyncio.create_task(self.server._emit_event("cloudsentinel.command.output", {
                             "input": command,
                             "output": str(output)[:2000],
                             "source": "vfs_agent",
                             "response_mode": response_mode,
                             "risk_score": mitre_annotation.get("risk_score", 0),
                             "mitre_techniques": mitre_annotation.get("mitre_techniques", []),
-                        })
+                        }))
                         return str(output)
 
-                    await self.server._emit_event("cloudsentinel.command.output", {
+                    asyncio.create_task(self.server._emit_event("cloudsentinel.command.output", {
                         "input": command,
                         "output": str(output)[:2000],
                         "source": "command_registry",
                         "response_mode": "command_registry",
-                    })
+                    }))
                     return str(output)
                 except Exception as exc:
                     logger.debug("Command registry failed for %r: %s", command, exc)
@@ -876,14 +876,14 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             output, response_mode = await self.vfs.run_command_with_mode(command)
             mitre_annotation = score_command(command)
 
-            await self.server._emit_event("cloudsentinel.command.output", {
+            asyncio.create_task(self.server._emit_event("cloudsentinel.command.output", {
                 "input": command,
                 "output": output[:2000],
                 "source": "vfs_agent",
                 "response_mode": response_mode,
                 "risk_score": mitre_annotation.get("risk_score", 0),
                 "mitre_techniques": mitre_annotation.get("mitre_techniques", []),
-            })
+            }))
             # Anomaly scoring
             if self._anomaly_detector is not None:
                 anomaly = self._anomaly_detector.score(command)
@@ -893,12 +893,12 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             return output
         except Exception as exc:
             logger.warning("Command handling failed for %r: %s", command, exc)
-            await self.server._emit_event("cloudsentinel.command.output", {
+            asyncio.create_task(self.server._emit_event("cloudsentinel.command.output", {
                 "input": command,
                 "output": "bash: command execution error",
                 "source": "vfs_agent",
                 "response_mode": "blocked",
-            })
+            }))
             return "bash: command execution error"
 
     def _resolve_command(self, name: str) -> type | None:
