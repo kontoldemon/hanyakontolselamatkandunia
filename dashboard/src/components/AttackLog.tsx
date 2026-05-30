@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 170;
+const ROW_HEIGHT = 180;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -98,84 +98,91 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     }
                 }}
                 className={clsx(
-                    "relative overflow-hidden h-full w-full min-w-0 p-2.5 bg-white dark:bg-white/5 rounded-lg transition-all duration-300 cursor-pointer group flex flex-col",
-                    isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10",
-                    underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-lg before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
+                    "relative overflow-hidden h-full w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-xl transition-all duration-300 cursor-pointer group flex flex-col justify-between",
+                    isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10",
+                    underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-xl before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
                     isDimmed ? "opacity-30 grayscale" : "opacity-100",
                 )}
             >
-                <div className="flex justify-between items-start mb-1">
-                    <span className="text-[10px] font-mono text-slate-400">{log.latestTimestamp}</span>
+                <div className="flex justify-between items-center mb-2">
+                    <span className="text-[11px] font-medium tracking-wide text-slate-400">{log.latestTimestamp}</span>
                     <div className="flex items-center gap-2 shrink-0">
                         {log.blocked && (
-                            <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-red-500/30 text-red-500 font-bold bg-red-500/10">
-                                <Shield size={10} />
+                            <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-red-500/30 text-red-500 font-bold bg-red-500/10">
+                                <Shield size={12} />
                                 BLOCKED {log.lastMttb ?? ""}
                             </span>
                         )}
                         <span
                             className={clsx(
-                                "text-[10px] px-1.5 rounded font-bold",
-                                log.latestType === "SSH_AUTH_FAIL" ? "bg-red-500/20 text-red-500" :
-                                    log.latestType === "COMMAND_EXEC" ? "bg-orange-500/20 text-orange-500" :
-                                        "bg-blue-500/20 text-blue-500",
+                                "text-[10px] px-2 py-0.5 rounded-full font-bold",
+                                log.latestType === "SSH_AUTH_FAIL" ? "bg-red-500/10 border border-red-500/20 text-red-500" :
+                                    log.latestType === "COMMAND_EXEC" ? "bg-orange-500/10 border border-orange-500/20 text-orange-500" :
+                                        "bg-blue-500/10 border border-blue-500/20 text-blue-500",
                             )}
                         >
                             {log.latestType}
                         </span>
                     </div>
                 </div>
-                <div className="mt-0.5 flex flex-col gap-1">
-                    <div className="min-w-0 flex flex-wrap items-center gap-1.5 text-xs font-mono text-slate-700 dark:text-slate-300">
-                        <Globe size={12} className="text-slate-500" />
-                        <span className="break-all">{log.ip}</span>
-                        <span className="opacity-50 whitespace-nowrap">({log.countryName ?? log.country})</span>
-                        {log.isp && <span className="opacity-60 truncate max-w-[170px]" title={log.isp}>{log.isp}</span>}
+
+                <div className="flex justify-between items-start gap-3 mb-2">
+                    <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5">
+                            <Globe size={14} className="text-slate-400 shrink-0" />
+                            <span className="text-sm font-semibold font-mono text-slate-800 dark:text-slate-200 break-all">{log.ip}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
+                            <span className="truncate">{log.countryName ?? log.country}</span>
+                            {log.isp && (
+                                <>
+                                    <span className="text-slate-300 dark:text-slate-600">&bull;</span>
+                                    <span className="truncate" title={log.isp}>{log.isp}</span>
+                                </>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex items-center gap-1 overflow-hidden min-h-6 max-h-6">
-                        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                            {log.eventCount} events
-                        </span>
-                        {log.hassh && (
-                            <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20">
-                                HASSH {log.hassh.slice(0, 8)}
-                            </span>
-                        )}
-                        {log.latestMitreId && (
-                            <span
-                                className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap truncate max-w-[70px]"
-                                title={log.latestMitreId}
-                            >
-                                {log.latestMitreId}
-                            </span>
-                        )}
-                        <button
-                            type="button"
-                            disabled={blockingIp === log.ip}
-                            title="Block IP"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                onBlock(log.ip);
-                            }}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded border border-red-500/30 text-red-500 hover:bg-red-500/10 disabled:opacity-50"
-                        >
-                            <Ban size={12} />
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        disabled={blockingIp === log.ip}
+                        title="Block IP"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onBlock(log.ip);
+                        }}
+                        className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 disabled:opacity-50 transition-colors"
+                    >
+                        <Ban size={14} />
+                    </button>
                 </div>
-                <div className="mt-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded flex items-center border border-slate-200/70 dark:border-white/10">
+
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-medium">
+                        {log.eventCount} events
+                    </span>
+                    {log.hassh && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-medium font-mono">
+                            HASSH {log.hassh.slice(0, 8)}
+                        </span>
+                    )}
+                    {log.latestMitreId && (
+                        <span
+                            className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-mono font-medium truncate max-w-[100px]"
+                            title={log.latestMitreId}
+                        >
+                            {log.latestMitreId}
+                        </span>
+                    )}
+                </div>
+
+                <div className="flex-1 w-full bg-slate-50 dark:bg-black/40 rounded-lg p-2.5 border border-slate-200/50 dark:border-white/5 flex items-start overflow-hidden">
                     {preview.tag ? (
-                        <div className="flex items-center gap-1.5 w-full">
-                            <span className="rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                        <div className="flex items-start gap-2 w-full">
+                            <span className="shrink-0 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-blue-600 dark:text-blue-400 mt-0.5">
                                 {preview.tag}
                             </span>
                             <span
-                                className="block overflow-hidden break-words whitespace-pre-wrap"
-                                style={{
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                }}
+                                className="text-xs font-mono text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2 break-all"
                                 title={compactPreviewText}
                             >
                                 {compactPreviewText || "-"}
@@ -183,15 +190,11 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </div>
                     ) : (
                         <span
-                            className="block overflow-hidden break-words whitespace-pre-wrap w-full"
-                            style={{
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                            }}
+                            className="text-xs font-mono text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2 break-all w-full"
                             title={compactPreviewText}
                         >
-                            $ {compactPreviewText || "-"}
+                            <span className="text-slate-400 dark:text-slate-500 mr-1.5">$</span>
+                            {compactPreviewText || "-"}
                         </span>
                     )}
                 </div>
