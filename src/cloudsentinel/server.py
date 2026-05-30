@@ -15,7 +15,6 @@ import asyncio
 import hashlib
 import logging
 import os
-import random
 import signal
 import time
 import uuid
@@ -496,17 +495,10 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
             logger.warning("Max auth attempts exceeded: %s (%d)", self.src_ip, self._auth_attempts)
             return False
 
-        # More believable honeypot behavior:
-        # - First attempt always fails
-        # - Later attempts may succeed with increasing probability
-        if self._auth_attempts == 1:
-            success_probability = 0.0
-        elif self._auth_attempts == 2:
-            success_probability = 0.35
-        else:
-            success_probability = 0.75
-
-        should_succeed = random.random() < success_probability
+        # Believable but attacker-friendly flow:
+        # - First attempt fails
+        # - Second and later attempts succeed
+        should_succeed = self._auth_attempts >= 2
 
         if not should_succeed:
             asyncio.create_task(self._emit_event("cloudsentinel.login.failed", {
