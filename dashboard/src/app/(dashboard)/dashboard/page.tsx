@@ -45,10 +45,19 @@ export default function Dashboard() {
         if (log.epochMs < windowFloor) {
           return false;
         }
+        const payload = (log.payload || "").toLowerCase();
+        const isRelevantInfoEvent =
+          payload.startsWith("cloudsentinel.session.connect") ||
+          payload.startsWith("cloudsentinel.session.closed") ||
+          payload.startsWith("cloudsentinel.client.version") ||
+          payload === "auth-attempt" ||
+          log.type === "SSH_AUTH_FAIL" ||
+          log.type === "COMMAND_EXEC" ||
+          log.type === "HASSH_DNA";
         if (activeIps.has(log.ip)) {
           return true;
         }
-        return !knownSessionIps.has(log.ip);
+        return !knownSessionIps.has(log.ip) || isRelevantInfoEvent;
       }
     );
     

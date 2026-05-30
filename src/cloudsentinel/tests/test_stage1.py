@@ -1112,6 +1112,8 @@ def test_war_room_state_degraded_hold(monkeypatch: pytest.MonkeyPatch) -> None:
     assert baseline.json()["state"] == "live"
     assert baseline.json()["degraded"] is False
 
+    # Simulate full Redis outage: both pipeline redis handle and direct fallback fail.
+    monkeypatch.setattr("redis.asyncio.from_url", lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionError("redis down")))
     pipeline._redis = None  # type: ignore[attr-defined]
     clock["now"] += 5_000
     held = client.get("/war-room-state", headers=headers)

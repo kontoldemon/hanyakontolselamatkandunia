@@ -61,6 +61,28 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
     const target = selectedRegion ? (COUNTRY_MAP[selectedRegion] || selectedRegion) : null;
     const isSelected = !!target && (log.country === target || log.ip === target);
     const isDimmed = !!target && log.country !== target && log.ip !== target;
+    const normalizePreview = (payload: string, type: string) => {
+        const normalized = (payload || "").trim().toLowerCase();
+        if (normalized.startsWith("cloudsentinel.session.connect")) {
+            return { text: "Session opened", tag: "OPEN" };
+        }
+        if (normalized.startsWith("cloudsentinel.session.closed")) {
+            return { text: "Session closed", tag: "CLOSE" };
+        }
+        if (normalized.startsWith("cloudsentinel.client.version")) {
+            return { text: "Client banner observed", tag: "VERSION" };
+        }
+        if (
+            normalized === "auth-attempt" ||
+            normalized.startsWith("cloudsentinel.login.failed") ||
+            normalized.startsWith("cloudsentinel.login.success") ||
+            type === "SSH_AUTH_FAIL"
+        ) {
+            return { text: "Authentication event", tag: "AUTH" };
+        }
+        return { text: payload, tag: "" };
+    };
+    const preview = normalizePreview(log.latestPayload, log.latestType);
 
     return (
         <div style={{ ...style, paddingBottom: ROW_GAP }}>
@@ -141,7 +163,16 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     </div>
                 </div>
                 <div className="mt-2 max-h-10 overflow-hidden text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded whitespace-nowrap text-ellipsis">
-                    $ {log.latestPayload}
+                    {preview.tag ? (
+                        <>
+                            <span className="mr-1.5 rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                                {preview.tag}
+                            </span>
+                            {preview.text}
+                        </>
+                    ) : (
+                        <>$ {log.latestPayload}</>
+                    )}
                 </div>
             </div>
         </div>

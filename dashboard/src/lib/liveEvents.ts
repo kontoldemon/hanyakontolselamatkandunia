@@ -1200,12 +1200,22 @@ export function useCapturedSessions() {
         current.client = log.client;
       }
       // Append live events to replay so the terminal updates instantly without waiting for backend sync
-      if (log.payload && (log.type === "COMMAND_EXEC" || log.type === "HONEYPOT_RESPONSE")) {
-        const role = log.role ?? (log.type === "HONEYPOT_RESPONSE" ? "honeypot" : "attacker");
+      const replayInfoLabel = toReplayInfoLabel(log.payload ?? "");
+      const shouldAppendReplay =
+        !!log.payload &&
+        (
+          log.type === "COMMAND_EXEC" ||
+          log.type === "HONEYPOT_RESPONSE" ||
+          !!replayInfoLabel
+        );
+      if (shouldAppendReplay && log.payload) {
+        const role = replayInfoLabel
+          ? "honeypot"
+          : (log.role ?? (log.type === "HONEYPOT_RESPONSE" ? "honeypot" : "attacker"));
         current.replay = current.replay ?? [];
         current.replay.push({
           role,
-          text: log.payload,
+          text: replayInfoLabel ?? log.payload,
           timestamp: log.timestamp
         });
       }
