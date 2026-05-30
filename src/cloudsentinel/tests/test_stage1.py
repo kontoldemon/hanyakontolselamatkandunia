@@ -1124,3 +1124,56 @@ def test_war_room_state_degraded_hold(monkeypatch: pytest.MonkeyPatch) -> None:
     assert expired.status_code == 200
     assert expired.json()["state"] == "offline"
     assert expired.json()["degraded"] is True
+
+
+def test_war_room_state_uses_direct_redis_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+    pipeline._redis = None  # type: ignore[attr-defined]
+
+    class FakeRedis:
+        def __init__(self) -> None:
+            self.data: dict[str, dict[str, str]] = {}
+
+        async def ping(self) -> bool:
+            return True
+
+        async def hgetall(self, key: str) -> dict[str, str]:
+            return dict(self.data.get(key, {}))
+
+        async def hset(self, key: str, mapping: dict[str, str]) -> None:
+            self.data[key] = {**self.data.get(key, {}), **mapping}
+
+        async def expire(self, key: str, ttl: int) -> None:
+            _ = (key, ttl)
+
+        async def aclose(self) -> None:
+            return None
+
+    fake_redis = FakeRedis()
+    monkeypatch.setattr("redis.asyncio.from_url", lambda *args, **kwargs: fake_redis)
+    monkeypatch.setattr("cloudsentinel.admin_api._now_ms", lambda: 5_010_000)
+    monkeypatch.setattr(
+        "cloudsentinel.admin_api._load_war_room_evidence_from_clickhouse",
+        lambda _settings: {
+            "source": "clickhouse",
+            "authoritative": True,
+            "last_online_at": 5_000_000,
+            "last_attack_at": 0,
+        },
+    )
+
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer test-token"}
+
+    response = client.get("/war-room-state", headers=headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["state"] == "live"
+    assert payload["degraded"] is False
+    assert payload["sourceBreakdown"]["storage"] == "redis-direct"

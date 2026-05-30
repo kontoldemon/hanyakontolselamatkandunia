@@ -953,28 +953,43 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     war_room_degraded_started_ms = 0
     war_room_state_transitions = 0
     war_room_degraded_transitions = 0
+    war_room_direct_redis: Any = None
 
-    async def _load_war_room_persisted_state() -> tuple[dict[str, Any], float]:
-        redis_client = getattr(pipeline, "_redis", None)
-        if redis_client is None:
-            raise RuntimeError("redis_unavailable")
+    async def _resolve_war_room_redis() -> tuple[Any, str]:
+        nonlocal war_room_direct_redis
+        pipeline_redis = getattr(pipeline, "_redis", None)
+        if pipeline_redis is not None:
+            return pipeline_redis, "pipeline"
+        if war_room_direct_redis is not None:
+            return war_room_direct_redis, "direct"
+        import redis.asyncio as aioredis
+        war_room_direct_redis = aioredis.from_url(
+            settings.redis.url,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_timeout=2,
+            socket_connect_timeout=2,
+        )
+        await war_room_direct_redis.ping()
+        return war_room_direct_redis, "direct"
+
+    async def _load_war_room_persisted_state() -> tuple[dict[str, Any], float, str]:
+        redis_client, redis_mode = await _resolve_war_room_redis()
         started = time.perf_counter()
         raw = await redis_client.hgetall(WAR_ROOM_STATE_REDIS_KEY)
         latency_ms = round((time.perf_counter() - started) * 1000, 3)
         if not raw:
-            return {}, latency_ms
-        return {
+            return {}, latency_ms, redis_mode
+        return ({
             "state": _state_to_public(raw.get("state", "offline")),
             "last_online_at": _as_int(raw.get("last_online_at")),
             "last_attack_at": _as_int(raw.get("last_attack_at")),
             "cooldown_until": _as_int(raw.get("cooldown_until")),
             "updated_at": _as_int(raw.get("updated_at")),
-        }, latency_ms
+        }, latency_ms, redis_mode)
 
-    async def _persist_war_room_state(payload: dict[str, Any]) -> float:
-        redis_client = getattr(pipeline, "_redis", None)
-        if redis_client is None:
-            raise RuntimeError("redis_unavailable")
+    async def _persist_war_room_state(payload: dict[str, Any]) -> tuple[float, str]:
+        redis_client, redis_mode = await _resolve_war_room_redis()
         fields = {
             "state": str(payload.get("state") or "offline"),
             "last_online_at": str(_as_int(payload.get("lastOnlineAt"))),
@@ -986,7 +1001,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         started = time.perf_counter()
         await redis_client.hset(WAR_ROOM_STATE_REDIS_KEY, mapping=fields)
         await redis_client.expire(WAR_ROOM_STATE_REDIS_KEY, WAR_ROOM_REDIS_TTL_SECONDS)
-        return round((time.perf_counter() - started) * 1000, 3)
+        return round((time.perf_counter() - started) * 1000, 3), redis_mode
 
     async def _compute_war_room_state(force: bool = False) -> dict[str, Any]:
         nonlocal war_room_last_snapshot
@@ -1007,7 +1022,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         war_room_last_refresh_ms = now_ms
         try:
             evidence = _load_war_room_evidence_from_clickhouse(settings)
-            persisted, redis_read_latency_ms = await _load_war_room_persisted_state()
+            persisted, redis_read_latency_ms, redis_read_mode = await _load_war_room_persisted_state()
             state = _compose_war_room_state(
                 now_ms=now_ms,
                 persisted=persisted,
@@ -1031,7 +1046,12 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                     evidence_ts=max(_as_int(state.get("lastOnlineAt")), _as_int(state.get("lastAttackAt"))),
                     cooldown_until=_as_int(state.get("cooldownUntil")),
                 )
-            redis_write_latency_ms = await _persist_war_room_state(state)
+            redis_write_latency_ms, redis_write_mode = await _persist_war_room_state(state)
+            storage_mode = "redis" if redis_read_mode == "pipeline" and redis_write_mode == "pipeline" else "redis-direct"
+            state["sourceBreakdown"] = {
+                **dict(state.get("sourceBreakdown") or {}),
+                "storage": storage_mode,
+            }
             state["stats"] = {
                 "stateTransitions": war_room_state_transitions,
                 "degradedTransitions": war_room_degraded_transitions,
@@ -1106,6 +1126,16 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             }
             war_room_last_snapshot = fallback
             return fallback
+
+    @app.on_event("shutdown")
+    async def _close_war_room_redis() -> None:
+        nonlocal war_room_direct_redis
+        if war_room_direct_redis is not None:
+            try:
+                await war_room_direct_redis.aclose()
+            except Exception:
+                pass
+            war_room_direct_redis = None
 
     @app.get("/healthz")
     async def healthz() -> dict[str, Any]:
