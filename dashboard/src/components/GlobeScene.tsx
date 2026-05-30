@@ -134,7 +134,7 @@ function RotatingGlobe() {
 
   useFrame((_, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.08; // smooth rotation
+      groupRef.current.rotation.y += delta * 0.04; // smooth slower rotation
     }
   });
 

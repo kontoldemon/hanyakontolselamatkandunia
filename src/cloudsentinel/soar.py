@@ -81,6 +81,7 @@ class SOAREngine:
         self._mem_ip_total_risk: dict[str,int]=defaultdict(int)
         self._mem_ip_techniques: dict[str,set[str]]=defaultdict(set)
         self._mem_ip_first_seen: dict[str,float]={}
+        self._mem_ip_last_seen: dict[str,float]={}
 
     async def start(self):
         if self.redis_settings:
@@ -205,6 +206,7 @@ class SOAREngine:
             return
         if ip not in self._mem_ip_first_seen:
             self._mem_ip_first_seen[ip] = timestamp
+        self._mem_ip_last_seen[ip] = timestamp
         sessions = self._mem_ip_sessions[ip]
         sessions.add(session_id)
         self._mem_ip_total_risk[ip] += max(event_score, 0)
@@ -219,6 +221,7 @@ class SOAREngine:
             "cumulative_risk": self._mem_ip_total_risk.get(ip, 0),
             "techniques": sorted(self._mem_ip_techniques.get(ip, set())),
             "first_seen": self._mem_ip_first_seen.get(ip, 0),
+            "last_seen": self._mem_ip_last_seen.get(ip, 0),
             "is_blocked": ip in self._mem_blocked_ips,
         }
 

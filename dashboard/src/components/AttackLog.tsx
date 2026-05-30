@@ -5,6 +5,7 @@ import { Ban, Globe, Shield, Search, X } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { List, type RowComponentProps, useListRef } from "react-window";
 import CustomDropdown from "./CustomDropdown";
 
 interface AttackLogProps {
@@ -31,27 +32,134 @@ type AggregatedLog = {
     lastMttb: string | null;
 };
 
-const COUNTRY_MAP: Record<string, string> = {
-    "China": "CN",
-    "Russia": "RU",
-    "Brazil": "BR",
-    "United States of America": "US",
-    "USA": "US",
-    "Iran": "IR",
-    "Vietnam": "VN",
-    "Indonesia": "ID",
-    "India": "IN"
+type RowData = {
+    logs: AggregatedLog[];
+    selectedRegion?: string | null;
+    underAttack: boolean;
+    blockingIp: string | null;
+    onBlock: (ip: string) => void;
+    onOpenSession: (ip: string) => void;
 };
 
+const COUNTRY_MAP: Record<string, string> = {
+    China: "CN",
+    Russia: "RU",
+    Brazil: "BR",
+    "United States of America": "US",
+    USA: "US",
+    Iran: "IR",
+    Vietnam: "VN",
+    Indonesia: "ID",
+    India: "IN",
+};
+
+const ROW_HEIGHT = 146;
+const ROW_GAP = 8;
+
+function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
+    const log = logs[index];
+    const target = selectedRegion ? (COUNTRY_MAP[selectedRegion] || selectedRegion) : null;
+    const isSelected = !!target && (log.country === target || log.ip === target);
+    const isDimmed = !!target && log.country !== target && log.ip !== target;
+
+    return (
+        <div style={{ ...style, paddingBottom: ROW_GAP }}>
+            <div
+                role="link"
+                tabIndex={0}
+                onClick={() => onOpenSession(log.ip)}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onOpenSession(log.ip);
+                    }
+                }}
+                className={clsx(
+                    "relative overflow-hidden h-full w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-lg transition-all duration-300 cursor-pointer group",
+                    isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10",
+                    underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-lg before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
+                    isDimmed ? "opacity-30 grayscale" : "opacity-100",
+                )}
+            >
+                <div className="flex justify-between items-start mb-1">
+                    <span className="text-[10px] font-mono text-slate-400">{log.latestTimestamp}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {log.blocked && (
+                            <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-red-500/30 text-red-500 font-bold bg-red-500/10">
+                                <Shield size={10} />
+                                BLOCKED {log.lastMttb ?? ""}
+                            </span>
+                        )}
+                        <span
+                            className={clsx(
+                                "text-[10px] px-1.5 rounded font-bold",
+                                log.latestType === "SSH_AUTH_FAIL" ? "bg-red-500/20 text-red-500" :
+                                    log.latestType === "COMMAND_EXEC" ? "bg-orange-500/20 text-orange-500" :
+                                        "bg-blue-500/20 text-blue-500",
+                            )}
+                        >
+                            {log.latestType}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-start justify-between gap-2 mt-1">
+                    <div className="min-w-0 flex flex-wrap items-center gap-2 text-xs font-mono text-slate-700 dark:text-slate-300">
+                        <Globe size={12} className="text-slate-500" />
+                        <span className="break-all">{log.ip}</span>
+                        <span className="opacity-50">({log.countryName ?? log.country})</span>
+                        {log.isp && <span className="opacity-60 break-words">{log.isp}</span>}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                            {log.eventCount} events
+                        </span>
+                        {log.hassh && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                                HASSH {log.hassh.slice(0, 8)}
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                        {log.latestMitreId && (
+                            <span
+                                className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap truncate max-w-[80px] sm:max-w-none"
+                                title={log.latestMitreId}
+                            >
+                                {log.latestMitreId}
+                            </span>
+                        )}
+                        <button
+                            type="button"
+                            disabled={blockingIp === log.ip}
+                            title="Block IP"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onBlock(log.ip);
+                            }}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded border border-red-500/30 text-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                        >
+                            <Ban size={12} />
+                        </button>
+                    </div>
+                </div>
+                <div className="mt-2 max-h-10 overflow-hidden text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded whitespace-nowrap text-ellipsis">
+                    $ {log.latestPayload}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function AttackLog({ selectedRegion, underAttack = false, threatLogs: externalLogs }: AttackLogProps = {}) {
-    const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const router = useRouter();
     const liveLogs = useLiveThreatLogs(!externalLogs);
     const threatLogs = externalLogs ?? liveLogs;
     const [sortMode, setSortMode] = useState<SortMode>("newest");
     const [searchQuery, setSearchQuery] = useState("");
-    const [visibleCount, setVisibleCount] = useState(40);
     const [blockingIp, setBlockingIp] = useState<string | null>(null);
+    const [confirmBlockIp, setConfirmBlockIp] = useState<string | null>(null);
+    const listRef = useListRef(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const [listHeight, setListHeight] = useState(480);
+
     const aggregatedLogs = useMemo(() => {
         const grouped = new Map<string, AggregatedLog>();
         for (const log of threatLogs) {
@@ -100,42 +208,45 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
         }
         return [...grouped.values()];
     }, [threatLogs]);
+
     const sorted = [...aggregatedLogs].sort((a, b) =>
         sortMode === "newest" ? b.latestEpochMs - a.latestEpochMs : a.latestEpochMs - b.latestEpochMs,
     );
     const filteredLogs = sorted.filter((log) => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
-        return log.ip.includes(q) || log.countryName?.toLowerCase().includes(q) || log.country.toLowerCase().includes(q) || log.hassh?.toLowerCase().includes(q);
+        return (
+            log.ip.includes(q) ||
+            log.countryName?.toLowerCase().includes(q) ||
+            log.country.toLowerCase().includes(q) ||
+            log.hassh?.toLowerCase().includes(q)
+        );
     });
-    const visibleLogs = filteredLogs.slice(0, visibleCount);
 
     useEffect(() => {
-        if (selectedRegion) {
-            const target = COUNTRY_MAP[selectedRegion] || selectedRegion;
-            const index = filteredLogs.findIndex((log) => log.country === target || log.ip === target);
-            if (index >= 0) {
-                if (index >= visibleCount) {
-                    setVisibleCount(index + 10);
-                }
-                setTimeout(() => {
-                    const firstMatch = filteredLogs[index];
-                    if (firstMatch && itemRefs.current[firstMatch.id]) {
-                        const el = itemRefs.current[firstMatch.id];
-                        if (el) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    }
-                }, 50);
-            }
-        }
-    }, [selectedRegion, filteredLogs, visibleCount]);
-
-    async function blockIp(ip: string) {
-        const confirmed = window.confirm(`Block ${ip} at the sensor firewall?`);
-        if (!confirmed) {
+        const el = containerRef.current;
+        if (!el) {
             return;
         }
+        const update = () => setListHeight(Math.max(200, el.clientHeight));
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (!selectedRegion) {
+            return;
+        }
+        const target = COUNTRY_MAP[selectedRegion] || selectedRegion;
+        const index = filteredLogs.findIndex((log) => log.country === target || log.ip === target);
+        if (index >= 0) {
+            listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
+        }
+    }, [selectedRegion, filteredLogs]);
+
+    async function executeBlockIp(ip: string) {
         setBlockingIp(ip);
         try {
             const response = await fetch("/api/cloudsentinel/block-ip", {
@@ -151,8 +262,18 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
             window.alert("Block request failed");
         } finally {
             setBlockingIp(null);
+            setConfirmBlockIp(null);
         }
     }
+
+    const rowData: RowData = {
+        logs: filteredLogs,
+        selectedRegion,
+        underAttack,
+        blockingIp,
+        onBlock: setConfirmBlockIp,
+        onOpenSession: (ip: string) => router.push(`/sessions?focusIp=${encodeURIComponent(ip)}`),
+    };
 
     return (
         <div className="h-full flex flex-col min-h-0 overflow-hidden">
@@ -165,14 +286,14 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                             type="text"
                             placeholder="Search IP, HASSH..."
                             value={searchQuery}
-                            onChange={(e) => {
-                                  setSearchQuery(e.target.value);
-                                  setVisibleCount(40);
-                            }}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded py-1 pl-7 pr-6 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
                         />
                         {searchQuery && (
-                            <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
                                 <X size={12} />
                             </button>
                         )}
@@ -180,20 +301,16 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                 </div>
                 <CustomDropdown
                     value={sortMode}
-                    onChange={(value) => {
-                        setSortMode(value as SortMode);
-                        setVisibleCount(40);
-                    }}
+                    onChange={(value) => setSortMode(value as SortMode)}
                     options={[
                         { label: "Newest", value: "newest" },
-                        { label: "Oldest", value: "oldest" }
+                        { label: "Oldest", value: "oldest" },
                     ]}
                     className="w-24"
                 />
             </div>
-            
-            {/* Scrollable Log Area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden terminal-scrollbar pr-1 scroll-smooth space-y-2 pb-4 min-h-0">
+
+            <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
                 {threatLogs.length === 0 ? (
                     <div className="p-4 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-slate-500 dark:text-slate-400">
                         No live sensor events yet. Waiting for Socket.IO stream or backend admin API.
@@ -202,98 +319,48 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
                     <div className="p-4 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-slate-500 dark:text-slate-400 font-medium">
                         No matching live events found for &quot;{searchQuery}&quot;.
                     </div>
-                ) : null}
-                {visibleLogs.map((log) => {
-                    const target = selectedRegion ? (COUNTRY_MAP[selectedRegion] || selectedRegion) : null;
-                    const isSelected = target && (log.country === target || log.ip === target);
-                    const isDimmed = target && (log.country !== target && log.ip !== target);
-                    return (
-                        <div 
-                            key={log.id} 
-                            ref={(el) => { itemRefs.current[log.id] = el; }}
-                            role="link"
-                            tabIndex={0}
-                            onClick={() => router.push(`/sessions?focusIp=${encodeURIComponent(log.ip)}`)}
-                            onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                    event.preventDefault();
-                                    router.push(`/sessions?focusIp=${encodeURIComponent(log.ip)}`);
-                                }
-                            }}
-                            className={clsx(
-                            "relative overflow-hidden w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-lg transition-all duration-300 cursor-pointer group",
-                            isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10",
-                            underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-lg before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
-                            isDimmed ? "opacity-30 grayscale" : "opacity-100"
-                        )}>
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-mono text-slate-400">{log.latestTimestamp}</span>
-                            <div className="flex items-center gap-2 shrink-0">
-                                {log.blocked && (
-                                    <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-red-500/30 text-red-500 font-bold bg-red-500/10">
-                                        <Shield size={10} />
-                                        BLOCKED {log.lastMttb ?? ""}
-                                    </span>
-                                )}
-                                <span className={clsx(
-                                    "text-[10px] px-1.5 rounded font-bold",
-                                    log.latestType === 'SSH_AUTH_FAIL' ? "bg-red-500/20 text-red-500" :
-                                        log.latestType === 'COMMAND_EXEC' ? "bg-orange-500/20 text-orange-500" :
-                                            "bg-blue-500/20 text-blue-500"
-                                )}>{log.latestType}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-start justify-between gap-2 mt-1">
-                            <div className="min-w-0 flex flex-wrap items-center gap-2 text-xs font-mono text-slate-700 dark:text-slate-300">
-                                <Globe size={12} className="text-slate-500" />
-                                <span className="break-all">{log.ip}</span>
-                                <span className="opacity-50">({log.countryName ?? log.country})</span>
-                                {log.isp && <span className="opacity-60 break-words">{log.isp}</span>}
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                    {log.eventCount} events
-                                </span>
-                                {log.hassh && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20">
-                                        HASSH {log.hassh.slice(0, 8)}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                                {log.latestMitreId && (
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-mono">
-                                        {log.latestMitreId}
-                                   </span>
-                                )}
-                                <button
-                                    type="button"
-                                    disabled={blockingIp === log.ip}
-                                    title="Block IP"
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        void blockIp(log.ip);
-                                    }}
-                                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-red-500/30 text-red-500 hover:bg-red-500/10 disabled:opacity-50"
-                                >
-                                    <Ban size={12} />
-                                </button>
-                            </div>
-                        </div>
-                            <div className="mt-2 max-h-16 overflow-hidden text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded whitespace-pre-wrap break-words">
-                                $ {log.latestPayload}
-                            </div>
-                        </div>
-                    );
-                })}
-                {visibleCount < filteredLogs.length && (
-                    <button
-                        type="button"
-                        onClick={() => setVisibleCount((value) => value + 40)}
-                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                        More
-                    </button>
+                ) : (
+                    <List
+                        listRef={listRef}
+                        rowCount={filteredLogs.length}
+                        rowHeight={ROW_HEIGHT + ROW_GAP}
+                        rowProps={rowData}
+                        rowComponent={AttackLogRow}
+                        style={{ height: listHeight }}
+                        className="terminal-scrollbar pr-1"
+                    />
                 )}
             </div>
+
+            {confirmBlockIp && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold mb-2">Block IP</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Are you sure you want to block <span className="font-mono bg-slate-100 dark:bg-white/10 px-1 rounded">{confirmBlockIp}</span> at the sensor firewall?</p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmBlockIp(null);
+                                }}
+                                className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    void executeBlockIp(confirmBlockIp);
+                                }}
+                                disabled={blockingIp === confirmBlockIp}
+                                className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {blockingIp === confirmBlockIp ? "Blocking..." : "Confirm"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

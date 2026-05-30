@@ -21,6 +21,12 @@ from .pipeline import EventPipeline
 
 security = HTTPBearer(auto_error=False)
 EXPOSURE_RULE_COMMENT = "cloudsentinel-dashboard-pause"
+SYNTHETIC_ACTIVE_WINDOW_SECONDS = 180
+
+
+def _strict_truth_mode_enabled() -> bool:
+    raw = os.getenv("CLOUDSENTINEL_STRICT_TRUTH", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
 
 
 def _is_allowlisted(ip: str, allowlist: list[str]) -> bool:
@@ -346,6 +352,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                     "blockEffective": last_soar_action in {"iptables_block", "already_blocked"},
                     "mitreTechniques": techniques[:20],
                     "replay": replay[:400],
+                    "source": "clickhouse",
                 }
             )
         return rows
@@ -625,6 +632,79 @@ def _load_attack_graph_from_clickhouse(settings: Settings, limit: int = 60) -> d
         return {"nodes": [], "edges": []}
 
 
+def _load_truth_summary_from_clickhouse(settings: Settings) -> dict[str, Any] | None:
+    if not settings.clickhouse.enabled:
+        return None
+    try:
+        import clickhouse_connect
+
+        query = f"""
+            SELECT
+                count() AS total_events,
+                uniqExact(src_ip) AS unique_ips,
+                uniqExactIf(
+                    if(country_code != '', country_code, country_name),
+                    if(country_code != '', country_code, country_name) != ''
+                ) AS unique_countries,
+                uniqExactIf(src_ip, timestamp >= now() - INTERVAL 3 MINUTE) AS active_sessions,
+                countIf(eventid = 'cloudsentinel.session.connect') AS total_connections,
+                countIf(eventid = 'cloudsentinel.login.failed') AS total_auth_failures,
+                countIf(eventid = 'cloudsentinel.command.input') AS total_commands,
+                uniqExactIf(
+                    input,
+                    eventid = 'cloudsentinel.command.input'
+                    AND input != ''
+                    AND positionCaseInsensitive(input, 'cloudsentinel.') = 0
+                    AND positionCaseInsensitive(input, '[redacted]') = 0
+                ) AS unique_commands,
+                countIf(positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0) AS total_blocks,
+                uniqExactIf(src_ip, positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0) AS blocked_ips_current,
+                avgIf(mttb_ms, mttb_ms > 0 AND positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0) AS mttb_ms,
+                avgIf(
+                    toFloat64(cloudsentinel_risk_score),
+                    cloudsentinel_risk_score > 0
+                ) AS avg_risk
+            FROM {settings.clickhouse.table}
+            WHERE timestamp >= now() - INTERVAL 24 HOUR
+              AND src_ip != ''
+              AND src_ip != '0.0.0.0'
+        """
+        client = clickhouse_connect.get_client(
+            host=settings.clickhouse.host,
+            port=settings.clickhouse.port,
+            username=settings.clickhouse.username,
+            password=secret_to_str(settings.clickhouse.password),
+            database=settings.clickhouse.database,
+        )
+        result = client.query(query)
+        if not result.result_rows:
+            return None
+        row = result.result_rows[0]
+        total_connections = int(row[4] or 0)
+        total_blocks = int(row[8] or 0)
+        raw_block_rate = (float(total_blocks) / float(total_connections) * 100.0) if total_connections > 0 else 0.0
+        block_rate = max(0.0, min(100.0, raw_block_rate))
+        avg_risk_raw = float(row[11] or 0.0)
+        avg_risk = max(0.0, min(100.0, avg_risk_raw))
+        return {
+            "total_events": int(row[0] or 0),
+            "unique_ips": int(row[1] or 0),
+            "unique_countries": int(row[2] or 0),
+            "active_sessions": int(row[3] or 0),
+            "total_connections": total_connections,
+            "total_auth_failures": int(row[5] or 0),
+            "total_commands": int(row[6] or 0),
+            "unique_commands": int(row[7] or 0),
+            "total_blocks": total_blocks,
+            "blocked_ips_current": int(row[9] or 0),
+            "mttb_ms": float(row[10] or 0.0),
+            "avg_risk": avg_risk,
+            "block_rate": block_rate,
+        }
+    except Exception:
+        return None
+
+
 def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = None) -> FastAPI:
     app = FastAPI(
         title="CloudSentinel Admin API",
@@ -746,13 +826,21 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
 
     @app.get("/sessions", dependencies=[Depends(require_auth)])
     async def sessions() -> dict[str, Any]:
+        strict_truth = _strict_truth_mode_enabled()
         sessions_list = _load_recent_sessions_from_clickhouse(settings)
         existing = {str(item.get("ip", "")) for item in sessions_list}
-        if soar is not None:
+        if not strict_truth and soar is not None:
+            now_ts = time.time()
             for ip, session_ids in getattr(soar, "_mem_ip_sessions", {}).items():
                 if ip in existing:
                     continue
                 profile = soar.get_ip_profile(ip) if hasattr(soar, "get_ip_profile") else {}
+                last_seen = float(profile.get("last_seen") or profile.get("first_seen") or 0.0)
+                # Avoid stale synthetic "active" rows with no recent evidence.
+                if last_seen <= 0 or (now_ts - last_seen) > SYNTHETIC_ACTIVE_WINDOW_SECONDS:
+                    continue
+                first_seen = float(profile.get("first_seen") or last_seen or now_ts)
+                duration_sec = max(0, int(now_ts - first_seen))
                 enriched = _enrichment_for_ip(ip, "XX", "Unknown")
                 sessions_list.append(
                     {
@@ -772,9 +860,12 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                         "timezone": enriched.get("timezone", "UTC"),
                         "startTime": time.strftime(
                             "%H:%M:%S",
-                            time.localtime(profile.get("first_seen") or time.time()),
+                            time.localtime(first_seen),
                         ),
-                        "duration": "active",
+                        "duration": f"{duration_sec // 60}m {duration_sec % 60}s",
+                        "startedAtEpochMs": int(first_seen * 1000),
+                        "firstSeenEpochMs": int(first_seen * 1000),
+                        "lastSeenEpochMs": int(last_seen * 1000),
                         "client": "unknown",
                         "fingerprint": "",
                         "input": [],
@@ -786,13 +877,46 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                         "blockEffective": False,
                         "mitreTechniques": profile.get("techniques", []),
                         "replay": [],
+                        "source": "memory",
                     }
                 )
-        return {"sessions": sessions_list}
+        return {
+            "sessions": sessions_list,
+            "source": "clickhouse" if strict_truth else ("mixed" if any(s.get("source") == "memory" for s in sessions_list) else "clickhouse"),
+            "authoritative": strict_truth,
+            "sourceBreakdown": {
+                "sessions": "clickhouse",
+                "memory_fallback_enabled": not strict_truth,
+            },
+        }
 
     @app.get("/events", dependencies=[Depends(require_auth)])
     async def events(limit: int = 100) -> dict[str, Any]:
-        return {"events": _load_recent_events_from_clickhouse(settings, limit=limit)}
+        return {
+            "events": _load_recent_events_from_clickhouse(settings, limit=limit),
+            "source": "clickhouse",
+            "authoritative": True,
+            "sourceBreakdown": {"events": "clickhouse"},
+        }
+
+    @app.get("/truth-summary", dependencies=[Depends(require_auth)])
+    async def truth_summary() -> dict[str, Any]:
+        summary = _load_truth_summary_from_clickhouse(settings)
+        if summary is None:
+            return {
+                "ok": False,
+                "source": "runtime",
+                "authoritative": False,
+                "metrics": {},
+                "sourceBreakdown": {"metrics": "runtime"},
+            }
+        return {
+            "ok": True,
+            "source": "clickhouse",
+            "authoritative": True,
+            "metrics": summary,
+            "sourceBreakdown": {"metrics": "clickhouse"},
+        }
 
     @app.post("/admin/block-ip", dependencies=[Depends(require_auth)])
     async def manual_block_ip(body: dict[str, Any]) -> dict[str, Any]:
@@ -902,21 +1026,23 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
 
     @app.get("/attack-distribution", dependencies=[Depends(require_auth)])
     async def attack_distribution() -> list[dict[str, Any]]:
+        strict_truth = _strict_truth_mode_enabled()
         metrics_data = _load_attack_distribution_from_clickhouse(settings)
-        try:
-            from .metrics import get_metrics
+        if not strict_truth:
+            try:
+                from .metrics import get_metrics
 
-            metrics = get_metrics()
-            metrics_data["Brute Force"] = max(
-                int(metrics_data.get("Brute Force", 0)),
-                int(metrics.total_auth_failures),
-            )
-            metrics_data["Command Injection"] = max(
-                int(metrics_data.get("Command Injection", 0)),
-                int(metrics.total_commands),
-            )
-        except Exception:
-            pass
+                metrics = get_metrics()
+                metrics_data["Brute Force"] = max(
+                    int(metrics_data.get("Brute Force", 0)),
+                    int(metrics.total_auth_failures),
+                )
+                metrics_data["Command Injection"] = max(
+                    int(metrics_data.get("Command Injection", 0)),
+                    int(metrics.total_commands),
+                )
+            except Exception:
+                pass
         return [
             {"name": "Brute Force", "value": metrics_data["Brute Force"], "fill": "#ef4444"},
             {
@@ -930,12 +1056,15 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
 
     @app.get("/attack-graph", dependencies=[Depends(require_auth)])
     async def attack_graph() -> dict[str, Any]:
+        strict_truth = _strict_truth_mode_enabled()
         nodes: list[dict[str, Any]] = [
             {"id": "honeypot", "type": "honeypot", "label": settings.honeypot.hostname}
         ]
         edges: list[dict[str, Any]] = []
+        used_soar = False
 
-        if soar is not None:
+        if not strict_truth and soar is not None:
+            used_soar = True
             for i, chain in enumerate(soar.get_attack_chains()):
                 node_id = f"ip-{i}"
                 nodes.append(
@@ -967,7 +1096,15 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             clickhouse_graph = _load_attack_graph_from_clickhouse(settings)
             nodes.extend(clickhouse_graph.get("nodes", []))
             edges.extend(clickhouse_graph.get("edges", []))
-        return {"nodes": nodes, "edges": edges}
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "source": "clickhouse" if strict_truth else ("mixed" if used_soar else "clickhouse"),
+            "authoritative": strict_truth,
+            "sourceBreakdown": {
+                "graph": "clickhouse" if strict_truth else ("mixed" if used_soar else "clickhouse")
+            },
+        }
 
     @app.get("/anomaly-stats", dependencies=[Depends(require_auth)])
     async def anomaly_stats() -> dict[str, Any]:

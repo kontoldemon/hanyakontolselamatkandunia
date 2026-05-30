@@ -12,6 +12,7 @@ import { useAgentCommand } from "@/lib/AgentContext";
 
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
     const { theme, setTheme } = useTheme();
@@ -130,7 +131,7 @@ export default function Sidebar() {
                 {/* User / Settings Footer */}
                 <div className="p-4 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2">
                     <div className={clsx("flex items-center transition-all", isCollapsed ? "justify-center flex-col gap-4" : "justify-between gap-2")}>
-                        <button onClick={signOut} className={clsx(
+                        <button onClick={() => setShowSignOutConfirm(true)} className={clsx(
                             "flex items-center text-slate-500 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-md transition-colors text-xs font-medium",
                             isCollapsed ? "p-2 justify-center" : "px-3 py-2 gap-2 flex-1"
                         )} title="Sign Out">
@@ -166,6 +167,30 @@ export default function Sidebar() {
                     );
                 })}
             </nav>
+
+            {/* Sign Out Confirmation Modal */}
+            {showSignOutConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold mb-2">Sign Out</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Are you sure you want to sign out of the dashboard?</p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowSignOutConfirm(false)}
+                                className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={signOut}
+                                className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors"
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

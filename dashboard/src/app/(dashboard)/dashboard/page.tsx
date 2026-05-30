@@ -6,6 +6,8 @@ import AttackLog from "@/components/AttackLog";
 import { useDashboardStats, useLiveThreatLogs, useSensorOperations, useCapturedSessions } from "@/lib/liveEvents";
 import { useMemo, useState, useEffect, useCallback } from "react";
 
+const LIVE_ACTIVITY_WINDOW_MS = 3 * 60 * 1000;
+
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
@@ -14,13 +16,37 @@ export default function Dashboard() {
   const operations = useSensorOperations();
   const sessions = useCapturedSessions();
   const liveConnectionCount = stats.activeSessions;
+  const [now, setNow] = useState<number>(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => setNow(Date.now()), 0);
+    const interval = setInterval(() => setNow(Date.now()), 5000);
+    return () => {
+      clearTimeout(t);
+      clearInterval(interval);
+    };
+  }, []);
 
   const combinedLogs = useMemo(() => {
+    if (now <= 0) {
+      return [];
+    }
+    const currentEpochMs = now;
+    const windowFloor = currentEpochMs - LIVE_ACTIVITY_WINDOW_MS;
     const activeIps = new Set(sessions.filter(s => s.status === "Active").map(s => s.ip));
+    const knownSessionIps = new Set(sessions.map((s) => s.ip));
     
-    // Only keep threat logs for currently active IPs, or IPs that are so new they aren't in the sessions list at all yet
+    // Keep only recent logs for active IPs, plus very recent unseen IPs.
     const filteredThreatLogs = threatLogs.filter(
-      (log) => activeIps.has(log.ip) || !sessions.some((s) => s.ip === log.ip)
+      (log) => {
+        if (log.epochMs < windowFloor) {
+          return false;
+        }
+        if (activeIps.has(log.ip)) {
+          return true;
+        }
+        return !knownSessionIps.has(log.ip);
+      }
     );
     
     const combined = [...filteredThreatLogs];
@@ -56,19 +82,9 @@ export default function Dashboard() {
       }
     }
     return combined.sort((a, b) => b.epochMs - a.epochMs);
-  }, [threatLogs, sessions]);
+  }, [threatLogs, sessions, now]);
 
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    const t = setTimeout(() => setNow(Date.now()), 0);
-    const interval = setInterval(() => setNow(Date.now()), 5000);
-    return () => {
-      clearTimeout(t);
-      clearInterval(interval);
-    };
-  }, []);
-
-  const underAttack = stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && now !== null && now - threatLogs[0].epochMs < 20000));
+  const underAttack = stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && now > 0 && now - threatLogs[0].epochMs < 20000));
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;
@@ -117,7 +133,7 @@ export default function Dashboard() {
   }, [downloadSensorJson]);
 
   return (
-    <div className="h-full flex flex-col gap-4">
+    <div className="flex flex-col gap-4 lg:h-full">
       {/* Header & Compact Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
         <div>
@@ -139,7 +155,7 @@ export default function Dashboard() {
               <span className="text-slate-500 text-xs mr-2">MITRE TTPs</span>
               <span className="font-semibold text-slate-900 dark:text-white">{mappedMitreCount}</span>
             </div>
-            <div className="px-3 py-1.5 hidden lg:block">
+            <div className="px-3 py-1.5">
               <span className="text-slate-500 text-xs mr-2">Uptime</span>
               <span className="font-semibold text-slate-900 dark:text-white">{stats.systemUptime}</span>
             </div>
@@ -163,13 +179,21 @@ export default function Dashboard() {
               {stats.source !== "live" ? "OFFLINE" : underAttack ? "UNDER ATTACK" : "LIVE"}
             </span>
           </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm">
+            <span className={`text-[10px] uppercase font-bold tracking-wide ${stats.authoritative ? "text-emerald-500" : "text-amber-500"}`}>
+              {stats.authoritative ? "Authoritative" : "Partial"}
+            </span>
+            <span className="text-[10px] font-mono text-slate-500">
+              source: {stats.telemetrySource ?? "mixed"}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Main Content Grid - Flex-1 to fill remaining height */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
         {/* Map Section */}
-        <div className="lg:col-span-2 flex flex-col bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 flex flex-col bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden min-h-[400px] lg:min-h-0">
           <div className="flex justify-between items-center px-4 py-3 border-b border-slate-200 dark:border-white/5 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
             <h3 className="font-medium text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Globe size={16} className="text-blue-500" />
@@ -191,7 +215,7 @@ export default function Dashboard() {
         </div>
 
         {/* Live Feed Section */}
-        <div className="lg:col-span-1 flex flex-col bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
+        <div className="lg:col-span-1 flex flex-col bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden min-h-[500px] lg:min-h-0">
           <div className="px-4 py-3 border-b border-slate-200 dark:border-white/5 shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
             <h3 className="font-medium text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Activity size={16} className="text-emerald-500" />

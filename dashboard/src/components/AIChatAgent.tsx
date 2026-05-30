@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Bot, Send, X, Loader2, Minimize2, Maximize2, ShieldCheck, ShieldX, Zap } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useCapturedSessions, useDashboardStats } from "@/lib/liveEvents";
+import { useCapturedSessions, useDashboardStats, useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
+import { useIntelStats } from "@/lib/intelStats";
 import { useAgent } from "@/lib/AgentContext";
 import type { AgentMessage } from "@/lib/agentActions";
 import { parseActionsFromResponse, detectIntentActions } from "@/lib/agentActions";
@@ -28,6 +29,9 @@ export default function AIChatAgent() {
     // Grab some context to send to the backend
     const stats = useDashboardStats();
     const sessions = useCapturedSessions();
+    const liveLogs = useLiveThreatLogs();
+    const operations = useSensorOperations();
+    const intelStats = useIntelStats(liveLogs, sessions);
     const activeIpCount = sessions.filter((s) => s.status === "Active").length;
 
     // Build a brief list of top IPs for the AI to reference
@@ -132,6 +136,22 @@ export default function AIChatAgent() {
 
         const recentHistory = messages.slice(-5).map(m => `${m.role === "user" ? "User" : "AI"}: ${m.content}`).join("\n");
 
+        // Compute Advanced Intelligence context
+        const attackTypes = operations?.sensor.distribution.data ?? [];
+        const topAttack = attackTypes.length > 0 ? attackTypes.reduce((prev, current) => (Number(prev.value) > Number(current.value)) ? prev : current) : null;
+        
+        let longestSessionIp = "None";
+        let longestSessionSeconds = 0;
+        if (sessions.length > 0) {
+            const sorted = [...sessions].sort((a, b) => {
+                const durA = (a.lastSeenEpochMs || 0) - (a.firstSeenEpochMs || 0);
+                const durB = (b.lastSeenEpochMs || 0) - (b.firstSeenEpochMs || 0);
+                return durB - durA;
+            });
+            longestSessionIp = sorted[0].ip;
+            longestSessionSeconds = Math.round(((sorted[0].lastSeenEpochMs || 0) - (sorted[0].firstSeenEpochMs || 0)) / 1000);
+        }
+
         // Build context string with system instructions for action markers
         const contextStr = `
 Current Page: ${pathname}
@@ -140,6 +160,15 @@ Total Captured IPs: ${sessions.length} (Live: ${activeIpCount})
 Total Attacks: ${stats.totalAttacks}
 MTTB: ${stats.mttb}
 Top IPs: ${topIps}${focusedSessionContext}
+
+Advanced Intelligence Summary:
+- Most frequent (highest) attack type: ${topAttack ? topAttack.name + ' (' + topAttack.value + ' hits)' : 'Unknown'}
+- Longest event/session alive: IP ${longestSessionIp} lasting ${longestSessionSeconds} seconds.
+- Average Risk Score: ${intelStats.risk.avg.toFixed(1)}/100
+- Unique Countries Targeted: ${intelStats.totalCountries}
+- Top ISP Attacking: ${intelStats.isps[0]?.name ?? "Unknown"}
+- SOAR Block Rate: ${intelStats.soar.blockRate}%
+
 ${recentHistory ? `\nRECENT CONVERSATION HISTORY:\n${recentHistory}\n` : ""}
 
 SYSTEM INSTRUCTIONS:
@@ -375,7 +404,10 @@ GLOBAL CONTROLS (work from any page):
             >
                 <div className="flex items-center gap-2">
                     <Bot size={18} />
-                    <span className="font-semibold text-sm">CloudSentinel AI</span>
+                    <div className="flex flex-col leading-tight">
+                        <span className="font-semibold text-sm">CloudSentinel AI</span>
+                        <span className="text-[9px] uppercase tracking-wide text-white/80">LLM analysis only, not telemetry source</span>
+                    </div>
                     {isExecuting && (
                         <span className="flex items-center gap-1 text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
                             <Loader2 size={10} className="animate-spin" />

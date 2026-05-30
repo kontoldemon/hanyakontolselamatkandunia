@@ -189,7 +189,8 @@ export default function SignInPage() {
               </div>
 
               <div className="pt-3 w-full">
-                <div className="w-fit ml-auto scale-[0.8] origin-right transform transition-transform">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 font-medium">Let us know you&apos;re human</p>
+                <div className="w-fit origin-left scale-[0.85] sm:scale-100 transform transition-transform">
                   <Turnstile
                     siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
                     onSuccess={(token) => setTurnstileToken(token)}

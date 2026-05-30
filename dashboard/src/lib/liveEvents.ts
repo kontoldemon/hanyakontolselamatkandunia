@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
+
+export type TelemetrySource = "clickhouse" | "runtime" | "memory" | "mixed";
 
 export type ThreatLog = {
   id: string;
@@ -37,12 +39,25 @@ export type DashboardStats = {
   blockedIPs: number;
   credentialsHarvested: number;
   totalAttacks: number;
+  totalEvents?: number;
+  uniqueIps?: number;
+  uniqueCountries?: number;
+  uniqueCommands?: number;
+  avgRisk?: number;
+  blockRate?: number;
   concurrentConnections: number;
   mttb: string;
   mitreCoverage: number;
   systemUptime: string;
   attackActive: boolean;
   source: "live" | "offline";
+  totalConnections?: number;
+  totalAuthFailures?: number;
+  totalCommands?: number;
+  totalBlocks?: number;
+  telemetrySource?: TelemetrySource;
+  authoritative?: boolean;
+  sourceBreakdown?: Record<string, TelemetrySource>;
 };
 
 export type CapturedSession = {
@@ -76,12 +91,22 @@ export type CapturedSession = {
   blockEffective?: boolean;
   mitreTechniques?: string[];
   replay?: Array<{ role: "attacker" | "honeypot"; text: string; timestamp?: string }>;
+  source?: TelemetrySource;
 };
 
 type SummaryResponse = {
   ok: boolean;
-  source: "live" | "offline";
+  status?: "live" | "offline";
+  source?: TelemetrySource;
+  authoritative?: boolean;
+  sourceBreakdown?: Record<string, TelemetrySource>;
   metrics?: {
+    totalEvents?: number;
+    uniqueIps?: number;
+    uniqueCountries?: number;
+    uniqueCommands?: number;
+    avgRisk?: number;
+    blockRate?: number;
     activeSessions?: number;
     mttbMs?: number;
     totalConnections?: number;
@@ -101,7 +126,11 @@ type SensorResult<T> = {
 
 export type SensorOperations = {
   ok: boolean;
+  status?: "live" | "offline";
   source: "live" | "offline";
+  telemetrySource?: TelemetrySource;
+  authoritative?: boolean;
+  sourceBreakdown?: Record<string, TelemetrySource>;
   telemetry?: {
     upstreamLatencyMs?: {
       readiness?: number;
@@ -157,6 +186,10 @@ const EMPTY_STATS: DashboardStats = {
   attackActive: false,
   source: "offline",
 };
+
+const LIVE_LOG_RETENTION_MS = 24 * 60 * 60 * 1000;
+const LIVE_LOG_BATCH_MS = 250;
+const SESSION_ACTIVE_WINDOW_MS = 3 * 60 * 1000;
 
 const socketTelemetryState: SocketTelemetrySnapshot = {
   socketUrl: "",
@@ -219,6 +252,13 @@ type CloudSentinelEvent = {
   hassh_algorithms?: string;
   response_mode?: string;
 };
+
+function normalizeTelemetrySource(value: unknown): TelemetrySource | undefined {
+  if (value === "clickhouse" || value === "runtime" || value === "memory" || value === "mixed") {
+    return value;
+  }
+  return undefined;
+}
 
 function eventType(eventid = "") {
   if (eventid.includes("command.output")) {
@@ -424,99 +464,194 @@ function formatUptime(seconds: number): string {
   return `${totalSeconds}s`;
 }
 
+let globalSocket: ReturnType<typeof io> | null = null;
+let globalLogs: ThreatLog[] = [];
+let subscribers = new Set<(logs: ThreatLog[]) => void>();
+let pollInterval: number | null = null;
+let isFetchingInitial = false;
+let pendingLogs: ThreatLog[] = [];
+let flushTimer: number | null = null;
+let unauthorizedHandledAt = 0;
+
+function teardownLiveRuntime() {
+  if (globalSocket) {
+    globalSocket.removeAllListeners();
+    globalSocket.disconnect();
+    globalSocket = null;
+  }
+  if (pollInterval !== null) {
+    window.clearInterval(pollInterval);
+    pollInterval = null;
+  }
+  if (flushTimer !== null) {
+    window.clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  pendingLogs = [];
+  globalLogs = [];
+  subscribers.forEach((sub) => {
+    startTransition(() => sub([]));
+  });
+  socketTelemetryState.connected = false;
+}
+
+function handleUnauthorizedApi(source: string) {
+  const now = Date.now();
+  if (now - unauthorizedHandledAt < 4000) {
+    return;
+  }
+  unauthorizedHandledAt = now;
+  pushSocketTelemetry("auth_expired", "warn", source);
+  teardownLiveRuntime();
+  if (typeof window !== "undefined") {
+    const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+    window.location.assign(`/signin?next=${next}`);
+  }
+}
+
+function addLogs(items: ThreatLog[]) {
+  if (items.length === 0) return;
+  const cutoff = Date.now() - LIVE_LOG_RETENTION_MS;
+  const merged = [...items, ...globalLogs].filter(
+    (item) => Number.isFinite(item.epochMs) && item.epochMs >= cutoff,
+  );
+  const seen = new Set<string>();
+  const unique: ThreatLog[] = [];
+  for (const item of merged) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    unique.push(item);
+  }
+  globalLogs = unique.sort((a, b) => b.epochMs - a.epochMs).slice(0, 150);
+  subscribers.forEach((sub) => {
+    startTransition(() => sub(globalLogs));
+  });
+}
+
+function flushPendingLogs() {
+  flushTimer = null;
+  if (pendingLogs.length === 0) {
+    return;
+  }
+  const batch = pendingLogs;
+  pendingLogs = [];
+  addLogs(batch);
+}
+
+function enqueueLogs(items: ThreatLog[]) {
+  if (items.length === 0) {
+    return;
+  }
+  pendingLogs.push(...items);
+  if (flushTimer !== null) {
+    return;
+  }
+  flushTimer = window.setTimeout(flushPendingLogs, LIVE_LOG_BATCH_MS);
+}
+
+async function loadRecentEvents() {
+  if (isFetchingInitial) return;
+  isFetchingInitial = true;
+  try {
+    const response = await fetch("/api/cloudsentinel/events", { cache: "no-store" });
+    if (response.status === 401) {
+      handleUnauthorizedApi("events");
+      return;
+    }
+    if (!response.ok) {
+      pushSocketTelemetry("events_fetch_failed", "warn", `status=${response.status}`);
+      return;
+    }
+    const payload = (await response.json()) as {
+      events?: CloudSentinelEvent[];
+      ok?: boolean;
+      error?: string;
+    };
+    if (payload.ok === false && payload.error) {
+      pushSocketTelemetry("events_fetch_upstream_error", "warn", payload.error);
+    }
+    const mapped = (payload.events ?? []).map(toThreatLog);
+    enqueueLogs(mapped);
+  } catch (error) {
+    pushSocketTelemetry(
+      "events_fetch_exception",
+      "error",
+      error instanceof Error ? error.message : "request failed",
+    );
+  } finally {
+    isFetchingInitial = false;
+  }
+}
+
+function initSocket(url: string) {
+  if (globalSocket) return;
+  const socketToken = process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN?.trim();
+
+  globalSocket = io(url, {
+    transports: ["polling", "websocket"],
+    reconnection: true,
+    withCredentials: false,
+    query: socketToken ? { token: socketToken } : undefined,
+  });
+  socketTelemetryState.socketUrl = url;
+
+  globalSocket.on("connect", () => {
+    socketTelemetryState.connected = true;
+    socketTelemetryState.connectCount += 1;
+    pushSocketTelemetry("connect", "info");
+  });
+
+  globalSocket.on("disconnect", (reason: string) => {
+    socketTelemetryState.connected = false;
+    socketTelemetryState.disconnectCount += 1;
+    pushSocketTelemetry("disconnect", "warn", reason);
+  });
+
+  globalSocket.on("connect_error", (error: Error) => {
+    socketTelemetryState.lastError = error.message;
+    pushSocketTelemetry("connect_error", "error", error.message);
+  });
+
+  globalSocket.io.on("reconnect_attempt", (attempt: number) => {
+    socketTelemetryState.reconnectAttempts = attempt;
+    pushSocketTelemetry("reconnect_attempt", "warn", `attempt=${attempt}`);
+  });
+
+  globalSocket.io.on("reconnect", (attempt: number) => {
+    socketTelemetryState.reconnectAttempts = 0;
+    pushSocketTelemetry("reconnect", "info", `attempt=${attempt}`);
+  });
+
+  globalSocket.io.on("reconnect_error", (error: Error) => {
+    socketTelemetryState.lastError = error.message;
+    pushSocketTelemetry("reconnect_error", "error", error.message);
+  });
+
+  globalSocket.on("cloudsentinel:event", (event: CloudSentinelEvent) => {
+    enqueueLogs([toThreatLog(event)]);
+  });
+}
+
 export function useLiveThreatLogs(enabled = true) {
-  const [liveLogs, setLiveLogs] = useState<ThreatLog[]>([]);
+  const [liveLogs, setLiveLogs] = useState<ThreatLog[]>(globalLogs);
   const url = socketUrl();
 
   useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    let cancelled = false;
-    const mergeLogs = (items: ThreatLog[]) => {
-      if (items.length === 0) {
-        return;
-      }
-      setLiveLogs((current) => {
-        const merged = [...items, ...current];
-        const seen = new Set<string>();
-        const unique: ThreatLog[] = [];
-        for (const item of merged) {
-          if (seen.has(item.id)) {
-            continue;
-          }
-          seen.add(item.id);
-          unique.push(item);
-        }
-        return unique.sort((a, b) => b.epochMs - a.epochMs).slice(0, 150);
-      });
-    };
+    if (!enabled) return;
 
-    async function loadRecentEvents() {
-      try {
-        const response = await fetch("/api/cloudsentinel/events", { cache: "no-store" });
-        if (!response.ok || cancelled) {
-          return;
-        }
-        const payload = (await response.json()) as { events?: CloudSentinelEvent[] };
-        const mapped = (payload.events ?? []).map(toThreatLog);
-        mergeLogs(mapped);
-      } catch {
-        // Socket stream remains primary path.
+    if (!globalSocket) {
+      initSocket(url);
+      loadRecentEvents();
+      if (!pollInterval) {
+        pollInterval = window.setInterval(loadRecentEvents, 12000);
       }
     }
 
-    loadRecentEvents();
-    const socket = io(url, {
-      transports: ["polling", "websocket"],
-      reconnection: true,
-      withCredentials: false,
-    });
-    socketTelemetryState.socketUrl = url;
-
-    socket.on("connect", () => {
-      socketTelemetryState.connected = true;
-      socketTelemetryState.connectCount += 1;
-      pushSocketTelemetry("connect", "info");
-    });
-
-    socket.on("disconnect", (reason: string) => {
-      socketTelemetryState.connected = false;
-      socketTelemetryState.disconnectCount += 1;
-      pushSocketTelemetry("disconnect", "warn", reason);
-    });
-
-    socket.on("connect_error", (error: Error) => {
-      socketTelemetryState.lastError = error.message;
-      pushSocketTelemetry("connect_error", "error", error.message);
-    });
-
-    socket.io.on("reconnect_attempt", (attempt: number) => {
-      socketTelemetryState.reconnectAttempts = attempt;
-      pushSocketTelemetry("reconnect_attempt", "warn", `attempt=${attempt}`);
-    });
-
-    socket.io.on("reconnect", (attempt: number) => {
-      socketTelemetryState.reconnectAttempts = 0;
-      pushSocketTelemetry("reconnect", "info", `attempt=${attempt}`);
-    });
-
-    socket.io.on("reconnect_error", (error: Error) => {
-      socketTelemetryState.lastError = error.message;
-      pushSocketTelemetry("reconnect_error", "error", error.message);
-    });
-
-    socket.on("cloudsentinel:event", (event: CloudSentinelEvent) => {
-      mergeLogs([toThreatLog(event)]);
-    });
-
-    const poll = window.setInterval(loadRecentEvents, 12000);
+    setLiveLogs(globalLogs);
+    subscribers.add(setLiveLogs);
 
     return () => {
-      cancelled = true;
-      window.clearInterval(poll);
-      socket.close();
-      socketTelemetryState.connected = false;
+      subscribers.delete(setLiveLogs);
     };
   }, [enabled, url]);
 
@@ -535,6 +670,10 @@ export function useDashboardStats() {
     async function loadStats() {
       try {
         const response = await fetch("/api/cloudsentinel/summary", { cache: "no-store" });
+        if (response.status === 401) {
+          handleUnauthorizedApi("summary");
+          return;
+        }
         if (!response.ok) {
           return;
         }
@@ -566,6 +705,12 @@ export function useDashboardStats() {
           conns: totalConnections,
         };
         const activeSessions = metrics.activeSessions ?? 0;
+        const totalEvents = metrics.totalEvents ?? 0;
+        const uniqueIps = metrics.uniqueIps ?? 0;
+        const uniqueCountries = metrics.uniqueCountries ?? 0;
+        const uniqueCommands = metrics.uniqueCommands ?? 0;
+        const avgRisk = metrics.avgRisk ?? 0;
+        const blockRate = metrics.blockRate ?? 0;
         setStats({
           ...EMPTY_STATS,
           activeSessions,
@@ -574,6 +719,16 @@ export function useDashboardStats() {
             totalAuthFailures +
             totalConnections +
             totalCommands,
+          totalEvents,
+          uniqueIps,
+          uniqueCountries,
+          uniqueCommands,
+          avgRisk,
+          blockRate,
+          totalConnections,
+          totalAuthFailures,
+          totalCommands,
+          totalBlocks,
           concurrentConnections: activeSessions,
           mttb:
             typeof metrics.mttbMs === "number" && metrics.mttbMs > 0
@@ -583,8 +738,11 @@ export function useDashboardStats() {
             typeof metrics.uptimeSeconds === "number" && metrics.uptimeSeconds > 0
               ? formatUptime(metrics.uptimeSeconds)
               : "offline",
-          attackActive: data.ok && (activeSessions > 0 || Date.now() < activeUntilRef.current),
-          source: data.ok ? "live" : "offline",
+          attackActive: data.ok && Date.now() < activeUntilRef.current,
+          source: data.status ?? (data.ok ? "live" : "offline"),
+          telemetrySource: data.source,
+          authoritative: data.authoritative,
+          sourceBreakdown: data.sourceBreakdown,
         });
       } catch {
         // Keep visible offline state instead of pretending traffic exists.
@@ -611,12 +769,22 @@ export function useSensorOperations() {
     async function loadOperations() {
       try {
         const response = await fetch("/api/cloudsentinel/operations", { cache: "no-store" });
+        if (response.status === 401) {
+          handleUnauthorizedApi("operations");
+          return;
+        }
         if (!response.ok) {
           return;
         }
         const data = (await response.json()) as SensorOperations;
         if (!cancelled) {
-          setOperations(data);
+          const payload = data as unknown as Record<string, unknown>;
+          const telemetrySource = normalizeTelemetrySource(payload.telemetrySource ?? payload.source);
+          setOperations({
+            ...data,
+            source: (data as SensorOperations & { status?: "live" | "offline" }).status ?? data.source,
+            telemetrySource,
+          });
         }
       } catch {
         if (!cancelled) {
@@ -641,6 +809,9 @@ export function useCapturedSessions() {
   const liveLogs = useLiveThreatLogs();
 
   return useMemo(() => {
+    const now = Date.now();
+    const activeCutoffMs = now - SESSION_ACTIVE_WINDOW_MS;
+
     const isReplayNoise = (text: string) => {
       const value = (text || "").trim().toLowerCase();
       return (
@@ -682,11 +853,32 @@ export function useCapturedSessions() {
     const grouped = new Map<string, CapturedSession>();
     const latestSessionByIp = new Map<string, string>();
     const sessions = operations?.sensor.sessions.data?.sessions ?? [];
+    const recentLiveByIp = new Map<string, number>();
+
+    for (const log of liveLogs) {
+      if (!log.ip) continue;
+      const current = recentLiveByIp.get(log.ip) ?? 0;
+      if (log.epochMs > current) {
+        recentLiveByIp.set(log.ip, log.epochMs);
+      }
+    }
 
     for (const session of sessions) {
       if (!session.ip) {
         continue;
       }
+      const backendLastSeen =
+        session.lastSeenEpochMs ??
+        session.firstSeenEpochMs ??
+        session.startedAtEpochMs ??
+        0;
+      const liveLastSeen = recentLiveByIp.get(session.ip) ?? 0;
+      const effectiveLastSeen = Math.max(backendLastSeen, liveLastSeen);
+      const incomingStatus = (session.status || "").trim().toLowerCase();
+      const forceClosed =
+        incomingStatus === "active" &&
+        (effectiveLastSeen === 0 || effectiveLastSeen < activeCutoffMs);
+
       const syntheticId = `sess-live-${session.ip}`;
       if (grouped.has(syntheticId) && session.id !== syntheticId) {
         grouped.delete(syntheticId);
@@ -694,8 +886,10 @@ export function useCapturedSessions() {
       const key = session.id || `sess-${session.ip}-${session.startedAtEpochMs ?? session.startTime}`;
       grouped.set(key, {
         ...session,
+        status: forceClosed ? "Closed" : session.status,
         input: [...(session.input ?? [])].slice(-300),
         replay: [...(session.replay ?? [])].slice(-600),
+        lastSeenEpochMs: effectiveLastSeen || session.lastSeenEpochMs,
       });
       const prepared = grouped.get(key);
       if (prepared) {
@@ -715,6 +909,9 @@ export function useCapturedSessions() {
     }
 
     for (const log of liveLogs) {
+      if (log.epochMs < activeCutoffMs) {
+        continue;
+      }
       const targetId = latestSessionByIp.get(log.ip);
       const existing = targetId ? grouped.get(targetId) : undefined;
       if (!existing) {
@@ -750,6 +947,7 @@ export function useCapturedSessions() {
           blockEffective: log.action === "Blocked",
           mitreTechniques: log.mitreTechniques ?? [],
           replay: [],
+          source: "mixed",
         });
         latestSessionByIp.set(log.ip, syntheticId);
       }
@@ -836,6 +1034,7 @@ export function useCapturedSessions() {
         }
       }
       current.sessionCount = Math.max(current.sessionCount ?? 1, 1);
+      current.source = current.source ?? "clickhouse";
       const replaySeen = new Set<string>();
       current.replay = (current.replay ?? [])
         .filter((entry) => {

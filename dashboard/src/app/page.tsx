@@ -57,7 +57,7 @@ export default function LandingPage() {
       {/* ── Snap Scroll Container ──────────────────────────────────────────── */}
       <div 
         id="snap-container" 
-        className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth pt-0"
+        className="h-full w-full overflow-y-scroll md:snap-y md:snap-mandatory scroll-smooth pt-0"
       >
         
         {/* ── SECTION 1: Hero + Globe + Stats ───────────────────────────────── */}
@@ -157,7 +157,7 @@ export default function LandingPage() {
         {/* ── SECTION 2: How It Works ────────────────────────────────────────── */}
         <section 
           id="how-it-works" 
-          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-center items-center pt-[56px] pb-6 px-6 md:px-12 relative overflow-hidden shrink-0"
+          className="snap-start snap-always w-full h-auto min-h-screen md:h-screen flex flex-col justify-center items-center py-24 md:pt-[56px] md:pb-6 px-6 md:px-12 relative overflow-visible md:overflow-hidden shrink-0"
         >
           <div className="max-w-5xl mx-auto w-full space-y-8">
             <div className="text-center reveal-on-scroll">
@@ -170,7 +170,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
               <div className="reveal-on-scroll">
                 <PipelineStep
                   step="01"
@@ -211,7 +211,7 @@ export default function LandingPage() {
         {/* ── SECTION 3: Capabilities ────────────────────────────────────────── */}
         <section 
           id="features" 
-          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-center items-center pt-[56px] pb-6 px-6 md:px-12 bg-[#0a0a0a]/30 relative overflow-hidden shrink-0"
+          className="snap-start snap-always w-full h-auto min-h-screen md:h-screen flex flex-col justify-center items-center py-24 md:pt-[56px] md:pb-6 px-6 md:px-12 bg-[#0a0a0a]/30 relative overflow-visible md:overflow-hidden shrink-0"
         >
           <div className="max-w-5xl mx-auto w-full space-y-6">
             <div className="text-center reveal-on-scroll">
@@ -225,7 +225,7 @@ export default function LandingPage() {
             </div>
 
             {/* 3 Symmetrical Horizontal Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
               <div className="reveal-on-scroll">
                 <FeatureCard 
                   icon={<Globe className="text-blue-400" size={20} />} 
@@ -265,7 +265,7 @@ export default function LandingPage() {
         {/* ── SECTION 4: Architecture ────────────────────────────────────────── */}
         <section 
           id="architecture" 
-          className="snap-start snap-always w-full h-screen min-h-screen flex flex-col justify-center items-center pt-[56px] pb-6 px-6 md:px-12 relative overflow-hidden shrink-0"
+          className="snap-start snap-always w-full h-auto min-h-screen md:h-screen flex flex-col justify-center items-center py-24 md:pt-[56px] md:pb-6 px-6 md:px-12 relative overflow-visible md:overflow-hidden shrink-0"
         >
           <div className="max-w-5xl mx-auto w-full space-y-8">
             <div className="text-center reveal-on-scroll">
@@ -285,11 +285,19 @@ export default function LandingPage() {
                 <div className="animate-packet-flow" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative z-10">
-                <ArchNode icon={<Server size={24} />} label="SSH Honeypot" tech="Custom Sensor" description="Captures attacker sessions, credentials, and TTY data on DigitalOcean" color="text-cyan-400" borderColor="border-cyan-500/20" />
-                <ArchNode icon={<Database size={24} />} label="Analytics Engine" tech="ClickHouse" description="High-speed columnar storage for real-time query and aggregation" color="text-amber-400" borderColor="border-amber-500/20" />
-                <ArchNode icon={<MonitorDot size={24} />} label="Dashboard" tech="Next.js + Socket.io" description="War Room UI with live WebSocket telemetry and AI-powered chat" color="text-blue-400" borderColor="border-blue-500/20" />
-                <ArchNode icon={<ShieldCheck size={24} />} label="SOAR Engine" tech="Python + iptables" description="Automated blocking, threat intel publishing, and active playbooks" color="text-red-400" borderColor="border-red-500/20" />
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative z-10 w-full">
+                <div className="reveal-on-scroll">
+                  <ArchNode icon={<Server size={24} />} label="SSH Honeypot" tech="Custom Sensor" description="Captures attacker sessions, credentials, and TTY data on DigitalOcean" color="text-cyan-400" borderColor="border-cyan-500/20" />
+                </div>
+                <div className="reveal-on-scroll">
+                  <ArchNode icon={<Database size={24} />} label="Analytics Engine" tech="ClickHouse" description="High-speed columnar storage for real-time query and aggregation" color="text-amber-400" borderColor="border-amber-500/20" />
+                </div>
+                <div className="reveal-on-scroll">
+                  <ArchNode icon={<MonitorDot size={24} />} label="Dashboard" tech="Next.js + Socket.io" description="War Room UI with live WebSocket telemetry and AI-powered chat" color="text-blue-400" borderColor="border-blue-500/20" />
+                </div>
+                <div className="reveal-on-scroll">
+                  <ArchNode icon={<ShieldCheck size={24} />} label="SOAR Engine" tech="Python + iptables" description="Automated blocking, threat intel publishing, and active playbooks" color="text-red-400" borderColor="border-red-500/20" />
+                </div>
               </div>
             </div>
           </div>

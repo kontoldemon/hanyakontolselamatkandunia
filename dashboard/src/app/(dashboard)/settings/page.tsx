@@ -87,6 +87,25 @@ export default function SettingsPage() {
                 {/* Left Column: Telemetry & Controls */}
                 <div className="space-y-6 flex flex-col">
                     <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col gap-3">
+                        <h3 className="font-semibold text-sm flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
+                            <Shield size={16} />
+                            Telemetry Truth
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div className="rounded border border-slate-200 dark:border-white/10 p-2">
+                                <div className="text-slate-500 uppercase text-[10px]">Authoritative</div>
+                                <div className={operations?.authoritative ? "font-bold text-emerald-500" : "font-bold text-amber-500"}>
+                                    {operations?.authoritative ? "Yes" : "Partial"}
+                                </div>
+                            </div>
+                            <div className="rounded border border-slate-200 dark:border-white/10 p-2">
+                                <div className="text-slate-500 uppercase text-[10px]">Primary Source</div>
+                                <div className="font-bold text-slate-700 dark:text-slate-300">{operations?.telemetrySource ?? "mixed"}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col gap-3">
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <h3 className="font-semibold text-sm flex items-center gap-2 text-amber-600 dark:text-amber-500">
@@ -113,7 +132,7 @@ export default function SettingsPage() {
                         <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] shrink-0">
                             <h3 className="font-semibold text-sm flex items-center gap-2 text-slate-800 dark:text-slate-200">
                                 <Activity size={16} className="text-blue-500" />
-                                Pipeline Latency
+                                Ops Health
                             </h3>
                         </div>
                         <div className="p-4 flex-1 overflow-y-auto space-y-2">

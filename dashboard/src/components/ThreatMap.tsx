@@ -738,7 +738,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Intel Feed
                             </span>
                         </div>
-                        <div className="flex items-center gap-4 whitespace-nowrap opacity-80 animate-[marquee_20s_linear_infinite] hover:[animation-play-state:paused] pl-[140px]">
+                        <div className="flex items-center gap-4 whitespace-nowrap opacity-80 animate-[marquee_40s_linear_infinite] hover:[animation-play-state:paused] pl-[140px]">
                             {threatLogs.length === 0 && <span className="text-slate-500">Awaiting initial sensor data stream...</span>}
                             {Array.from(new Map(threatLogs.map(log => [log.ip, log])).values()).slice(0, 10).map((log, i) => (
                                 <span key={i} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">

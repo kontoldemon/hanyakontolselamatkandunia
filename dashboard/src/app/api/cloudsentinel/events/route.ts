@@ -16,12 +16,56 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      return NextResponse.json({ ok: false, events: [] }, { status: 200 });
+      console.warn("[cloudsentinel/events] upstream request failed", {
+        status: response.status,
+        statusText: response.statusText,
+        baseUrl,
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          status: "offline",
+          source: "runtime",
+          authoritative: false,
+          sourceBreakdown: { events: "runtime" },
+          events: [],
+          error: `upstream ${response.status} ${response.statusText}`,
+        },
+        { status: 200 },
+      );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: 200 });
-  } catch {
-    return NextResponse.json({ ok: false, events: [] }, { status: 200 });
+    const data = await response.json() as {
+      events?: unknown[];
+      source?: string;
+      authoritative?: boolean;
+      sourceBreakdown?: Record<string, unknown>;
+      ok?: boolean;
+    };
+    return NextResponse.json(
+      {
+        ok: data.ok ?? true,
+        status: "live",
+        source: data.source ?? "clickhouse",
+        authoritative: data.authoritative ?? true,
+        sourceBreakdown: data.sourceBreakdown ?? { events: "clickhouse" },
+        events: data.events ?? [],
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("[cloudsentinel/events] request exception", error);
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "offline",
+        source: "runtime",
+        authoritative: false,
+        sourceBreakdown: { events: "runtime" },
+        events: [],
+        error: error instanceof Error ? error.message : "request failed",
+      },
+      { status: 200 },
+    );
   }
 }

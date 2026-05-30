@@ -83,7 +83,7 @@ export default function LiveThreatSandbox() {
         setStep("running");
         runConsoleOutputs(type);
       }
-    }, 40);
+    }, 75);
   };
 
   const runConsoleOutputs = (type: "stuffing" | "dropper" | "exploit") => {
@@ -104,7 +104,7 @@ export default function LiveThreatSandbox() {
           }, 4500);
         }, 600);
       }
-    }, 450);
+    }, 850);
   };
 
   useEffect(() => {
