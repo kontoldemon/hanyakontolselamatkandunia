@@ -535,7 +535,6 @@ export default function IntelligencePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     <CountryStatsPanel expanded={panels.countries} onToggle={() => togglePanel("countries")} countries={stats.countries} />
                     <TimingHeatmapPanel expanded={panels.timing} onToggle={() => togglePanel("timing")} heatmap={stats.heatmap} />
-                    <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
                 </div>
 
                 {/* Row 3: Tables */}
@@ -627,8 +626,9 @@ export default function IntelligencePage() {
                     </CollapsiblePanel>
                 </div>
 
-                {/* Row 4: Fingerprints */}
+                {/* Row 4: Network + Fingerprints */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                    <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
                     <CollapsiblePanel
                         expanded={panels.fingerprints}
                         onToggle={() => togglePanel("fingerprints")}
