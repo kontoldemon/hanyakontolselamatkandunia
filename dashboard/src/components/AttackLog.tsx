@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 160;
+const ROW_HEIGHT = 168;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -98,7 +98,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     }
                 }}
                 className={clsx(
-                    "relative overflow-hidden h-full w-full min-w-0 p-3 bg-white dark:bg-white/5 rounded-xl transition-all duration-300 cursor-pointer group flex flex-col justify-between",
+                    "relative overflow-hidden h-full w-full min-w-0 px-3 pt-3 pb-4 bg-white dark:bg-white/5 rounded-xl transition-all duration-300 cursor-pointer group flex flex-col",
                     isSelected ? "border-2 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-blue-50/50 dark:bg-blue-500/10" : "border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10",
                     underAttack && "border-red-500/60 before:absolute before:inset-0 before:rounded-xl before:border before:border-red-500/50 before:animate-[pulse_1.1s_ease-in-out_infinite] before:pointer-events-none",
                     isDimmed ? "opacity-30 grayscale" : "opacity-100",
@@ -156,7 +156,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                <div className="flex flex-wrap items-center gap-1.5 mb-auto">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-medium">
                         {log.eventCount} events
                     </span>
@@ -175,7 +175,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     )}
                 </div>
 
-                <div className="flex-1 w-full bg-slate-50 dark:bg-black/40 rounded-lg p-2.5 border border-slate-200/50 dark:border-white/5 flex items-center overflow-hidden min-h-[44px] max-h-[44px] mb-1">
+                <div className="w-full bg-slate-50 dark:bg-black/40 rounded-lg p-2.5 border border-slate-200/50 dark:border-white/5 flex items-center overflow-hidden h-[44px]">
                     {preview.tag ? (
                         <div className="flex items-center gap-2 w-full">
                             <span className="shrink-0 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-blue-600 dark:text-blue-400">
