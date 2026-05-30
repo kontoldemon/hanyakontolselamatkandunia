@@ -6,7 +6,9 @@ import AttackLog from "@/components/AttackLog";
 import { useDashboardStats, useLiveThreatLogs, useSensorOperations, useCapturedSessions } from "@/lib/liveEvents";
 import { useMemo, useState, useEffect, useCallback } from "react";
 
-const LIVE_ACTIVITY_WINDOW_MS = 3 * 60 * 1000;
+const LIVE_ACTIVITY_WINDOW_MS = 90 * 1000;
+const ONLINE_GRACE_MS = 25 * 1000;
+const UNDER_ATTACK_COOLDOWN_MS = 90 * 1000;
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
@@ -84,7 +86,53 @@ export default function Dashboard() {
     return combined.sort((a, b) => b.epochMs - a.epochMs);
   }, [threatLogs, sessions, now]);
 
-  const underAttack = stats.source === "live" && (stats.attackActive || (threatLogs.length > 0 && now > 0 && now - threatLogs[0].epochMs < 20000));
+  const hasRecentThreatActivity = now > 0 && combinedLogs.some((log) => {
+    if (log.epochMs < now - LIVE_ACTIVITY_WINDOW_MS) {
+      return false;
+    }
+    // Ignore non-attack noise that can create fake "under attack" state.
+    if (log.type === "SENSOR_EVENT") {
+      const payload = (log.payload || "").toLowerCase();
+      if (
+        payload.startsWith("cloudsentinel.session.connect") ||
+        payload.startsWith("cloudsentinel.session.closed") ||
+        payload.startsWith("cloudsentinel.client.version") ||
+        payload.startsWith("cloudsentinel.event")
+      ) {
+        return false;
+      }
+    }
+    return log.type === "SSH_AUTH_FAIL" || log.type === "COMMAND_EXEC" || log.type === "HASSH_DNA";
+  });
+  const bridgeLive = operations?.source === "live";
+  const summaryLive = stats.source === "live";
+  const rawOnlineSignal = summaryLive || bridgeLive;
+  const rawAttackSignal = stats.attackActive || liveConnectionCount > 0 || hasRecentThreatActivity;
+  const hasRecentConnectivityEvidence = now > 0 && (
+    threatLogs.some((log) => log.epochMs >= now - ONLINE_GRACE_MS) ||
+    sessions.some((session) => {
+      const lastSeen =
+        session.lastSeenEpochMs ??
+        session.firstSeenEpochMs ??
+        session.startedAtEpochMs ??
+        0;
+      return lastSeen >= now - ONLINE_GRACE_MS;
+    })
+  );
+  const hasRecentAttackEvidence = now > 0 && combinedLogs.some((log) => {
+    if (log.epochMs < now - UNDER_ATTACK_COOLDOWN_MS) {
+      return false;
+    }
+    return log.type === "SSH_AUTH_FAIL" || log.type === "COMMAND_EXEC" || log.type === "HASSH_DNA";
+  });
+
+  const warRoomOnline = rawOnlineSignal || hasRecentConnectivityEvidence;
+  const underAttack = warRoomOnline && (rawAttackSignal || hasRecentAttackEvidence);
+  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = !warRoomOnline && !hasRecentThreatActivity
+    ? "OFFLINE"
+    : underAttack
+      ? "UNDER ATTACK"
+      : "LIVE";
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;
@@ -170,13 +218,13 @@ export default function Dashboard() {
             <span className="hidden sm:inline">Export</span>
           </button>
 
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm ${stats.source !== "live" ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-500" : underAttack ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500"}`}>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm ${warRoomState === "OFFLINE" ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-500" : warRoomState === "UNDER ATTACK" ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500"}`}>
             <span className="relative flex h-2 w-2">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${stats.source !== "live" ? "bg-amber-400" : underAttack ? "bg-red-400" : "bg-emerald-400"}`}></span>
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${stats.source !== "live" ? "bg-amber-500" : underAttack ? "bg-red-500" : "bg-emerald-500"}`}></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${warRoomState === "OFFLINE" ? "bg-amber-400" : warRoomState === "UNDER ATTACK" ? "bg-red-400" : "bg-emerald-400"}`}></span>
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${warRoomState === "OFFLINE" ? "bg-amber-500" : warRoomState === "UNDER ATTACK" ? "bg-red-500" : "bg-emerald-500"}`}></span>
             </span>
             <span className="text-xs font-semibold tracking-wide">
-              {stats.source !== "live" ? "OFFLINE" : underAttack ? "UNDER ATTACK" : "LIVE"}
+              {warRoomState}
             </span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm">
