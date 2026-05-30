@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Shield, Activity, RefreshCw, Cpu, Server, Radio } from "lucide-react";
+import { Shield, Activity, RefreshCw, Cpu, Server } from "lucide-react";
 
 export default function LandingAnimations() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState(0);
-  const [showHUD, setShowHUD] = useState(true);
 
   useEffect(() => {
     // 1. Intersection Observer for scroll reveals
@@ -43,13 +42,7 @@ export default function LandingAnimations() {
         setScrollProgress(progress);
 
         const sectionIndex = Math.min(4, Math.floor(progress / 19.9));
-        setActiveSection((prev) => {
-          if (prev !== sectionIndex) {
-            // Flash HUD open temporarily when section changes for futuristic popup effect
-            setShowHUD(true);
-          }
-          return sectionIndex;
-        });
+        setActiveSection(sectionIndex);
       }
     };
 

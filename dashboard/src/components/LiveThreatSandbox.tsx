@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Terminal, ShieldAlert, Crosshair, Brain } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Terminal, ShieldAlert } from "lucide-react";
 
 interface Simulation {
   command: string;
@@ -63,8 +63,30 @@ export default function LiveThreatSandbox() {
   
   const scenarioIndex = useRef(0);
   const typingTimer = useRef<NodeJS.Timeout | null>(null);
+  const startSimulationRef = useRef<(type: "stuffing" | "dropper" | "exploit") => void>(() => undefined);
 
-  const startSimulation = (type: "stuffing" | "dropper" | "exploit") => {
+  const runConsoleOutputs = useCallback((type: "stuffing" | "dropper" | "exploit") => {
+    const lines = SIMULATIONS[type].output;
+    let idx = 0;
+    
+    const interval = setInterval(() => {
+      setConsoleLines((prev) => [...prev, lines[idx]]);
+      idx++;
+      if (idx >= lines.length) {
+        clearInterval(interval);
+        setTimeout(() => {
+          setStep("blocked");
+          // Hold the blocked screen for 4.5 seconds before auto-cycling to next scenario
+          setTimeout(() => {
+            scenarioIndex.current = (scenarioIndex.current + 1) % SCENARIOS.length;
+            startSimulationRef.current(SCENARIOS[scenarioIndex.current]);
+          }, 4500);
+        }, 600);
+      }
+    }, 850);
+  }, []);
+
+  const startSimulation = useCallback((type: "stuffing" | "dropper" | "exploit") => {
     setSelected(type);
     setStep("typing");
     setTypingText("");
@@ -84,35 +106,18 @@ export default function LiveThreatSandbox() {
         runConsoleOutputs(type);
       }
     }, 75);
-  };
+  }, [runConsoleOutputs]);
 
-  const runConsoleOutputs = (type: "stuffing" | "dropper" | "exploit") => {
-    const lines = SIMULATIONS[type].output;
-    let idx = 0;
-    
-    const interval = setInterval(() => {
-      setConsoleLines((prev) => [...prev, lines[idx]]);
-      idx++;
-      if (idx >= lines.length) {
-        clearInterval(interval);
-        setTimeout(() => {
-          setStep("blocked");
-          // Hold the blocked screen for 4.5 seconds before auto-cycling to next scenario
-          setTimeout(() => {
-            scenarioIndex.current = (scenarioIndex.current + 1) % SCENARIOS.length;
-            startSimulation(SCENARIOS[scenarioIndex.current]);
-          }, 4500);
-        }, 600);
-      }
-    }, 850);
-  };
+  useEffect(() => {
+    startSimulationRef.current = startSimulation;
+  }, [startSimulation]);
 
   useEffect(() => {
     startSimulation("stuffing");
     return () => {
       if (typingTimer.current) clearInterval(typingTimer.current);
     };
-  }, []);
+  }, [startSimulation]);
 
   return (
     <div className="w-full h-full flex flex-col font-mono select-none">

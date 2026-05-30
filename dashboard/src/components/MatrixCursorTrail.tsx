@@ -80,7 +80,7 @@ export default function MatrixCursorTrail() {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      particles.current.forEach((p, idx) => {
+      particles.current.forEach((p) => {
         p.life--;
         p.y += p.vy;
         p.x += p.vx;

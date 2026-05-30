@@ -186,24 +186,49 @@ export default function SessionsPage() {
             if (!base) {
                 continue;
             }
+            const allReplay = sorted
+                .slice()
+                .reverse()
+                .flatMap((session) => session.replay ?? []);
+            const replaySeen = new Set<string>();
+            const mergedReplay = allReplay
+                .filter((entry) => {
+                    const text = (entry.text || "").trim().toLowerCase();
+                    if (!text || text.startsWith("cloudsentinel.") || text.includes("[redacted]")) {
+                        return false;
+                    }
+                    const key = `${entry.role}|${entry.timestamp ?? ""}|${entry.text}`;
+                    if (replaySeen.has(key)) {
+                        return false;
+                    }
+                    replaySeen.add(key);
+                    return true;
+                })
+                .slice(-800);
+
+            const mergedInput = Array.from(
+                new Set(
+                    sorted
+                        .slice()
+                        .reverse()
+                        .flatMap((session) => session.input ?? [])
+                        .map((value) => value.trim())
+                        .filter(Boolean),
+                ),
+            ).slice(-400);
 
             const replaySource = sorted.find(hasReplay);
-            if (!replaySource || replaySource.id === base.id) {
-                selected.push(base);
-                continue;
-            }
-
             selected.push({
                 ...base,
-                input: (base.input?.length ? base.input : replaySource.input) ?? [],
-                replay: (base.replay?.length ? base.replay : replaySource.replay) ?? [],
+                input: mergedInput.length > 0 ? mergedInput : (base.input ?? []),
+                replay: mergedReplay.length > 0 ? mergedReplay : (base.replay ?? []),
                 mitreTechniques: Array.from(
-                    new Set([...(base.mitreTechniques ?? []), ...(replaySource.mitreTechniques ?? [])]),
+                    new Set(sorted.flatMap((session) => session.mitreTechniques ?? [])),
                 ),
-                fingerprint: base.fingerprint || replaySource.fingerprint,
+                fingerprint: base.fingerprint || replaySource?.fingerprint || "",
                 client: (base.client && base.client !== "unknown")
                     ? base.client
-                    : replaySource.client,
+                    : (replaySource?.client ?? base.client ?? "unknown"),
             });
         }
 
@@ -223,7 +248,7 @@ export default function SessionsPage() {
             selectSession(filteredSessions[index]);
             listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
         }
-    }, [filteredSessions, selectSession]));
+    }, [filteredSessions, selectSession, listRef]));
 
     const exactMatch = selectedSessionId ? sessions.find((s) => s.id === selectedSessionId) : null;
     const selectedSession = exactMatch || (lastSelectedIp ? sessions.find((s) => s.ip === lastSelectedIp) : null);
@@ -284,7 +309,7 @@ export default function SessionsPage() {
             listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
             setFocusIp("");
         }
-    }, [focusIp, filteredSessions, selectSession]);
+    }, [focusIp, filteredSessions, selectSession, listRef]);
 
     async function executeBlockIp(ip: string) {
         setBlockingIp(ip);

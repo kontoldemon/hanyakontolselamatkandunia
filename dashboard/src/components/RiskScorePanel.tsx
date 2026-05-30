@@ -19,7 +19,17 @@ export default function RiskScorePanel({ expanded, onToggle, risk }: RiskScorePa
     count,
     color: COLORS[i]
   }));
-  
+
+  const formatTooltipValue = (value: unknown): number | string => {
+    if (Array.isArray(value) && value.length > 0) {
+      return String(value[0] ?? 0);
+    }
+    if (typeof value === "number" || typeof value === "string") {
+      return value;
+    }
+    return 0;
+  };
+
   return (
     <CollapsiblePanel
       expanded={expanded}
@@ -41,7 +51,7 @@ export default function RiskScorePanel({ expanded, onToggle, risk }: RiskScorePa
                 cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                 contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(value: any) => [value, "Sessions"]}
+                formatter={(value) => [formatTooltipValue(value), "Sessions"]}
               />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {data.map((entry, index) => (

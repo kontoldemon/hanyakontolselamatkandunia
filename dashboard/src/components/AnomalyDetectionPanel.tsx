@@ -72,14 +72,20 @@ export default function AnomalyDetectionPanel({ expanded, onToggle, logs }: Anom
         };
     }, [logs]);
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    type AnomalyTooltipProps = {
+        active?: boolean;
+        payload?: Array<{ value?: number | string }>;
+        label?: string | number;
+    };
+
+    const CustomTooltip = ({ active, payload, label }: AnomalyTooltipProps) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 p-3 rounded-lg shadow-xl text-xs z-[100]">
-                    <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-white/10 pb-1">{label}</p>
+                    <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-white/10 pb-1">{String(label ?? "")}</p>
                     <div className="flex items-center justify-between gap-4 mt-2">
                         <span className="text-slate-500">Rate</span>
-                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{Math.round(payload[0].value)}/hr</span>
+                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{Math.round(Number(payload[0]?.value ?? 0))}/hr</span>
                     </div>
                 </div>
             );

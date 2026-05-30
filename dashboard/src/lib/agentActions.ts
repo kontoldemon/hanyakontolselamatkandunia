@@ -148,7 +148,6 @@ const PAGE_KEYWORDS: Record<string, string> = {
 };
 
 export function detectIntentActions(userMessage: string, aiResponse: string, history: AgentMessage[] = []): AgentAction[] {
-  const combined = `${userMessage} ${aiResponse}`.toLowerCase();
   const userLower = userMessage.toLowerCase();
   const actions: AgentAction[] = [];
   const ipMatch = userMessage.match(IP_RE) ?? aiResponse.match(IP_RE);

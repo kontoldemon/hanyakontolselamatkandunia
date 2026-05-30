@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, Maximize2, Minimize2 } from "lucide-react";
-import { ReactNode, ComponentType, useState, useEffect } from "react";
+import { ReactNode, ComponentType, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface CollapsiblePanelProps {
@@ -24,11 +24,6 @@ export default function CollapsiblePanel({
     children,
 }: CollapsiblePanelProps) {
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     const toggleFullscreen = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -80,7 +75,7 @@ export default function CollapsiblePanel({
         </div>
     );
 
-    if (isFullscreen && mounted) {
+    if (isFullscreen && typeof document !== "undefined") {
         return (
             <>
                 <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm h-12" />

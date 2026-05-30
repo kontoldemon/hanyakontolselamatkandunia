@@ -466,7 +466,7 @@ function formatUptime(seconds: number): string {
 
 let globalSocket: ReturnType<typeof io> | null = null;
 let globalLogs: ThreatLog[] = [];
-let subscribers = new Set<(logs: ThreatLog[]) => void>();
+const subscribers = new Set<(logs: ThreatLog[]) => void>();
 let pollInterval: number | null = null;
 let isFetchingInitial = false;
 let pendingLogs: ThreatLog[] = [];
@@ -647,7 +647,6 @@ export function useLiveThreatLogs(enabled = true) {
       }
     }
 
-    setLiveLogs(globalLogs);
     subscribers.add(setLiveLogs);
 
     return () => {
@@ -836,10 +835,17 @@ export function useSensorOperations() {
 export function useCapturedSessions() {
   const operations = useSensorOperations();
   const liveLogs = useLiveThreatLogs();
+  const [nowMs, setNowMs] = useState(0);
+
+  useEffect(() => {
+    const tick = () => setNowMs(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 5000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return useMemo(() => {
-    const now = Date.now();
-    const activeCutoffMs = now - SESSION_ACTIVE_WINDOW_MS;
+    const activeCutoffMs = nowMs - SESSION_ACTIVE_WINDOW_MS;
 
     const isReplayNoise = (text: string) => {
       const value = (text || "").trim().toLowerCase();
@@ -1085,7 +1091,7 @@ export function useCapturedSessions() {
     return [...grouped.values()]
       .sort((a, b) => (b.lastSeenEpochMs ?? 0) - (a.lastSeenEpochMs ?? 0))
       .slice(0, 100);
-  }, [operations, liveLogs]);
+  }, [operations, liveLogs, nowMs]);
 }
 
 export function useSocketTelemetry() {

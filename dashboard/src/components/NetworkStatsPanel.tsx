@@ -23,7 +23,17 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
   }, [isps, mode]);
 
   const topIsp = isps.length > 0 ? isps[0].name : "None";
-  
+
+  const formatTooltipValue = (value: unknown): number | string => {
+    if (Array.isArray(value) && value.length > 0) {
+      return String(value[0] ?? 0);
+    }
+    if (typeof value === "number" || typeof value === "string") {
+      return value;
+    }
+    return 0;
+  };
+
   return (
     <CollapsiblePanel
       expanded={expanded}
@@ -65,7 +75,7 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
                 cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                 contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '11px' }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(value: any) => [value, "Attacks"]}
+                formatter={(value) => [formatTooltipValue(value), "Attacks"]}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {displayData.map((entry, index) => (

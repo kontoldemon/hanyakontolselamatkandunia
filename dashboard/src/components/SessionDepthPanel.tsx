@@ -57,14 +57,20 @@ export default function SessionDepthPanel({ expanded, onToggle, sessions }: Sess
         return { chartData, avgDwellS, avgCmds, validDwellCount };
     }, [sessions]);
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    type SessionDepthTooltipProps = {
+        active?: boolean;
+        payload?: Array<{ value?: number | string }>;
+        label?: string | number;
+    };
+
+    const CustomTooltip = ({ active, payload, label }: SessionDepthTooltipProps) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 p-3 rounded-lg shadow-xl text-xs z-[100]">
-                    <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-white/10 pb-1">{label} Dwell Time</p>
+                    <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-white/10 pb-1">{String(label ?? "")} Dwell Time</p>
                     <div className="flex items-center justify-between gap-4 mt-2">
                         <span className="text-slate-500">Sessions</span>
-                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{payload[0].value}</span>
+                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{payload[0]?.value ?? 0}</span>
                     </div>
                 </div>
             );

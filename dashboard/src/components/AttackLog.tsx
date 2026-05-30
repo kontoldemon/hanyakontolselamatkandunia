@@ -244,7 +244,7 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
         if (index >= 0) {
             listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
         }
-    }, [selectedRegion, filteredLogs]);
+    }, [selectedRegion, filteredLogs, listRef]);
 
     async function executeBlockIp(ip: string) {
         setBlockingIp(ip);
