@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 162;
+const ROW_HEIGHT = 176;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -126,11 +126,11 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                     </div>
                 </div>
                 <div className="flex items-start justify-between gap-2 mt-1 flex-1 min-h-0 pb-1">
-                    <div className="min-w-0 flex flex-wrap items-center gap-2 text-xs font-mono text-slate-700 dark:text-slate-300">
+                    <div className="min-w-0 flex flex-wrap items-center gap-1.5 text-xs font-mono text-slate-700 dark:text-slate-300">
                         <Globe size={12} className="text-slate-500" />
                         <span className="break-all">{log.ip}</span>
-                        <span className="opacity-50">({log.countryName ?? log.country})</span>
-                        {log.isp && <span className="opacity-60 break-words">{log.isp}</span>}
+                        <span className="opacity-50 whitespace-nowrap">({log.countryName ?? log.country})</span>
+                        {log.isp && <span className="opacity-60 truncate max-w-[180px]" title={log.isp}>{log.isp}</span>}
                         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                             {log.eventCount} events
                         </span>
