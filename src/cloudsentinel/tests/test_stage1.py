@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 import pytest
-from cloudsentinel.admin_api import _is_noise_event, _is_noise_text, create_admin_app
+from cloudsentinel.admin_api import _is_noise_event, _is_noise_text, _trim_replay_entries, create_admin_app
 from cloudsentinel.commands import CommandAdapter
 from cloudsentinel.commands.base import commands as cmd_registry
 from cloudsentinel.config import load_settings
@@ -123,6 +123,29 @@ def test_admin_api_noise_classifiers() -> None:
     assert _is_noise_text("cloudsentinel.session.closed") is True
     assert _is_noise_text("root / [redacted]") is True
     assert _is_noise_text("whoami") is False
+
+
+def test_trim_replay_keeps_info_tags() -> None:
+    replay: list[dict[str, str]] = [
+        {"role": "honeypot", "text": "[OPEN] Session opened", "timestamp": "10:00:00.001"},
+    ]
+    for idx in range(500):
+        replay.append(
+            {
+                "role": "attacker" if idx % 2 == 0 else "honeypot",
+                "text": f"cmd-{idx}",
+                "timestamp": f"10:00:{idx % 60:02d}.{idx:03d}",
+            }
+        )
+    replay.append({"role": "honeypot", "text": "[AUTH] Failed login for root attempt 1", "timestamp": "10:09:59.010"})
+    replay.append({"role": "honeypot", "text": "[CLOSE] Session closed (12.0s)", "timestamp": "10:10:00.000"})
+
+    trimmed = _trim_replay_entries(replay, limit=400)
+    assert len(trimmed) <= 400
+    texts = [entry["text"] for entry in trimmed]
+    assert any(text.startswith("[OPEN]") for text in texts)
+    assert any(text.startswith("[AUTH]") for text in texts)
+    assert any(text.startswith("[CLOSE]") for text in texts)
 
 
 def test_admin_api_exposure_uses_honeypot_ports(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -432,7 +432,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                     "mttbMs": max_mttb_ms,
                     "blockEffective": last_soar_action in {"iptables_block", "already_blocked"},
                     "mitreTechniques": techniques[:20],
-                    "replay": replay[:400],
+                    "replay": _trim_replay_entries(replay, limit=400),
                     "source": "clickhouse",
                 }
             )
@@ -912,6 +912,48 @@ def _compose_war_room_state(
             "activeFreshnessMs": WAR_ROOM_ACTIVE_FRESHNESS_MS,
         },
     }
+
+
+def _trim_replay_entries(entries: list[dict[str, str]], limit: int = 400) -> list[dict[str, str]]:
+    if len(entries) <= limit:
+        return entries
+    info_entries: list[dict[str, str]] = []
+    stream_entries: list[dict[str, str]] = []
+    for entry in entries:
+        text = str(entry.get("text") or "").strip().lower()
+        if text.startswith("[open]") or text.startswith("[close]") or text.startswith("[auth]") or text.startswith("[version]"):
+            info_entries.append(entry)
+        else:
+            stream_entries.append(entry)
+    keep: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for entry in info_entries:
+        key = (
+            str(entry.get("role") or ""),
+            str(entry.get("text") or ""),
+            str(entry.get("timestamp") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        keep.append(entry)
+    remaining = max(0, limit - len(keep))
+    if remaining > 0:
+        tail = stream_entries[-remaining:]
+        for entry in tail:
+            key = (
+                str(entry.get("role") or ""),
+                str(entry.get("text") or ""),
+                str(entry.get("timestamp") or ""),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            keep.append(entry)
+    keep.sort(key=lambda e: str(e.get("timestamp") or ""))
+    if len(keep) > limit:
+        keep = keep[-limit:]
+    return keep
 
 
 def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = None) -> FastAPI:
