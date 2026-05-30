@@ -48,8 +48,13 @@ logger = structlog.get_logger("cloudsentinel.admin_api")
 
 
 def _strict_truth_mode_enabled() -> bool:
-    # Triage contract: telemetry truth is ClickHouse-only.
-    return True
+    raw = os.getenv("CLOUDSENTINEL_STRICT_TRUTH", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _persistent_online_enabled() -> bool:
+    raw = os.getenv("CLOUDSENTINEL_WAR_ROOM_PERSISTENT_ONLINE", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
 
 
 def _is_allowlisted(ip: str, allowlist: list[str]) -> bool:
@@ -888,10 +893,14 @@ def _compose_war_room_state(
         if last_attack_at > 0
         else 0
     )
-    # UX contract: "offline" means sensor/service unavailable, not "no recent attacker events".
-    # If backend and authoritative evidence are healthy, treat sensor as online.
     online_from_events = last_online_at > 0 and (now_ms - last_online_at) <= WAR_ROOM_ONLINE_GRACE_MS
-    online = (not degraded) and (bool(authoritative) or online_from_events)
+    if _persistent_online_enabled():
+        # Optional UX mode: keep online while authoritative data says sensor was seen at least once.
+        online = (not degraded) and (
+            online_from_events or (bool(authoritative) and last_online_at > 0)
+        )
+    else:
+        online = online_from_events
     under_attack = online and cooldown_until > 0 and now_ms <= cooldown_until
     if not online:
         state = "offline"
