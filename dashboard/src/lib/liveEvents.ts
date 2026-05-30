@@ -876,14 +876,37 @@ export function useCapturedSessions() {
   return useMemo(() => {
     const activeCutoffMs = nowMs - SESSION_ACTIVE_WINDOW_MS;
 
+    const toReplayInfoLabel = (text: string) => {
+      const value = (text || "").trim();
+      const normalized = value.toLowerCase();
+      if (!normalized) {
+        return null;
+      }
+      if (normalized.startsWith("[open]") || normalized.startsWith("[close]") || normalized.startsWith("[auth]") || normalized.startsWith("[version]")) {
+        return value;
+      }
+      if (normalized.startsWith("cloudsentinel.session.connect")) {
+        return "[OPEN] Session opened";
+      }
+      if (normalized.startsWith("cloudsentinel.session.closed")) {
+        return "[CLOSE] Session closed";
+      }
+      if (normalized.startsWith("cloudsentinel.client.version")) {
+        return "[VERSION] Client banner observed";
+      }
+      if (normalized === "auth-attempt" || normalized.startsWith("cloudsentinel.login.failed") || normalized.startsWith("cloudsentinel.login.success")) {
+        return "[AUTH] Authentication event";
+      }
+      return null;
+    };
+
     const isReplayNoise = (text: string) => {
       const value = (text || "").trim().toLowerCase();
+      if (toReplayInfoLabel(text)) {
+        return false;
+      }
       return (
         !value ||
-        value.startsWith("cloudsentinel.session.connect") ||
-        value.startsWith("cloudsentinel.session.closed") ||
-        value.startsWith("cloudsentinel.client.version") ||
-        value === "auth-attempt" ||
         value.includes("[redacted]")
       );
     };
@@ -894,7 +917,8 @@ export function useCapturedSessions() {
       let lastAttacker = "";
 
       for (const entry of session.replay ?? []) {
-        const text = (entry.text || "").trim();
+        const rawText = (entry.text || "").trim();
+        const text = toReplayInfoLabel(rawText) ?? rawText;
         if (isReplayNoise(text)) {
           continue;
         }
@@ -1101,6 +1125,10 @@ export function useCapturedSessions() {
       current.source = current.source ?? "clickhouse";
       const replaySeen = new Set<string>();
       current.replay = (current.replay ?? [])
+        .map((entry) => ({
+          ...entry,
+          text: toReplayInfoLabel((entry.text || "").trim()) ?? (entry.text || "").trim(),
+        }))
         .filter((entry) => {
           if (isReplayNoise(entry.text)) {
             return false;

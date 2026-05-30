@@ -21,7 +21,8 @@ from .pipeline import EventPipeline
 
 security = HTTPBearer(auto_error=False)
 EXPOSURE_RULE_COMMENT = "cloudsentinel-dashboard-pause"
-SYNTHETIC_ACTIVE_WINDOW_SECONDS = 180
+ACTIVE_FRESHNESS_WINDOW_SECONDS = 90
+SYNTHETIC_ACTIVE_WINDOW_SECONDS = ACTIVE_FRESHNESS_WINDOW_SECONDS
 
 
 def _strict_truth_mode_enabled() -> bool:
@@ -160,7 +161,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                 anyIf(version, version != '') AS client_version,
                 argMax(cloudsentinel_soar_action, timestamp) AS last_soar_action,
                 max(mttb_ms) AS max_mttb_ms,
-                groupArray((timestamp, eventid, input, reason)) AS replay_timeline,
+                groupArray((timestamp, eventid, input, reason, username, attempt, auth_type, version, duration)) AS replay_timeline,
                 arrayDistinct(arrayFlatten(groupArray(cloudsentinel_mitre_techniques))) AS techniques,
                 max(cloudsentinel_risk_score) AS max_risk
             FROM {settings.clickhouse.table}
@@ -227,7 +228,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
             latest_close_ts = (
                 latest_close.timestamp() if hasattr(latest_close, "timestamp") else 0.0
             )
-            is_active = now - last_ts <= 180
+            is_active = now - last_ts <= ACTIVE_FRESHNESS_WINDOW_SECONDS
             if is_active:
                 duration_sec = max(0, int(now - latest_connect_ts))
             elif latest_close_ts >= latest_connect_ts > 0:
@@ -237,11 +238,23 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
 
             replay: list[dict[str, str]] = []
             commands: list[str] = []
-            normalized_timeline: list[tuple[float, str, str, str]] = []
+            normalized_timeline: list[tuple[float, str, str, str, str, int, str, str, str]] = []
             latest_input = ""
             for item in timeline_items:
                 try:
-                    ts_raw, eventid, input_value, reason = item
+                    ts_raw = item[0]
+                    eventid = item[1]
+                    input_value = item[2]
+                    reason = item[3]
+                    username = item[4] if len(item) > 4 else ""
+                    attempt_raw = item[5] if len(item) > 5 else 0
+                    try:
+                        attempt = int(attempt_raw or 0)
+                    except Exception:
+                        attempt = 0
+                    auth_type = item[6] if len(item) > 6 else ""
+                    version = item[7] if len(item) > 7 else ""
+                    duration = item[8] if len(item) > 8 else ""
                 except Exception:
                     continue
                 if hasattr(ts_raw, "timestamp"):
@@ -254,15 +267,67 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                         str(eventid or ""),
                         str(input_value or ""),
                         str(reason or ""),
+                        str(username or ""),
+                        attempt,
+                        str(auth_type or ""),
+                        str(version or ""),
+                        str(duration or ""),
                     )
                 )
 
             normalized_timeline.sort(key=lambda value: (value[0], _event_sort_priority(value[1])))
             replay_seen: set[tuple[str, str, str]] = set()
-            for ts_value, eventid, input_value, reason in normalized_timeline:
+            for (
+                ts_value,
+                eventid,
+                input_value,
+                reason,
+                username,
+                attempt,
+                auth_type,
+                version,
+                duration,
+            ) in normalized_timeline:
                 dt = time.localtime(ts_value)
                 ms = int((ts_value - int(ts_value)) * 1000)
                 stamp = f"{time.strftime('%H:%M:%S', dt)}.{ms:03d}"
+                info_text = ""
+                if eventid == "cloudsentinel.session.connect":
+                    info_text = "[OPEN] Session opened"
+                elif eventid == "cloudsentinel.session.closed":
+                    duration_value = duration.strip()
+                    info_text = (
+                        f"[CLOSE] Session closed ({duration_value}s)"
+                        if duration_value
+                        else "[CLOSE] Session closed"
+                    )
+                elif eventid == "cloudsentinel.login.failed":
+                    user = username.strip() or "unknown"
+                    attempt_suffix = f" attempt {attempt}" if attempt > 0 else ""
+                    method = auth_type.strip()
+                    if method and method != "password":
+                        info_text = f"[AUTH] Failed login for {user} via {method}{attempt_suffix}"
+                    else:
+                        info_text = f"[AUTH] Failed login for {user}{attempt_suffix}"
+                elif eventid == "cloudsentinel.login.success":
+                    user = username.strip() or "unknown"
+                    info_text = f"[AUTH] Login success for {user}"
+                elif eventid == "cloudsentinel.client.version":
+                    version_value = version.strip() or client_version.strip()
+                    info_text = f"[VERSION] {version_value}" if version_value else "[VERSION] Client banner observed"
+
+                if info_text:
+                    info_entry = {
+                        "role": "honeypot",
+                        "text": info_text[:2000],
+                        "timestamp": stamp,
+                    }
+                    info_key = (info_entry["role"], info_entry["text"], info_entry["timestamp"])
+                    if info_key not in replay_seen:
+                        replay_seen.add(info_key)
+                        replay.append(info_entry)
+                    continue
+
                 if eventid == "cloudsentinel.command.input" and input_value.strip():
                     if _is_noise_text(input_value):
                         continue
@@ -646,7 +711,7 @@ def _load_truth_summary_from_clickhouse(settings: Settings) -> dict[str, Any] | 
                     if(country_code != '', country_code, country_name),
                     if(country_code != '', country_code, country_name) != ''
                 ) AS unique_countries,
-                uniqExactIf(src_ip, timestamp >= now() - INTERVAL 3 MINUTE) AS active_sessions,
+                uniqExactIf(src_ip, timestamp >= now() - INTERVAL {ACTIVE_FRESHNESS_WINDOW_SECONDS} SECOND) AS active_sessions,
                 countIf(eventid = 'cloudsentinel.session.connect') AS total_connections,
                 countIf(eventid = 'cloudsentinel.login.failed') AS total_auth_failures,
                 countIf(eventid = 'cloudsentinel.command.input') AS total_commands,

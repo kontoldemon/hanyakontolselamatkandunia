@@ -12,6 +12,8 @@ type ReplayEntry = {
     timestamp?: string;
 };
 
+type ReplayInfoType = "OPEN" | "CLOSE" | "AUTH" | "VERSION";
+
 interface TerminalReplayProps {
     lines: string[];
     replay?: ReplayEntry[];
@@ -29,7 +31,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
     useAgentCommand("replay.fullscreen", useCallback(() => setIsFullScreen((p) => !p), []));
     useAgentCommand("replay.mode", useCallback((v: string) => onModeChange?.(v as "attacker" | "both"), [onModeChange]));
     useAgentCommand("replay.copy", useCallback(() => {
-        const text = (replay && replay.length > 0 ? replay : lines.map((l) => ({ role: "attacker" as const, text: l }))).map((e) => `${e.role === "honeypot" ? "#" : "$"} ${e.text}`).join("\n");
+        const text = (replay && replay.length > 0 ? replay : lines.map((l) => ({ role: "attacker" as const, text: l }))).map((e) => formatReplayLine(e)).join("\n");
         navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -71,7 +73,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
     }
 
     function handleCopy() {
-        const text = visibleEntries.map(e => `${e.role === 'honeypot' ? '#' : '$'} ${e.text}`).join('\n');
+        const text = visibleEntries.map((entry) => formatReplayLine(entry)).join("\n");
         navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -126,17 +128,53 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                         No command replay stored for this session yet.
                     </div>
                 )}
-                {visibleEntries.map((entry, i) => (
+                {visibleEntries.map((entry, i) => {
+                    const infoType = getInfoType(entry.text);
+                    return (
                     <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="mb-1.5 leading-relaxed break-words">
-                        <span className={`select-none mr-2 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`}>
-                            {entry.role === "honeypot" ? "#" : "$"}
-                        </span>
-                        <span className="typing-effect whitespace-pre-wrap">{entry.text}</span>
+                        {infoType ? (
+                            <>
+                                <span className={`select-none mr-2 font-bold text-[10px] uppercase px-1.5 py-0.5 rounded border ${infoTypeClass(infoType)}`}>
+                                    {infoType}
+                                </span>
+                                <span className="typing-effect whitespace-pre-wrap">{entry.text.replace(/^\[[A-Z]+\]\s*/i, "")}</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className={`select-none mr-2 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`}>
+                                    {entry.role === "honeypot" ? "#" : "$"}
+                                </span>
+                                <span className="typing-effect whitespace-pre-wrap">{entry.text}</span>
+                            </>
+                        )}
                         {entry.timestamp && <span className="ml-3 text-[10px] text-slate-400 dark:text-slate-500">{entry.timestamp}</span>}
                     </div>
-                ))}
+                );})}
                 <div className="animate-pulse inline-block w-2 h-4 bg-slate-400 dark:bg-green-400 align-middle ml-1"></div>
             </div>
         </div>
     );
 }
+    const getInfoType = (text: string): ReplayInfoType | null => {
+        const normalized = (text || "").trim().toLowerCase();
+        if (normalized.startsWith("[open]")) return "OPEN";
+        if (normalized.startsWith("[close]")) return "CLOSE";
+        if (normalized.startsWith("[auth]")) return "AUTH";
+        if (normalized.startsWith("[version]")) return "VERSION";
+        return null;
+    };
+
+    const formatReplayLine = (entry: ReplayEntry) => {
+        const infoType = getInfoType(entry.text);
+        if (infoType) {
+            return `! ${entry.text}`;
+        }
+        return `${entry.role === "honeypot" ? "#" : "$"} ${entry.text}`;
+    };
+
+    const infoTypeClass = (infoType: ReplayInfoType) => {
+        if (infoType === "OPEN") return "bg-cyan-500/15 text-cyan-700 border-cyan-500/30 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-400/30";
+        if (infoType === "CLOSE") return "bg-slate-500/10 text-slate-700 border-slate-400/30 dark:bg-slate-400/10 dark:text-slate-300 dark:border-slate-300/20";
+        if (infoType === "AUTH") return "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-400/30";
+        return "bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-300 dark:border-violet-400/30";
+    };
