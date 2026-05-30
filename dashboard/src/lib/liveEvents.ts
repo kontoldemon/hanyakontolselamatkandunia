@@ -239,6 +239,7 @@ const LIVE_LOG_BATCH_MS = 250;
 const SESSION_ACTIVE_WINDOW_MS = 90 * 1000;
 const OFFLINE_GRACE_MS = 20_000;
 const OFFLINE_FAILURE_THRESHOLD = 2;
+let WAR_ROOM_SNAPSHOT_CACHE: WarRoomState | null = null;
 
 const socketTelemetryState: SocketTelemetrySnapshot = {
   socketUrl: "",
@@ -909,8 +910,14 @@ export function useSensorOperations() {
 }
 
 export function useWarRoomState() {
-  const [warRoomState, setWarRoomState] = useState<WarRoomState>(EMPTY_WAR_ROOM_STATE);
-  const lastSuccessAtRef = useRef(0);
+  const [warRoomState, setWarRoomState] = useState<WarRoomState>(
+    WAR_ROOM_SNAPSHOT_CACHE ?? EMPTY_WAR_ROOM_STATE,
+  );
+  const lastSuccessAtRef = useRef(
+    WAR_ROOM_SNAPSHOT_CACHE?.updatedAt && WAR_ROOM_SNAPSHOT_CACHE.updatedAt > 0
+      ? WAR_ROOM_SNAPSHOT_CACHE.updatedAt
+      : 0,
+  );
   const consecutiveFailuresRef = useRef(0);
 
   useEffect(() => {
@@ -957,11 +964,13 @@ export function useWarRoomState() {
         }
         consecutiveFailuresRef.current = 0;
         lastSuccessAtRef.current = Date.now();
-        setWarRoomState({
+        const nextState: WarRoomState = {
           ...EMPTY_WAR_ROOM_STATE,
           ...data,
           source: normalizeTelemetrySource(data.source) ?? "runtime",
-        });
+        };
+        WAR_ROOM_SNAPSHOT_CACHE = nextState;
+        setWarRoomState(nextState);
       } catch {
         consecutiveFailuresRef.current += 1;
         maybeSetOffline();
