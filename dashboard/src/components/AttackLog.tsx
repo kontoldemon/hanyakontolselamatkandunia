@@ -53,7 +53,7 @@ const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-const ROW_HEIGHT = 146;
+const ROW_HEIGHT = 154;
 const ROW_GAP = 8;
 
 function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
@@ -163,7 +163,7 @@ function AttackLogRow({ index, style, logs, selectedRegion, underAttack, blockin
                         </button>
                     </div>
                 </div>
-                <div className="mt-2 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded">
+                <div className="mt-2 mb-1 min-h-10 max-h-10 overflow-hidden text-xs font-mono leading-5 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-black/30 p-1.5 rounded">
                     {preview.tag ? (
                         <div className="flex items-start gap-1.5">
                             <span className="mr-1.5 rounded border border-blue-500/30 bg-blue-500/10 px-1 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
