@@ -223,6 +223,26 @@ async def _run_command(args: list[str], timeout: float = 5.0) -> tuple[int, str,
     )
 
 
+def _exposure_firewall_paths(settings: Settings) -> list[str]:
+    ordered = [
+        str(settings.soar.firewall_path or "/sbin/iptables"),
+        "/usr/sbin/iptables-legacy",
+        "/usr/sbin/iptables",
+        "/usr/sbin/iptables-nft",
+        "/sbin/iptables-legacy",
+        "/sbin/iptables",
+    ]
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in ordered:
+        value = item.strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
 async def _http_json(
     method: str, url: str, token: str, payload: dict[str, Any] | None = None, timeout: float = 7.0
 ) -> tuple[int, dict[str, Any], str]:
@@ -1823,7 +1843,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             result["paused"] = paused
             return result
 
-        firewall_path = settings.soar.firewall_path or "/sbin/iptables"
+        firewall_paths = _exposure_firewall_paths(settings)
         ports = _exposure_target_ports(settings)
         actions: list[dict[str, Any]] = []
         if not ports:
@@ -1836,38 +1856,60 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 "actions": actions,
             }
         for port in ports:
-            rule = [
-                firewall_path,
-                "-C",
-                "INPUT",
-                "-p",
-                "tcp",
-                "--dport",
-                str(port),
-                "-m",
-                "comment",
-                "--comment",
-                EXPOSURE_RULE_COMMENT,
-                "-j",
-                "DROP",
-            ]
-            check_code, _, _ = await _run_command(rule)
-            if enabled:
+            last_error = ""
+            applied = False
+            for firewall_path in firewall_paths:
+                rule = [
+                    firewall_path,
+                    "-C",
+                    "INPUT",
+                    "-p",
+                    "tcp",
+                    "--dport",
+                    str(port),
+                    "-m",
+                    "comment",
+                    "--comment",
+                    EXPOSURE_RULE_COMMENT,
+                    "-j",
+                    "DROP",
+                ]
+                check_code, _, check_err = await _run_command(rule)
+                if enabled:
+                    if check_code == 0:
+                        delete = rule.copy()
+                        delete[1] = "-D"
+                        code, _, stderr = await _run_command(delete)
+                        if code == 0:
+                            actions.append({"port": port, "action": "removed", "ok": True, "firewallPath": firewall_path})
+                            applied = True
+                            break
+                        last_error = stderr[:200]
+                        continue
+                    if check_code == 1:
+                        actions.append({"port": port, "action": "already_open", "ok": True, "firewallPath": firewall_path})
+                        applied = True
+                        break
+                    last_error = check_err[:200]
+                    continue
                 if check_code == 0:
-                    delete = rule.copy()
-                    delete[1] = "-D"
-                    code, _, stderr = await _run_command(delete)
-                    actions.append({"port": port, "action": "removed", "ok": code == 0, "error": stderr[:200]})
-                else:
-                    actions.append({"port": port, "action": "already_open", "ok": True})
-            elif check_code == 0:
-                actions.append({"port": port, "action": "already_paused", "ok": True})
-            else:
+                    actions.append({"port": port, "action": "already_paused", "ok": True, "firewallPath": firewall_path})
+                    applied = True
+                    break
+                if check_code != 1:
+                    last_error = check_err[:200]
+                    continue
                 add = rule.copy()
                 add[1] = "-I"
                 add.insert(3, "1")
                 code, _, stderr = await _run_command(add)
-                actions.append({"port": port, "action": "paused", "ok": code == 0, "error": stderr[:200]})
+                if code == 0:
+                    actions.append({"port": port, "action": "paused", "ok": True, "firewallPath": firewall_path})
+                    applied = True
+                    break
+                last_error = stderr[:200]
+            if not applied:
+                actions.append({"port": port, "action": "failed", "ok": False, "error": last_error[:200]})
         paused = not enabled
         if all(item.get("ok") for item in actions):
             try:
