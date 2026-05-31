@@ -1,7 +1,7 @@
 "use client";
 
 import { Shield, Zap, Fingerprint, Database, Save, Activity, Check, Power, Maximize2, Minimize2 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSensorOperations, useSocketTelemetry } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 
@@ -13,6 +13,9 @@ export default function SettingsPage() {
     const [exposurePaused, setExposurePaused] = useState(false);
     const [exposureBusy, setExposureBusy] = useState(false);
     const [isSocketFullScreen, setIsSocketFullScreen] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+    const [showExposureConfirm, setShowExposureConfirm] = useState(false);
+    const [pendingExposurePaused, setPendingExposurePaused] = useState<boolean | null>(null);
     // Controlled state for all config dropdowns
     const [deceptionLevel, setDeceptionLevel] = useState("High (Full VFS)");
     const [hasshAction, setHashAction] = useState("Immediate Drop");
@@ -42,14 +45,7 @@ export default function SettingsPage() {
         { name: "LLM", value: Number(upstreamLatency.llm ?? 0) },
     ];
 
-    async function toggleExposure() {
-        const nextPaused = !exposurePaused;
-        const confirmed = window.confirm(nextPaused
-            ? "Pause public honeypot exposure? Admin dashboard will stay online."
-            : "Resume public honeypot exposure?");
-        if (!confirmed) {
-            return;
-        }
+    async function applyExposure(nextPaused: boolean) {
         setExposureBusy(true);
         try {
             const response = await fetch("/api/cloudsentinel/exposure", {
@@ -60,18 +56,55 @@ export default function SettingsPage() {
             const data = await response.json();
             if (data.ok) {
                 setExposurePaused(Boolean(data.paused));
+                setToast({
+                    message: data.paused ? "Honeypot exposure set to offline." : "Honeypot exposure set to online.",
+                    type: "success",
+                });
             } else {
-                window.alert(data.error ?? "Exposure update failed");
+                setToast({ message: data.error ?? "Exposure update failed.", type: "error" });
             }
         } catch {
-            window.alert("Exposure update failed");
+            setToast({ message: "Exposure update failed.", type: "error" });
         } finally {
             setExposureBusy(false);
         }
     }
 
+    function openExposureConfirm() {
+        if (exposureBusy || !sensorOnline) return;
+        setPendingExposurePaused(!exposurePaused);
+        setShowExposureConfirm(true);
+    }
+
+    async function confirmExposureToggle() {
+        if (pendingExposurePaused === null) {
+            setShowExposureConfirm(false);
+            return;
+        }
+        setShowExposureConfirm(false);
+        await applyExposure(pendingExposurePaused);
+        setPendingExposurePaused(null);
+    }
+
+    useEffect(() => {
+        if (!toast) return;
+        const timer = window.setTimeout(() => setToast(null), 2500);
+        return () => window.clearTimeout(timer);
+    }, [toast]);
+
     return (
         <div className="h-full flex flex-col gap-6">
+            {toast && (
+                <div className={`fixed bottom-5 right-5 z-[160] px-3 py-2 rounded-lg border shadow-lg text-xs font-semibold ${
+                    toast.type === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                        : toast.type === "error"
+                            ? "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400"
+                            : "bg-slate-500/10 border-slate-500/30 text-slate-700 dark:text-slate-300"
+                }`}>
+                    {toast.message}
+                </div>
+            )}
             <div className="flex justify-between items-end shrink-0">
                 <div>
                     <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">System Configuration</h2>
@@ -114,7 +147,7 @@ export default function SettingsPage() {
                             <button
                                 type="button"
                                 disabled={exposureBusy || !sensorOnline}
-                                onClick={toggleExposure}
+                                onClick={openExposureConfirm}
                                 className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
                             >
                                 <Power size={12} />
@@ -284,6 +317,37 @@ export default function SettingsPage() {
 
                 </div>
             </div>
+
+            {showExposureConfirm && (
+                <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold mb-2">Exposure Control</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+                            {pendingExposurePaused
+                                ? "Set honeypot exposure to offline? Admin dashboard will stay online."
+                                : "Set honeypot exposure to online?"}
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => {
+                                    setShowExposureConfirm(false);
+                                    setPendingExposurePaused(null);
+                                    setToast({ message: "Exposure update cancelled.", type: "info" });
+                                }}
+                                className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmExposureToggle}
+                                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition-colors"
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
