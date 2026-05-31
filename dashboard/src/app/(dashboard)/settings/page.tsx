@@ -21,6 +21,7 @@ export default function SettingsPage() {
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
     const [showExposureConfirm, setShowExposureConfirm] = useState(false);
     const [pendingExposurePaused, setPendingExposurePaused] = useState<boolean | null>(null);
+    const [pendingEffectiveExposurePaused, setPendingEffectiveExposurePaused] = useState<boolean | null>(null);
     const [syncStartedAt, setSyncStartedAt] = useState<number | null>(null);
     const [exposureCooldownUntil, setExposureCooldownUntil] = useState<number>(0);
     const [cooldownNow, setCooldownNow] = useState<number>(() => Date.now());
@@ -60,6 +61,7 @@ export default function SettingsPage() {
     async function applyExposure(nextPaused: boolean) {
         setExposureBusy(true);
         setSyncStartedAt(Date.now());
+        setPendingEffectiveExposurePaused(nextPaused);
         try {
             const response = await fetch("/api/cloudsentinel/exposure", {
                 method: "POST",
@@ -78,8 +80,8 @@ export default function SettingsPage() {
             if (data.ok) {
                 const paused = hasPausedState ? Boolean(data.paused) : nextPaused;
                 setToast({
-                    message: paused ? "Honeypot exposure set to offline." : "Honeypot exposure set to online.",
-                    type: "success",
+                    message: paused ? "Applying offline state..." : "Applying online state...",
+                    type: "info",
                 });
             } else {
                 if (data.error === "cooldown_active") {
@@ -87,6 +89,8 @@ export default function SettingsPage() {
                     if (Number.isFinite(remainingMs) && remainingMs > 0) {
                         setExposureCooldownUntil(Date.now() + remainingMs);
                     }
+                    setExposureBusy(false);
+                    setPendingEffectiveExposurePaused(null);
                     setToast({
                         message: `Exposure cooldown active. Try again in ${Math.max(1, Math.ceil(remainingMs / 1000))}s.`,
                         type: "info",
@@ -95,6 +99,8 @@ export default function SettingsPage() {
                 }
                 if (hasPausedState) {
                     const paused = Boolean(data.paused);
+                    setExposureBusy(false);
+                    setPendingEffectiveExposurePaused(null);
                     setToast({
                         message: paused
                             ? "Exposure switched to offline with partial backend warning."
@@ -102,13 +108,15 @@ export default function SettingsPage() {
                         type: "info",
                     });
                 } else {
+                    setExposureBusy(false);
+                    setPendingEffectiveExposurePaused(null);
                     setToast({ message: data.error ?? "Exposure update failed.", type: "error" });
                 }
             }
         } catch {
-            setToast({ message: "Exposure update failed.", type: "error" });
-        } finally {
             setExposureBusy(false);
+            setPendingEffectiveExposurePaused(null);
+            setToast({ message: "Exposure update failed.", type: "error" });
         }
     }
 
@@ -141,7 +149,6 @@ export default function SettingsPage() {
 
     useEffect(() => {
         if (!exposureSyncing) {
-            setSyncStartedAt(null);
             return;
         }
         if (!syncStartedAt) {
@@ -163,15 +170,48 @@ export default function SettingsPage() {
                     window.sessionStorage.setItem(EXPOSURE_STATE_KEY, paused ? "1" : "0");
                 }
             }
+            setExposureBusy(false);
+            setPendingEffectiveExposurePaused(null);
             setSyncStartedAt(null);
         }, 400);
         return () => window.clearInterval(timer);
     }, [exposureSyncing, syncStartedAt, effectiveExposureEnabled]);
 
+    useEffect(() => {
+        if (pendingEffectiveExposurePaused === null) {
+            return;
+        }
+        if (typeof effectiveExposureEnabled !== "boolean") {
+            return;
+        }
+        if (exposureSyncing) {
+            return;
+        }
+        const effectivePaused = !effectiveExposureEnabled;
+        if (effectivePaused !== pendingEffectiveExposurePaused) {
+            return;
+        }
+        const timer = window.setTimeout(() => {
+            setExposurePaused(effectivePaused);
+            if (typeof window !== "undefined") {
+                window.sessionStorage.setItem(EXPOSURE_STATE_KEY, effectivePaused ? "1" : "0");
+            }
+            setExposureCooldownUntil(Date.now() + 8000);
+            setExposureBusy(false);
+            setPendingEffectiveExposurePaused(null);
+            setSyncStartedAt(null);
+            setToast({
+                message: effectivePaused ? "Honeypot exposure set to offline." : "Honeypot exposure set to online.",
+                type: "success",
+            });
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [pendingEffectiveExposurePaused, effectiveExposureEnabled, exposureSyncing]);
+
     return (
         <div className="h-full flex flex-col gap-6">
             {toast && (
-                <div className={`fixed bottom-5 right-5 z-[160] px-3 py-2 rounded-lg border shadow-lg text-xs font-semibold ${
+                <div className={`fixed top-5 right-5 z-[160] px-3 py-2 rounded-lg border shadow-lg text-xs font-semibold ${
                     toast.type === "success"
                         ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
                         : toast.type === "error"
