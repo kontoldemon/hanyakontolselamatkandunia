@@ -21,6 +21,7 @@ export default function SettingsPage() {
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
     const [showExposureConfirm, setShowExposureConfirm] = useState(false);
     const [pendingExposurePaused, setPendingExposurePaused] = useState<boolean | null>(null);
+    const [syncStartedAt, setSyncStartedAt] = useState<number | null>(null);
     // Controlled state for all config dropdowns
     const [deceptionLevel, setDeceptionLevel] = useState("High (Full VFS)");
     const [hasshAction, setHashAction] = useState("Immediate Drop");
@@ -54,6 +55,7 @@ export default function SettingsPage() {
 
     async function applyExposure(nextPaused: boolean) {
         setExposureBusy(true);
+        setSyncStartedAt(Date.now());
         try {
             const response = await fetch("/api/cloudsentinel/exposure", {
                 method: "POST",
@@ -96,7 +98,7 @@ export default function SettingsPage() {
     }
 
     function openExposureConfirm() {
-        if (exposureBusy || !sensorOnline) return;
+        if (exposureBusy || exposureSyncing || !sensorOnline) return;
         setPendingExposurePaused(!exposurePaused);
         setShowExposureConfirm(true);
     }
@@ -116,6 +118,35 @@ export default function SettingsPage() {
         const timer = window.setTimeout(() => setToast(null), 2500);
         return () => window.clearTimeout(timer);
     }, [toast]);
+
+    useEffect(() => {
+        if (!exposureSyncing) {
+            setSyncStartedAt(null);
+            return;
+        }
+        if (!syncStartedAt) {
+            return;
+        }
+        const timer = window.setInterval(() => {
+            const elapsed = Date.now() - syncStartedAt;
+            if (elapsed < 8000) {
+                return;
+            }
+            setToast({
+                message: "Exposure sync taking too long. Keeping last effective state.",
+                type: "error",
+            });
+            if (typeof effectiveExposureEnabled === "boolean") {
+                const paused = !effectiveExposureEnabled;
+                setExposurePaused(paused);
+                if (typeof window !== "undefined") {
+                    window.sessionStorage.setItem(EXPOSURE_STATE_KEY, paused ? "1" : "0");
+                }
+            }
+            setSyncStartedAt(null);
+        }, 400);
+        return () => window.clearInterval(timer);
+    }, [exposureSyncing, syncStartedAt, effectiveExposureEnabled]);
 
     return (
         <div className="h-full flex flex-col gap-6">
@@ -171,7 +202,7 @@ export default function SettingsPage() {
                             </div>
                             <button
                                 type="button"
-                                disabled={exposureBusy || !sensorOnline}
+                                disabled={exposureBusy || exposureSyncing || !sensorOnline}
                                 onClick={openExposureConfirm}
                                 className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
                             >
