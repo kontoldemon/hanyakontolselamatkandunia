@@ -276,9 +276,23 @@ async def _http_json(
 
 def _do_rule_matches_port(rule: dict[str, Any], port: int) -> bool:
     ports = rule.get("ports")
-    if not isinstance(ports, list):
-        return False
-    return str(port) in {str(item) for item in ports}
+    if isinstance(ports, list):
+        return str(port) in {str(item) for item in ports}
+    if isinstance(ports, str):
+        value = ports.strip()
+        if not value:
+            return False
+        if value == str(port):
+            return True
+        if "-" in value:
+            try:
+                start_s, end_s = value.split("-", 1)
+                start_i = int(start_s.strip())
+                end_i = int(end_s.strip())
+                return start_i <= int(port) <= end_i
+            except Exception:
+                return False
+    return False
 
 
 def _do_rule_is_global(rule: dict[str, Any]) -> bool:
@@ -296,15 +310,13 @@ def _do_rule_is_tcp(rule: dict[str, Any]) -> bool:
     return str(rule.get("protocol", "")).lower() == "tcp"
 
 
-def _do_read_blocked_ports(firewall: dict[str, Any], target_ports: set[int]) -> set[int]:
-    blocked: set[int] = set()
+def _do_read_allowed_ports(firewall: dict[str, Any], target_ports: set[int]) -> set[int]:
+    allowed: set[int] = set()
     inbound = firewall.get("inbound_rules", [])
     if not isinstance(inbound, list):
-        return blocked
+        return allowed
     for rule in inbound:
         if not isinstance(rule, dict):
-            continue
-        if str(rule.get("action", "")).lower() != "drop":
             continue
         if not _do_rule_is_tcp(rule):
             continue
@@ -312,8 +324,8 @@ def _do_read_blocked_ports(firewall: dict[str, Any], target_ports: set[int]) -> 
             continue
         for port in target_ports:
             if _do_rule_matches_port(rule, port):
-                blocked.add(port)
-    return blocked
+                allowed.add(port)
+    return allowed
 
 
 async def _toggle_exposure_digitalocean(enabled: bool, settings: Settings) -> dict[str, Any]:
@@ -343,32 +355,37 @@ async def _toggle_exposure_digitalocean(enabled: bool, settings: Settings) -> di
     before_rules = before_fw.get("inbound_rules", [])
     if not isinstance(before_rules, list):
         return {"ok": False, "error": "digitalocean firewall inbound_rules invalid", "actions": []}
-    before_blocked = _do_read_blocked_ports(before_fw, target_set)
+    before_allowed = _do_read_allowed_ports(before_fw, target_set)
 
     new_rules: list[dict[str, Any]] = []
     for rule in before_rules:
         if not isinstance(rule, dict):
             continue
         remove = (
-            str(rule.get("action", "")).lower() == "drop"
-            and _do_rule_is_tcp(rule)
+            _do_rule_is_tcp(rule)
             and _do_rule_is_global(rule)
             and any(_do_rule_matches_port(rule, p) for p in target_set)
         )
         if not remove:
             new_rules.append(rule)
-    if not enabled:
+    if enabled:
         for port in sorted(target_set):
-            new_rules.append(
-                {
-                    "protocol": "tcp",
-                    "ports": str(port),
-                    "sources": {"addresses": ["0.0.0.0/0", "::/0"]},
-                    "action": "drop",
-                }
-            )
+            if port not in before_allowed:
+                new_rules.append(
+                    {
+                        "protocol": "tcp",
+                        "ports": str(port),
+                        "sources": {"addresses": ["0.0.0.0/0", "::/0"]},
+                    }
+                )
 
-    put_payload = {"inbound_rules": new_rules}
+    put_payload = {
+        "name": str(before_fw.get("name") or firewall_id),
+        "inbound_rules": new_rules,
+        "outbound_rules": before_fw.get("outbound_rules", []),
+        "droplet_ids": before_fw.get("droplet_ids", []),
+        "tags": before_fw.get("tags", []),
+    }
     put_status, _, put_err = await _http_json("PUT", firewall_url, token, payload=put_payload)
     if put_status not in {200, 202}:
         return {
@@ -389,11 +406,17 @@ async def _toggle_exposure_digitalocean(enabled: bool, settings: Settings) -> di
     verify_fw = verify_json.get("firewall")
     if not isinstance(verify_fw, dict):
         return {"ok": False, "error": "digitalocean verify payload invalid", "actions": []}
-    after_blocked = _do_read_blocked_ports(verify_fw, target_set)
-    expected_blocked = set() if enabled else target_set
-    verified = after_blocked == expected_blocked
+    after_allowed = _do_read_allowed_ports(verify_fw, target_set)
+    expected_allowed = target_set if enabled else set()
+    verified = after_allowed == expected_allowed
     if not verified:
-        rollback_payload = {"inbound_rules": before_rules}
+        rollback_payload = {
+            "name": str(before_fw.get("name") or firewall_id),
+            "inbound_rules": before_rules,
+            "outbound_rules": before_fw.get("outbound_rules", []),
+            "droplet_ids": before_fw.get("droplet_ids", []),
+            "tags": before_fw.get("tags", []),
+        }
         rollback_status, _, rollback_err = await _http_json("PUT", firewall_url, token, payload=rollback_payload)
         return {
             "ok": False,
@@ -402,16 +425,16 @@ async def _toggle_exposure_digitalocean(enabled: bool, settings: Settings) -> di
             "rollback_ok": rollback_status in {200, 202},
             "actions": [],
             "desired_enabled": enabled,
-            "effective_enabled": len(before_blocked) == 0,
+            "effective_enabled": len(before_allowed) > 0,
         }
 
     actions: list[dict[str, Any]] = []
     for port in sorted(target_set):
         if enabled:
-            changed = port in before_blocked
+            changed = port not in before_allowed
             actions.append({"port": port, "action": "opened" if changed else "already_open", "ok": True})
         else:
-            changed = port not in before_blocked
+            changed = port in before_allowed
             actions.append({"port": port, "action": "paused" if changed else "already_paused", "ok": True})
     return {
         "ok": True,
