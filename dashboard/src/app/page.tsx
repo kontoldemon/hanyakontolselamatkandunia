@@ -9,6 +9,7 @@ import HeroGlobe from "@/components/HeroGlobe";
 import LandingAnimations from "@/components/LandingAnimations";
 import LiveThreatSandbox from "@/components/LiveThreatSandbox";
 import MatrixCursorTrail from "@/components/MatrixCursorTrail";
+import LandingLiveStats from "@/components/LandingLiveStats";
 
 export const metadata: Metadata = {
   title: "CloudSentinel | SSH Honeypot Cloud Dashboard",
@@ -112,12 +113,7 @@ export default function LandingPage() {
               </div>
 
               {/* Stats Bar Integrated Directly In The Central Hero Stack — 100% Safe From Overlapping! */}
-              <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 pt-10 px-4 md:px-8">
-                <StatCard value="50,000+" label="Threats Analyzed" icon={<Crosshair size={16} className="text-red-400" />} delay="anim-delay-100" />
-                <StatCard value="190+" label="Countries Tracked" icon={<Globe size={16} className="text-blue-400" />} delay="anim-delay-200" />
-                <StatCard value="<15ms" label="Avg MTTB" icon={<Zap size={16} className="text-amber-400" />} delay="anim-delay-300" />
-                <StatCard value="24/7" label="Active Monitoring" icon={<Activity size={16} className="text-emerald-400" />} delay="anim-delay-400" />
-              </div>
+              <LandingLiveStats />
             </div>
           </div>
 
@@ -359,16 +355,6 @@ export default function LandingPage() {
 }
 
 // ─── Sub-Components ──────────────────────────────────────────────────────────
-
-function StatCard({ value, label, icon, delay }: { value: string; label: string; icon: React.ReactNode; delay: string }) {
-  return (
-    <div className={`rounded-xl border border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl p-3 text-center shadow-lg hover:border-white/10 hover:scale-105 transition-all animate-fade-in-up ${delay}`}>
-      <div className="flex justify-center mb-1">{icon}</div>
-      <div className="text-lg md:text-xl font-extrabold tracking-tight text-white">{value}</div>
-      <div className="text-[9px] text-slate-400 font-medium mt-0.5">{label}</div>
-    </div>
-  );
-}
 
 function PipelineStep({ step, color, borderColor, bgColor, icon, title, description }: {
   step: string; color: string; borderColor: string; bgColor: string; icon: React.ReactNode; title: string; description: string;
