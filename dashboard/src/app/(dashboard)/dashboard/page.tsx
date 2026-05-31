@@ -170,6 +170,7 @@ export default function Dashboard() {
     : warRoom.state === "live"
       ? "LIVE"
       : "OFFLINE";
+  const exposurePaused = warRoom.exposure?.effectiveEnabled === false;
   const sensorReachable = !exposurePaused && (operations?.source === "live" || operations?.sensor.readiness.ok === true);
   const backendWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
     backendWarRoomStateRaw === "OFFLINE" && sensorReachable ? "LIVE" : backendWarRoomStateRaw;
@@ -180,7 +181,6 @@ export default function Dashboard() {
     ? inferredWarRoomState
     : ((backendWarRoomState === "LIVE" && hasRealtimeAttackHint) ? "UNDER ATTACK" : backendWarRoomState);
   const initialUnknownState = !warRoom.ok && warRoom.updatedAt <= 0;
-  const exposurePaused = warRoom.exposure?.effectiveEnabled === false;
   const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
     exposurePaused
       ? "OFFLINE"
