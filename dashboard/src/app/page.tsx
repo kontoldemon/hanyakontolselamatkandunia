@@ -11,12 +11,12 @@ import LiveThreatSandbox from "@/components/LiveThreatSandbox";
 import MatrixCursorTrail from "@/components/MatrixCursorTrail";
 
 export const metadata: Metadata = {
-  title: "CloudSentinel | Enterprise SSH Threat Detection System",
-  description: "Advanced honeypot and threat intelligence dashboard for real-time SSH attack analysis, monitoring, and active defense.",
+  title: "CloudSentinel | SSH Honeypot Cloud Dashboard",
+  description: "SSH honeypot dashboard for real-time attack monitoring, analysis, and response.",
   keywords: ["SSH", "Honeypot", "Threat Intelligence", "Cybersecurity", "Dashboard", "Active Defense", "MITRE ATT&CK"],
   openGraph: {
-    title: "CloudSentinel - Active Threat Defense",
-    description: "Enterprise SSH Threat Detection System mapping attacks to the MITRE ATT&CK framework.",
+    title: "CloudSentinel - SSH Honeypot Dashboard",
+    description: "SSH honeypot monitoring dashboard with MITRE ATT&CK mapping and live session visibility.",
     url: "https://cloudsentinel.zis3c.dev",
     siteName: "CloudSentinel",
     locale: "en_US",
@@ -83,9 +83,9 @@ export default function LandingPage() {
               </div>
 
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tighter leading-[1.05] animate-fade-in-up anim-delay-100 text-white">
-                Enterprise Grade <br className="hidden md:block" />
+                SSH Honeypot <br className="hidden md:block" />
                 <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400 bg-clip-text text-transparent">
-                  Threat Intelligence
+                  Cloud Dashboard
                 </span>
               </h1>
 
@@ -179,7 +179,7 @@ export default function LandingPage() {
                   bgColor="bg-cyan-500/5"
                   icon={<Crosshair size={24} />}
                   title="Detect"
-                  description="A production-grade SSH honeypot sensor captures attacker sessions, credentials, commands, and SSH client fingerprints (HASSH) in real-time. Every keystroke is recorded."
+                  description="An SSH honeypot sensor captures attacker sessions, credentials, commands, and SSH client fingerprints (HASSH) in real-time. Every keystroke is recorded."
                 />
               </div>
               <div className="reveal-on-scroll">

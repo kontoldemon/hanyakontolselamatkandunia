@@ -4,7 +4,7 @@ import TerminalReplay from "@/components/TerminalReplay";
 import { Terminal, Clock, ShieldAlert, ArrowLeft, Shield, Search, Ban, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useCapturedSessions, type CapturedSession } from "@/lib/liveEvents";
+import { useCapturedSessions, useLiveThreatLogs, type CapturedSession } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 import { List, type RowComponentProps, useListRef } from "react-window";
 import CustomDropdown from "@/components/CustomDropdown";
@@ -155,6 +155,7 @@ export default function SessionsPage() {
     const [replayMode, setReplayMode] = useState<"attacker" | "both">("both");
     const [nowMs, setNowMs] = useState(() => Date.now());
     const sessions = useCapturedSessions();
+    const liveLogs = useLiveThreatLogs();
     const [focusIp, setFocusIp] = useState("");
     const listRef = useListRef(null);
     const listContainerRef = useRef<HTMLDivElement | null>(null);
@@ -306,6 +307,62 @@ export default function SessionsPage() {
         selectedByIpRaw ||
         lastSelectedSnapshotRef.current;
 
+    const selectedSessionLive = useMemo(() => {
+        if (!selectedSession) {
+            return selectedSession;
+        }
+        const baseLastSeen = selectedSession.lastSeenEpochMs ?? 0;
+        const merged: CapturedSession = {
+            ...selectedSession,
+            input: [...(selectedSession.input ?? [])],
+            replay: [...(selectedSession.replay ?? [])],
+        };
+        const seenReplay = new Set(
+            (merged.replay ?? []).map((entry) => `${entry.role}|${entry.timestamp ?? ""}|${entry.text}`),
+        );
+        let liveLastSeen = baseLastSeen;
+
+        for (const log of liveLogs) {
+            if (log.ip !== selectedSession.ip || log.epochMs <= baseLastSeen) {
+                continue;
+            }
+            liveLastSeen = Math.max(liveLastSeen, log.epochMs);
+            const rawText = (log.payload ?? "").trim();
+            if (!rawText || rawText.includes("[redacted]")) {
+                continue;
+            }
+            const lower = rawText.toLowerCase();
+            const infoText =
+                lower.startsWith("cloudsentinel.session.connect")
+                    ? "[OPEN] Session opened"
+                    : lower.startsWith("cloudsentinel.session.closed")
+                      ? "[CLOSE] Session closed"
+                      : lower.startsWith("cloudsentinel.client.version")
+                        ? "[VERSION] Client banner observed"
+                        : lower === "auth-attempt" || lower.startsWith("cloudsentinel.login.failed") || lower.startsWith("cloudsentinel.login.success")
+                          ? "[AUTH] Authentication event"
+                          : null;
+            const text = infoText ?? rawText;
+            const role = infoText ? "honeypot" : (log.role ?? (log.type === "HONEYPOT_RESPONSE" ? "honeypot" : "attacker"));
+            const replayKey = `${role}|${log.timestamp ?? ""}|${text}`;
+            if (!seenReplay.has(replayKey)) {
+                seenReplay.add(replayKey);
+                merged.replay?.push({ role, text, timestamp: log.timestamp });
+            }
+            if (role === "attacker") {
+                merged.input?.push(text);
+            }
+        }
+
+        if (liveLastSeen > baseLastSeen) {
+            merged.lastSeenEpochMs = liveLastSeen;
+            merged.status = "Active";
+        }
+        merged.replay = (merged.replay ?? []).slice(-600);
+        merged.input = Array.from(new Set((merged.input ?? []).filter(Boolean))).slice(-300);
+        return merged;
+    }, [selectedSession, liveLogs]);
+
     useEffect(() => {
         if (selectedSession) {
             lastSelectedSnapshotRef.current = selectedSession;
@@ -313,13 +370,15 @@ export default function SessionsPage() {
     }, [selectedSession]);
 
     useEffect(() => {
+        const exactMatch = exactMatchDisplayed || exactMatchRaw;
         if (!exactMatch && selectedSession && selectedSessionId !== selectedSession.id) {
             setSelectedSessionId(selectedSession.id);
         }
-    }, [exactMatch, selectedSession, selectedSessionId]);
+    }, [exactMatchDisplayed, exactMatchRaw, selectedSession, selectedSessionId]);
 
-    const selectedAction = formatSoarAction(selectedSession?.soarAction);
-    const selectedBlocked = isBlockEffective(selectedSession?.soarAction, selectedSession?.blockEffective);
+    const selectedView = selectedSessionLive ?? selectedSession;
+    const selectedAction = formatSoarAction(selectedView?.soarAction);
+    const selectedBlocked = isBlockEffective(selectedView?.soarAction, selectedView?.blockEffective);
 
     useEffect(() => {
         setReplayMode("both");
@@ -455,7 +514,7 @@ export default function SessionsPage() {
             </div>
 
             <div className={cn("flex-1 flex flex-col h-full bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-xl shadow-sm overflow-hidden", !selectedSessionId ? "hidden md:flex items-center justify-center" : "flex")}>
-                {!selectedSession ? (
+                {!selectedView ? (
                     <div className="text-center text-slate-500 flex flex-col items-center gap-3">
                         <Terminal size={32} className="opacity-20" />
                         <p className="text-sm">Select a session to view details & replay</p>
@@ -468,21 +527,21 @@ export default function SessionsPage() {
                                     <ArrowLeft size={16} />
                                 </button>
                                 <div className="min-w-0">
-                                    <h2 className="font-bold text-lg font-mono leading-none truncate">{selectedSession.ip}</h2>
+                                    <h2 className="font-bold text-lg font-mono leading-none truncate">{selectedView.ip}</h2>
                                     <p className="text-[11px] text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                        <span className="whitespace-nowrap">ASN: {selectedSession.asn || "N/A"}</span>
+                                        <span className="whitespace-nowrap">ASN: {selectedView.asn || "N/A"}</span>
                                         <span className="hidden sm:inline">•</span>
-                                        <span className="whitespace-nowrap truncate max-w-[120px] sm:max-w-none">HASSH: {selectedSession.fingerprint?.slice(0, 16) || "N/A"}...</span>
+                                        <span className="whitespace-nowrap truncate max-w-[120px] sm:max-w-none">HASSH: {selectedView.fingerprint?.slice(0, 16) || "N/A"}...</span>
                                     </p>
                                     <p className="text-[10px] text-slate-500 mt-1 font-mono flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5">
-                                        <span>First seen: {formatSeenTime(selectedSession.firstSeenEpochMs ?? selectedSession.startedAtEpochMs)}</span>
-                                        <span>Last update: {formatSeenTime(selectedSession.lastSeenEpochMs ?? selectedSession.firstSeenEpochMs ?? selectedSession.startedAtEpochMs)}</span>
+                                        <span>First seen: {formatSeenTime(selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
+                                        <span>Last update: {formatSeenTime(selectedView.lastSeenEpochMs ?? selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
                                     </p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => setConfirmBlockIp(selectedSession.ip)}
-                                disabled={blockingIp === selectedSession.ip}
+                                onClick={() => setConfirmBlockIp(selectedView.ip)}
+                                disabled={blockingIp === selectedView.ip}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-600 dark:text-red-400 rounded-md hover:bg-red-500 hover:text-white disabled:opacity-50 transition-colors text-xs font-semibold"
                             >
                                 <Ban size={14} />
@@ -493,8 +552,8 @@ export default function SessionsPage() {
                         <div className="flex-1 grid grid-cols-1 xl:grid-cols-3 gap-6 p-4 md:p-6 min-h-0 overflow-hidden">
                             <div className="xl:col-span-2 flex flex-col h-full min-h-0 overflow-hidden">
                                 <TerminalReplay
-                                    lines={selectedSession.input ?? []}
-                                    replay={selectedSession.replay}
+                                    lines={selectedView.input ?? []}
+                                    replay={selectedView.replay}
                                     mode={replayMode}
                                     onModeChange={setReplayMode}
                                 />
@@ -517,11 +576,11 @@ export default function SessionsPage() {
                                         </div>
                                         <div className="flex justify-between border-b border-slate-200 dark:border-white/5 pb-2">
                                             <span className="text-slate-500">State</span>
-                                            <span className="text-slate-900 dark:text-slate-300">{blockStateText(selectedSession.soarAction, selectedSession.blockEffective)}</span>
+                                            <span className="text-slate-900 dark:text-slate-300">{blockStateText(selectedView.soarAction, selectedView.blockEffective)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-slate-500">MTTB</span>
-                                            <span className="text-slate-900 dark:text-slate-300">{(selectedSession.mttbMs ?? 0) > 0 ? `${(selectedSession.mttbMs ?? 0).toFixed(2)}ms` : "N/A"}</span>
+                                            <span className="text-slate-900 dark:text-slate-300">{(selectedView.mttbMs ?? 0) > 0 ? `${(selectedView.mttbMs ?? 0).toFixed(2)}ms` : "N/A"}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -531,9 +590,9 @@ export default function SessionsPage() {
                                         <ShieldAlert size={16} />
                                         MITRE ATT&CK
                                     </h3>
-                                    {selectedSession.mitreTechniques && selectedSession.mitreTechniques.length > 0 ? (
+                                    {selectedView.mitreTechniques && selectedView.mitreTechniques.length > 0 ? (
                                         <ul className="space-y-1.5">
-                                            {selectedSession.mitreTechniques.slice(0, 6).map((technique) => (
+                                            {selectedView.mitreTechniques.slice(0, 6).map((technique) => (
                                                 <li key={technique} className="text-[11px] flex justify-between font-mono bg-red-500/10 px-2 py-1 rounded">
                                                     <span className="text-red-700 dark:text-red-300">{technique}</span>
                                                     <span className="text-red-500">Detected</span>
