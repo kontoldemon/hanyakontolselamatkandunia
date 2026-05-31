@@ -187,6 +187,7 @@ export default function Dashboard() {
   const exposureSyncElapsedSec = exposureSyncing && exposureSyncStartedAt > 0
     ? Math.max(0, Math.floor((now - exposureSyncStartedAt) / 1000))
     : 0;
+  const exposureSyncSlow = exposureSyncing && exposureSyncElapsedSec >= 8;
   const underAttack = exposurePaused
     ? false
     : (useEmergencyFallback ? inferredUnderAttack : (backendUnderAttack || hasRealtimeAttackHint));
@@ -289,7 +290,7 @@ export default function Dashboard() {
               </span>
             )}
             {exposureSyncing && (
-              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${exposureSyncSlow ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"}`}>
                 syncing {exposureSyncElapsedSec}s
               </span>
             )}
