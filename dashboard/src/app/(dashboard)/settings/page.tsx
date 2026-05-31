@@ -58,18 +58,32 @@ export default function SettingsPage() {
                 body: JSON.stringify({ enabled: !nextPaused }),
             });
             const data = await response.json();
-            if (data.ok) {
+            const hasPausedState = typeof data.paused === "boolean";
+            if (hasPausedState) {
                 const paused = Boolean(data.paused);
                 setExposurePaused(paused);
                 if (typeof window !== "undefined") {
                     window.sessionStorage.setItem(EXPOSURE_STATE_KEY, paused ? "1" : "0");
                 }
+            }
+            if (data.ok) {
+                const paused = hasPausedState ? Boolean(data.paused) : nextPaused;
                 setToast({
                     message: paused ? "Honeypot exposure set to offline." : "Honeypot exposure set to online.",
                     type: "success",
                 });
             } else {
-                setToast({ message: data.error ?? "Exposure update failed.", type: "error" });
+                if (hasPausedState) {
+                    const paused = Boolean(data.paused);
+                    setToast({
+                        message: paused
+                            ? "Exposure switched to offline with partial backend warning."
+                            : "Exposure switched to online with partial backend warning.",
+                        type: "info",
+                    });
+                } else {
+                    setToast({ message: data.error ?? "Exposure update failed.", type: "error" });
+                }
             }
         } catch {
             setToast({ message: "Exposure update failed.", type: "error" });
