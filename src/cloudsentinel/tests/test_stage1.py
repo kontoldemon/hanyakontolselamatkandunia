@@ -178,6 +178,35 @@ def test_admin_api_exposure_uses_honeypot_ports(monkeypatch: pytest.MonkeyPatch)
     assert "22" not in touched_ports
 
 
+def test_admin_api_exposure_can_include_admin_ports_with_explicit_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    async def fake_run_command(args: list[str], timeout: float = 5.0) -> tuple[int, str, str]:
+        calls.append(args)
+        return (1 if args[1] == "-C" else 0, "", "")
+
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+    monkeypatch.setattr("cloudsentinel.admin_api._run_command", fake_run_command)
+    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_ALLOW_ADMIN_PORTS", "1")
+    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_TARGET_PORTS", f"22,{settings.honeypot.ssh_port}")
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+
+    response = client.post(
+        "/admin/exposure",
+        headers={"Authorization": "Bearer test-token"},
+        json={"enabled": False},
+    )
+    assert response.status_code == 200
+    touched_ports = {call[idx + 1] for call in calls for idx, part in enumerate(call) if part == "--dport"}
+    assert {"22", str(settings.honeypot.ssh_port)}.issubset(touched_ports)
+
+
 def test_admin_api_exposure_digitalocean_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = load_settings(
         Path("src/cloudsentinel/configs/usas-production.yaml"),

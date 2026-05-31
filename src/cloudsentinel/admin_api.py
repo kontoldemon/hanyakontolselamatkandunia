@@ -100,6 +100,9 @@ def _exposure_target_ports(settings: Settings) -> list[int]:
                 requested.add(value)
     if not requested:
         requested.add(int(settings.honeypot.ssh_port))
+    allow_admin_ports = os.getenv("CLOUDSENTINEL_EXPOSURE_ALLOW_ADMIN_PORTS", "0").strip().lower() in {"1", "true", "yes", "on"}
+    if allow_admin_ports:
+        return sorted(requested)
     admin_ports = _exposure_admin_ports()
     return sorted(port for port in requested if port not in admin_ports)
 
