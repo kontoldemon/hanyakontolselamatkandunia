@@ -181,10 +181,22 @@ export default function Dashboard() {
     ? inferredWarRoomState
     : ((backendWarRoomState === "LIVE" && hasRealtimeAttackHint) ? "UNDER ATTACK" : backendWarRoomState);
   const initialUnknownState = !warRoom.ok && warRoom.updatedAt <= 0;
+  const warRoomPending = !exposurePaused && initialUnknownState;
   const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
     exposurePaused
       ? "OFFLINE"
       : (initialUnknownState && derivedWarRoomState === "OFFLINE" ? "LIVE" : derivedWarRoomState);
+  const recentOnlineEvidence = (warRoom.lastOnlineAt ?? 0) > 0 && now > 0 && (now - Number(warRoom.lastOnlineAt)) <= 90_000;
+  const recentWarRoomRefresh = warRoom.updatedAt > 0 && now > 0 && (now - warRoom.updatedAt) <= 2500;
+  const holdOfflineLabel =
+    !exposurePaused &&
+    warRoomState === "OFFLINE" &&
+    (
+      recentWarRoomRefresh ||
+      sensorReachable ||
+      recentOnlineEvidence
+    );
+  const warRoomChipPending = warRoomPending || holdOfflineLabel;
   const exposureSyncing = warRoom.exposure?.syncing === true;
   const exposureSyncStartedAt = warRoom.exposure?.updatedAt ?? 0;
   const exposureSyncElapsedSec = exposureSyncing && exposureSyncStartedAt > 0
@@ -279,13 +291,13 @@ export default function Dashboard() {
             <span className="hidden sm:inline">Export</span>
           </button>
 
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm ${warRoomState === "OFFLINE" ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-500" : warRoomState === "UNDER ATTACK" ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500"}`}>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm ${warRoomChipPending ? "bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-300" : warRoomState === "OFFLINE" ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-500" : warRoomState === "UNDER ATTACK" ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-500"}`}>
             <span className="relative flex h-2 w-2">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${warRoomState === "OFFLINE" ? "bg-amber-400" : warRoomState === "UNDER ATTACK" ? "bg-red-400" : "bg-emerald-400"}`}></span>
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${warRoomState === "OFFLINE" ? "bg-amber-500" : warRoomState === "UNDER ATTACK" ? "bg-red-500" : "bg-emerald-500"}`}></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${warRoomChipPending ? "bg-slate-400" : warRoomState === "OFFLINE" ? "bg-amber-400" : warRoomState === "UNDER ATTACK" ? "bg-red-400" : "bg-emerald-400"}`}></span>
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${warRoomChipPending ? "bg-slate-500" : warRoomState === "OFFLINE" ? "bg-amber-500" : warRoomState === "UNDER ATTACK" ? "bg-red-500" : "bg-emerald-500"}`}></span>
             </span>
             <span className="text-xs font-semibold tracking-wide">
-              {warRoomState}
+              {warRoomChipPending ? "CHECKING..." : warRoomState}
             </span>
             {warRoom.degraded && (
               <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400">
