@@ -366,7 +366,7 @@ class SOAREngine:
             if exists[0]==0:
                 await self._mark_blocked(ip)
                 return finish("already_blocked")
-            result=await self._run_firewall(["-A","INPUT","-s",ip,"-j","DROP"],event)
+            result=await self._run_firewall(["-I","INPUT","1","-s",ip,"-j","DROP"],event)
             if result[0]==0:
                 await self._mark_blocked(ip)
                 logger.warning("iptables DROP: %s",ip); return finish("iptables_block")

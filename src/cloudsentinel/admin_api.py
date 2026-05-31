@@ -1807,8 +1807,9 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         check = [firewall_path, "-C", "INPUT", "-s", ip, "-j", "DROP"]
         add = [
             firewall_path,
-            "-A",
+            "-I",
             "INPUT",
+            "1",
             "-s",
             ip,
             "-m",
