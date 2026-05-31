@@ -33,6 +33,7 @@ WAR_ROOM_ACTIVE_FRESHNESS_MS = ACTIVE_FRESHNESS_WINDOW_SECONDS * 1000
 WAR_ROOM_REDIS_TTL_SECONDS = 24 * 60 * 60
 WAR_ROOM_DEGRADED_HOLD_MS = 60_000
 WAR_ROOM_STATE_REDIS_KEY = "cloudsentinel:war_room_state:v1"
+EXPOSURE_STATE_REDIS_KEY = "cloudsentinel:exposure_state:v1"
 WAR_ROOM_EVIDENCE_LOOKBACK_MINUTES = 30
 HOT_CACHE_PREFIX = "cloudsentinel:hotcache:v1"
 HOT_CACHE_TTL_SUMMARY_SECONDS = 5
@@ -1119,6 +1120,7 @@ def _compose_war_room_state(
     now_ms: int,
     persisted: dict[str, Any] | None,
     evidence: dict[str, Any],
+    exposure: dict[str, Any] | None,
     degraded: bool,
     source: str,
     authoritative: bool,
@@ -1150,6 +1152,12 @@ def _compose_war_room_state(
         state = "under_attack"
     else:
         state = "live"
+    exposure_data = exposure or {}
+    desired_enabled = _to_bool(exposure_data.get("desired_enabled", True))
+    effective_enabled = _to_bool(exposure_data.get("effective_enabled", True))
+    exposure_syncing = desired_enabled != effective_enabled
+    if not effective_enabled:
+        state = "offline"
     return {
         "ok": True,
         "state": state,
@@ -1165,6 +1173,13 @@ def _compose_war_room_state(
             "onlineEvidence": evidence.get("source", source),
             "attackEvidence": evidence.get("source", source),
             "storage": "memory" if degraded else "redis",
+        },
+        "exposure": {
+            "provider": str(exposure_data.get("provider") or _exposure_provider()),
+            "desiredEnabled": desired_enabled,
+            "effectiveEnabled": effective_enabled,
+            "syncing": exposure_syncing,
+            "updatedAt": _as_int(exposure_data.get("updated_at")),
         },
         "windows": {
             "onlineGraceMs": WAR_ROOM_ONLINE_GRACE_MS,
@@ -1290,6 +1305,43 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             "updated_at": _as_int(raw.get("updated_at")),
         }, latency_ms, redis_mode)
 
+    async def _load_exposure_state() -> dict[str, Any]:
+        try:
+            redis_client, _ = await _resolve_war_room_redis()
+            raw = await redis_client.hgetall(EXPOSURE_STATE_REDIS_KEY)
+            if not raw:
+                return {}
+            desired_enabled = _to_bool(raw.get("desired_enabled"))
+            effective_enabled = _to_bool(raw.get("effective_enabled"))
+            return {
+                "provider": str(raw.get("provider") or _exposure_provider()),
+                "desired_enabled": desired_enabled,
+                "effective_enabled": effective_enabled,
+                "updated_at": _as_int(raw.get("updated_at")),
+            }
+        except Exception:
+            return {}
+
+    async def _persist_exposure_state(
+        *,
+        provider: str,
+        desired_enabled: bool,
+        effective_enabled: bool,
+        updated_at_ms: int | None = None,
+    ) -> None:
+        redis_client, _ = await _resolve_war_room_redis()
+        stamp = _as_int(updated_at_ms or _now_ms())
+        await redis_client.hset(
+            EXPOSURE_STATE_REDIS_KEY,
+            mapping={
+                "provider": provider,
+                "desired_enabled": "1" if desired_enabled else "0",
+                "effective_enabled": "1" if effective_enabled else "0",
+                "updated_at": str(stamp),
+            },
+        )
+        await redis_client.expire(EXPOSURE_STATE_REDIS_KEY, WAR_ROOM_REDIS_TTL_SECONDS)
+
     async def _persist_war_room_state(payload: dict[str, Any]) -> tuple[float, str]:
         redis_client, redis_mode = await _resolve_war_room_redis()
         fields = {
@@ -1350,10 +1402,12 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         try:
             evidence = _load_war_room_evidence_from_clickhouse(settings)
             persisted, redis_read_latency_ms, redis_read_mode = await _load_war_room_persisted_state()
+            exposure = await _load_exposure_state()
             state = _compose_war_room_state(
                 now_ms=now_ms,
                 persisted=persisted,
                 evidence=evidence,
+                exposure=exposure,
                 degraded=False,
                 source="clickhouse" if evidence.get("authoritative") else "runtime",
                 authoritative=bool(evidence.get("authoritative")),
@@ -1421,6 +1475,14 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                     "redisReadLatencyMs": 0.0,
                     "redisWriteLatencyMs": 0.0,
                 }
+                if "exposure" not in held:
+                    held["exposure"] = {
+                        "provider": _exposure_provider(),
+                        "desiredEnabled": True,
+                        "effectiveEnabled": True,
+                        "syncing": False,
+                        "updatedAt": 0,
+                    }
                 return held
 
             fallback = {
@@ -1438,6 +1500,13 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                     "onlineEvidence": "runtime",
                     "attackEvidence": "runtime",
                     "storage": "memory",
+                },
+                "exposure": {
+                    "provider": _exposure_provider(),
+                    "desiredEnabled": True,
+                    "effectiveEnabled": True,
+                    "syncing": False,
+                    "updatedAt": 0,
                 },
                 "windows": {
                     "onlineGraceMs": WAR_ROOM_ONLINE_GRACE_MS,
@@ -1738,6 +1807,15 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         if provider == "digitalocean":
             result = await _toggle_exposure_digitalocean(enabled, settings)
             paused = not bool(result.get("effective_enabled", enabled))
+            if result.get("ok"):
+                try:
+                    await _persist_exposure_state(
+                        provider=provider,
+                        desired_enabled=enabled,
+                        effective_enabled=not paused,
+                    )
+                except Exception:
+                    pass
             result["enabled"] = not paused
             result["paused"] = paused
             return result
@@ -1788,6 +1866,15 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 code, _, stderr = await _run_command(add)
                 actions.append({"port": port, "action": "paused", "ok": code == 0, "error": stderr[:200]})
         paused = not enabled
+        if all(item.get("ok") for item in actions):
+            try:
+                await _persist_exposure_state(
+                    provider=provider,
+                    desired_enabled=enabled,
+                    effective_enabled=enabled,
+                )
+            except Exception:
+                pass
         return {
             "ok": all(item["ok"] for item in actions),
             "enabled": enabled,

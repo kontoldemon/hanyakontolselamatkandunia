@@ -82,6 +82,13 @@ export type WarRoomState = {
     redisReadLatencyMs?: number;
     redisWriteLatencyMs?: number;
   };
+  exposure?: {
+    provider?: string;
+    desiredEnabled?: boolean;
+    effectiveEnabled?: boolean;
+    syncing?: boolean;
+    updatedAt?: number;
+  };
 };
 
 export type CapturedSession = {
@@ -231,6 +238,13 @@ const EMPTY_WAR_ROOM_STATE: WarRoomState = {
     onlineGraceMs: 25_000,
     attackCooldownMs: 90_000,
     activeFreshnessMs: 90_000,
+  },
+  exposure: {
+    provider: "runtime",
+    desiredEnabled: true,
+    effectiveEnabled: true,
+    syncing: false,
+    updatedAt: 0,
   },
 };
 
@@ -1007,7 +1021,7 @@ export function useWarRoomState() {
   useEffect(() => {
     let cancelled = false;
 
-    const maybeSetOffline = () => {
+    const keepLastState = () => {
       const now = Date.now();
       const staleFor = now - lastSuccessAtRef.current;
       if (
@@ -1020,13 +1034,12 @@ export function useWarRoomState() {
       if (!cancelled) {
         setWarRoomState((prev) => {
           const next = {
-          ...prev,
-          ok: false,
-          state: "offline",
-          degraded: true,
-          authoritative: false,
-          source: "runtime",
-          updatedAt: Date.now(),
+            ...prev,
+            ok: false,
+            degraded: true,
+            authoritative: false,
+            source: "runtime",
+            updatedAt: Date.now(),
           } as WarRoomState;
           WAR_ROOM_SNAPSHOT_CACHE = next;
           persistWarRoomState(next);
@@ -1044,7 +1057,7 @@ export function useWarRoomState() {
         }
         if (!response.ok) {
           consecutiveFailuresRef.current += 1;
-          maybeSetOffline();
+          keepLastState();
           return;
         }
         const data = (await response.json()) as WarRoomState;
@@ -1063,7 +1076,7 @@ export function useWarRoomState() {
         setWarRoomState(nextState);
       } catch {
         consecutiveFailuresRef.current += 1;
-        maybeSetOffline();
+        keepLastState();
       }
     }
 

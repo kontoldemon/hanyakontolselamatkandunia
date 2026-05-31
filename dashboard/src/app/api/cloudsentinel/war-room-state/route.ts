@@ -28,6 +28,13 @@ type WarRoomStatePayload = {
     redisReadLatencyMs?: number;
     redisWriteLatencyMs?: number;
   };
+  exposure?: {
+    provider?: string;
+    desiredEnabled?: boolean;
+    effectiveEnabled?: boolean;
+    syncing?: boolean;
+    updatedAt?: number;
+  };
 };
 
 const offlineFallback: WarRoomStatePayload = {
@@ -50,6 +57,13 @@ const offlineFallback: WarRoomStatePayload = {
     onlineGraceMs: 45_000,
     attackCooldownMs: 90_000,
     activeFreshnessMs: 90_000,
+  },
+  exposure: {
+    provider: "runtime",
+    desiredEnabled: true,
+    effectiveEnabled: true,
+    syncing: false,
+    updatedAt: 0,
   },
 };
 
@@ -140,6 +154,13 @@ async function loadCompatibilityWarRoomState(baseUrl: string, token?: string): P
       onlineGraceMs,
       attackCooldownMs,
       activeFreshnessMs,
+    },
+    exposure: {
+      provider: "compat",
+      desiredEnabled: true,
+      effectiveEnabled: true,
+      syncing: false,
+      updatedAt: now,
     },
   };
 }
