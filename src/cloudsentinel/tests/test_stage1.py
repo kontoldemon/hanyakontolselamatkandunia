@@ -235,14 +235,12 @@ def test_admin_api_exposure_digitalocean_provider(monkeypatch: pytest.MonkeyPatc
     verify_payload = {
         "firewall": {
             "id": "fw-test",
+            "name": "fw-test-name",
+            "outbound_rules": [],
+            "droplet_ids": [],
+            "tags": [],
             "inbound_rules": [
                 {"protocol": "tcp", "ports": "22", "sources": {"addresses": ["0.0.0.0/0"]}},
-                {
-                    "protocol": "tcp",
-                    "ports": str(settings.honeypot.ssh_port),
-                    "sources": {"addresses": ["0.0.0.0/0", "::/0"]},
-                    "action": "drop",
-                },
             ],
         }
     }
