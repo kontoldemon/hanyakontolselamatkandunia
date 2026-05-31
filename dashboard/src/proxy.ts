@@ -7,6 +7,7 @@ const publicPaths = [
   "/api/auth/login",
   "/api/auth/verify",
   "/api/auth/logout",
+  "/api/cloudsentinel/summary",
   "/505",
   "/favicon.ico",
   "/logo.svg",
