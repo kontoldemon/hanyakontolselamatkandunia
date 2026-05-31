@@ -10,10 +10,12 @@ const LIVE_ACTIVITY_WINDOW_MS = 90 * 1000;
 const ONLINE_GRACE_MS = 25 * 1000;
 const UNDER_ATTACK_COOLDOWN_MS = 90 * 1000;
 const REALTIME_ATTACK_HINT_MS = 20 * 1000;
+const EXPOSURE_STATE_KEY = "cloudsentinel.exposure.paused";
 
 export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [displayConnections, setDisplayConnections] = useState(0);
+  const [exposurePaused, setExposurePaused] = useState(false);
 
   const stats = useDashboardStats();
   const threatLogs = useLiveThreatLogs();
@@ -29,6 +31,18 @@ export default function Dashboard() {
     return () => {
       clearTimeout(t);
       clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readExposure = () => setExposurePaused(window.sessionStorage.getItem(EXPOSURE_STATE_KEY) === "1");
+    readExposure();
+    window.addEventListener("storage", readExposure);
+    const timer = window.setInterval(readExposure, 1500);
+    return () => {
+      window.removeEventListener("storage", readExposure);
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -181,8 +195,12 @@ export default function Dashboard() {
     : ((backendWarRoomState === "LIVE" && hasRealtimeAttackHint) ? "UNDER ATTACK" : backendWarRoomState);
   const initialUnknownState = !warRoom.ok && warRoom.updatedAt <= 0;
   const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
-    initialUnknownState && derivedWarRoomState === "OFFLINE" ? "LIVE" : derivedWarRoomState;
-  const underAttack = useEmergencyFallback ? inferredUnderAttack : (backendUnderAttack || hasRealtimeAttackHint);
+    exposurePaused
+      ? "OFFLINE"
+      : (initialUnknownState && derivedWarRoomState === "OFFLINE" ? "LIVE" : derivedWarRoomState);
+  const underAttack = exposurePaused
+    ? false
+    : (useEmergencyFallback ? inferredUnderAttack : (backendUnderAttack || hasRealtimeAttackHint));
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
       return false;

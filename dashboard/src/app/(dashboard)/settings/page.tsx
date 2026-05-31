@@ -6,11 +6,15 @@ import { useSensorOperations, useSocketTelemetry } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 
 import CustomDropdown from "@/components/CustomDropdown";
+const EXPOSURE_STATE_KEY = "cloudsentinel.exposure.paused";
 
 export default function SettingsPage() {
     const operations = useSensorOperations();
     const socketTelemetry = useSocketTelemetry();
-    const [exposurePaused, setExposurePaused] = useState(false);
+    const [exposurePaused, setExposurePaused] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return window.sessionStorage.getItem(EXPOSURE_STATE_KEY) === "1";
+    });
     const [exposureBusy, setExposureBusy] = useState(false);
     const [isSocketFullScreen, setIsSocketFullScreen] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -55,9 +59,13 @@ export default function SettingsPage() {
             });
             const data = await response.json();
             if (data.ok) {
-                setExposurePaused(Boolean(data.paused));
+                const paused = Boolean(data.paused);
+                setExposurePaused(paused);
+                if (typeof window !== "undefined") {
+                    window.sessionStorage.setItem(EXPOSURE_STATE_KEY, paused ? "1" : "0");
+                }
                 setToast({
-                    message: data.paused ? "Honeypot exposure set to offline." : "Honeypot exposure set to online.",
+                    message: paused ? "Honeypot exposure set to offline." : "Honeypot exposure set to online.",
                     type: "success",
                 });
             } else {

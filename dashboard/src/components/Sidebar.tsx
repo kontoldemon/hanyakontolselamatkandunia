@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { LayoutDashboard, Terminal, BrainCircuit, Settings, LogOut, Shield, ChevronLeft } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -9,9 +9,13 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { useSensorOperations } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
+const SIDEBAR_COLLAPSED_KEY = "cloudsentinel.sidebar.collapsed";
 
 export default function Sidebar() {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+    });
     const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
@@ -29,6 +33,11 @@ export default function Sidebar() {
         if (v === "dark" || v === "light") setTheme(v);
         else setTheme(theme === "dark" ? "light" : "dark");
     }, [theme, setTheme]));
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? "1" : "0");
+    }, [isCollapsed]);
 
     const links = [
         { name: "War Room", href: "/dashboard", icon: LayoutDashboard },
