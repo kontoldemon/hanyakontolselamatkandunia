@@ -12,6 +12,16 @@ export type AgentActionType =
   // ── Generic UI Command (controls dropdowns, search, filters, toggles) ──
   | "ui_command";
 
+const VALID_ACTION_TYPES: ReadonlySet<AgentActionType> = new Set<AgentActionType>([
+  "navigate_session",
+  "navigate_page",
+  "show_threat_map",
+  "block_ip",
+  "export_data",
+  "toggle_exposure",
+  "ui_command",
+]);
+
 export interface AgentAction {
   type: AgentActionType;
   label: string;
@@ -111,6 +121,9 @@ export function parseActionsFromResponse(aiText: string): { cleanText: string; p
 
   const cleanText = processText.replace(MARKER_RE, (_, rawType: string, rawParam: string) => {
     const type = rawType as AgentActionType;
+    if (!VALID_ACTION_TYPES.has(type)) {
+      return "";
+    }
     const param = (rawParam ?? "").trim();
 
     if (type === "ui_command") {
@@ -122,6 +135,11 @@ export function parseActionsFromResponse(aiText: string): { cleanText: string; p
     } else {
       let resolvedParam = param;
       if (type === "navigate_page" && param === "/") resolvedParam = "/dashboard";
+      if (type === "navigate_page") {
+        const allowed = new Set(["/dashboard", "/sessions", "/intelligence", "/settings"]);
+        const normalized = resolvedParam.startsWith("/") ? resolvedParam : `/${resolvedParam}`;
+        resolvedParam = allowed.has(normalized) ? normalized : "/dashboard";
+      }
       const { label, description } = labelForAction(type, resolvedParam);
       actions.push({ type, label, description, params: { value: resolvedParam } });
     }

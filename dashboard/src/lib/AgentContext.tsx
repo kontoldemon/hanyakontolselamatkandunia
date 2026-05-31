@@ -131,6 +131,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           case "navigate_page": {
             let path = action.params.value || "/dashboard";
             if (path === "/") path = "/dashboard"; // Remap legacy LLM prompts
+            if (!path.startsWith("/")) path = `/${path}`;
+            const allowed = new Set(["/dashboard", "/sessions", "/intelligence", "/settings"]);
+            if (!allowed.has(path)) path = "/dashboard";
             router.push(path);
             await wait(1000);
             const names: Record<string, string> = { "/dashboard": "War Room", "/sessions": "Sessions", "/intelligence": "Intelligence", "/settings": "Settings" };
@@ -139,7 +142,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           }
 
           case "show_threat_map": {
-            router.push("/");
+            router.push("/dashboard");
             await wait(1200);
             result = "Navigated to the War Room. The Global Threat Map is now visible with real-time attack indicators.";
             break;

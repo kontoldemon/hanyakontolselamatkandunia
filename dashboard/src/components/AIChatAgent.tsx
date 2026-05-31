@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Bot, Send, X, Loader2, Minimize2, Maximize2, ShieldCheck, ShieldX, Zap } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCapturedSessions, useDashboardStats, useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
@@ -22,6 +22,7 @@ export default function AIChatAgent() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const messagesRef = useRef<AgentMessage[]>(messages);
     const pathname = usePathname();
     const { executeAction, isExecuting } = useAgent();
     const lastAiMsgCountRef = useRef(1);
@@ -32,18 +33,114 @@ export default function AIChatAgent() {
     const liveLogs = useLiveThreatLogs();
     const operations = useSensorOperations();
     const intelStats = useIntelStats(liveLogs, sessions);
-    const activeIpCount = sessions.filter((s) => s.status === "Active").length;
+    const activeIpCount = sessions.filter((s) => (s.status ?? "").toLowerCase() === "active").length;
 
     // Build a brief list of top IPs for the AI to reference
     const topIps = sessions.slice(0, 8).map((s) => `${s.ip} (${s.country}, ${s.status})`).join(", ");
+    const intelligenceSnapshot = useMemo(() => {
+        const safeLogs = liveLogs ?? [];
+        const safeSessions = sessions ?? [];
+        const distributionRows = operations?.sensor?.distribution?.data ?? [];
+        const topAttack = distributionRows.length > 0
+            ? distributionRows.reduce((prev, current) => (Number(prev.value) > Number(current.value) ? prev : current))
+            : null;
+
+        const mitreSet = new Set<string>();
+        for (const session of safeSessions) {
+            for (const tech of session.mitreTechniques ?? []) {
+                if (tech) mitreSet.add(tech);
+            }
+        }
+        for (const log of safeLogs) {
+            for (const tech of log.mitreTechniques ?? []) {
+                if (tech) mitreSet.add(tech);
+            }
+        }
+
+        const hasshSet = new Set<string>();
+        for (const session of safeSessions) {
+            const fp = (session.fingerprint ?? "").trim();
+            if (fp) hasshSet.add(fp);
+        }
+        for (const log of safeLogs) {
+            const fp = (log.hassh ?? "").trim();
+            if (fp) hasshSet.add(fp);
+        }
+
+        const commandSet = new Set<string>();
+        for (const session of safeSessions) {
+            for (const cmd of session.input ?? []) {
+                const trimmed = cmd.trim();
+                if (trimmed && !trimmed.startsWith("cloudsentinel.") && !trimmed.includes("[redacted]")) commandSet.add(trimmed);
+            }
+        }
+        for (const log of safeLogs) {
+            const payload = (log.payload ?? "").trim();
+            if (log.role === "attacker" && payload && !payload.startsWith("cloudsentinel.") && !payload.includes("[redacted]")) {
+                commandSet.add(payload);
+            }
+        }
+
+        const totalEvents = Number(stats.totalEvents ?? safeLogs.length) || 0;
+        const uniqueIps = Number(stats.uniqueIps ?? intelStats.uniqueIps) || 0;
+        const countries = Number(stats.uniqueCountries ?? intelStats.totalCountries) || 0;
+        const avgRisk = Number.isFinite(Number(stats.avgRisk)) ? Number(stats.avgRisk) : intelStats.risk.avg;
+        const blockRate = Number.isFinite(Number(stats.blockRate)) ? Number(stats.blockRate) : intelStats.soar.blockRate;
+        const topNetwork = intelStats.isps[0]?.name ?? "Unknown";
+
+        return {
+            totalEvents,
+            uniqueIps,
+            countries,
+            uniqueCommands: commandSet.size,
+            avgRisk: Number(avgRisk.toFixed(1)),
+            blockRate: Number(blockRate.toFixed(1)),
+            topAttackName: topAttack?.name ?? "Unknown",
+            topAttackValue: Number(topAttack?.value ?? 0),
+            mitreCount: mitreSet.size,
+            hasshCount: hasshSet.size,
+            topNetwork,
+        };
+    }, [liveLogs, sessions, operations, stats, intelStats]);
 
     // Detect focused session IP from URL (avoids useSearchParams Suspense requirement)
     const [focusIp, setFocusIp] = useState("");
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        setFocusIp(params.get("focusIp")?.trim() ?? "");
+        const updateFocusIp = () => {
+            const params = new URLSearchParams(window.location.search);
+            setFocusIp(params.get("focusIp")?.trim() ?? "");
+        };
+        const patchHistoryForLocationChange = () => {
+            const historyAny = window.history as History & { __cloudsentinelPatched?: boolean };
+            if (historyAny.__cloudsentinelPatched) return;
+            const wrap = (method: "pushState" | "replaceState") => {
+                const original = window.history[method];
+                window.history[method] = function (...args: Parameters<History[typeof method]>) {
+                    const result = original.apply(this, args);
+                    window.dispatchEvent(new Event("locationchange"));
+                    return result;
+                };
+            };
+            wrap("pushState");
+            wrap("replaceState");
+            historyAny.__cloudsentinelPatched = true;
+        };
+        patchHistoryForLocationChange();
+        updateFocusIp();
+        window.addEventListener("popstate", updateFocusIp);
+        window.addEventListener("hashchange", updateFocusIp);
+        window.addEventListener("locationchange", updateFocusIp);
+        return () => {
+            window.removeEventListener("popstate", updateFocusIp);
+            window.removeEventListener("hashchange", updateFocusIp);
+            window.removeEventListener("locationchange", updateFocusIp);
+        };
     }, [pathname]);
     const focusedSession = focusIp ? sessions.find((s) => s.ip === focusIp) : null;
+
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
 
     // Build contextual info about the focused session
     const focusedSessionContext = focusedSession
@@ -81,34 +178,46 @@ export default function AIChatAgent() {
 
     const handleActionApprove = useCallback(
         async (msgIndex: number) => {
-            const msg = messages[msgIndex];
-            const actions = msg?.actions;
+            const snapshotMsg = messagesRef.current[msgIndex];
+            if (!snapshotMsg?.actions || snapshotMsg.actions.length === 0) return;
+            let actions: NonNullable<AgentMessage["actions"]> = [];
+            let postActionContent = "";
+            setMessages((prev) => {
+                const msg = prev[msgIndex];
+                actions = msg?.actions ?? [];
+                postActionContent = msg?.postActionContent ?? "";
+                if (!msg || actions.length === 0) {
+                    return prev;
+                }
+                return prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "executing" as const } : m));
+            });
             if (!actions || actions.length === 0) return;
-
-            // Mark as executing
-            setMessages((prev) =>
-                prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "executing" as const } : m)),
-            );
 
             for (const action of actions) {
                 await executeAction(action);
             }
 
-            // Mark as done
-            setMessages((prev) =>
-                prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "done" as const } : m)),
-            );
+            // Mark as done and read the latest message content safely
+            let completionText = postActionContent || (actions.length > 1 ? "All actions completed successfully." : "Action completed.");
+            setMessages((prev) => {
+                const updated = prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "done" as const } : m));
+                const latestMsg = updated[msgIndex];
+                if (latestMsg?.postActionContent) {
+                    completionText = latestMsg.postActionContent;
+                }
+                return updated;
+            });
 
             // Append agent completion message
             setMessages((prev) => [
                 ...prev,
                 {
                     role: "ai",
-                    content: msg.postActionContent || (actions.length > 1 ? "All actions completed successfully." : "Action completed."),
+                    content: completionText,
                 },
             ]);
         },
-        [messages, executeAction],
+        [executeAction],
     );
 
     const handleActionDeny = useCallback(
@@ -134,12 +243,12 @@ export default function AIChatAgent() {
         setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
         setIsLoading(true);
 
-        const recentHistory = messages.slice(-5).map(m => `${m.role === "user" ? "User" : "AI"}: ${m.content}`).join("\n");
+        const recentHistory = [...messages, { role: "user", content: userMsg } as AgentMessage]
+            .slice(-6)
+            .map(m => `${m.role === "user" ? "User" : "AI"}: ${m.content}`)
+            .join("\n");
 
-        // Compute Advanced Intelligence context
-        const attackTypes = operations?.sensor.distribution.data ?? [];
-        const topAttack = attackTypes.length > 0 ? attackTypes.reduce((prev, current) => (Number(prev.value) > Number(current.value)) ? prev : current) : null;
-        
+        // Compute focused session behavior summary
         let longestSessionIp = "None";
         let longestSessionSeconds = 0;
         if (sessions.length > 0) {
@@ -162,12 +271,19 @@ MTTB: ${stats.mttb}
 Top IPs: ${topIps}${focusedSessionContext}
 
 Advanced Intelligence Summary:
-- Most frequent (highest) attack type: ${topAttack ? topAttack.name + ' (' + topAttack.value + ' hits)' : 'Unknown'}
+- Most frequent (highest) attack type: ${intelligenceSnapshot.topAttackName} (${intelligenceSnapshot.topAttackValue} hits)
 - Longest event/session alive: IP ${longestSessionIp} lasting ${longestSessionSeconds} seconds.
-- Average Risk Score: ${intelStats.risk.avg.toFixed(1)}/100
-- Unique Countries Targeted: ${intelStats.totalCountries}
-- Top ISP Attacking: ${intelStats.isps[0]?.name ?? "Unknown"}
-- SOAR Block Rate: ${intelStats.soar.blockRate}%
+- Average Risk Score: ${intelligenceSnapshot.avgRisk}/100
+- Unique Countries Targeted: ${intelligenceSnapshot.countries}
+- Top ISP/Network Attacking: ${intelligenceSnapshot.topNetwork}
+- SOAR Block Rate: ${intelligenceSnapshot.blockRate}%
+
+Intelligence Dashboard Snapshot (authoritative dashboard telemetry):
+- Total Events: ${intelligenceSnapshot.totalEvents}
+- Unique IPs: ${intelligenceSnapshot.uniqueIps}
+- MITRE Techniques Mapped: ${intelligenceSnapshot.mitreCount}
+- HASSH Signatures: ${intelligenceSnapshot.hasshCount}
+- Unique Commands: ${intelligenceSnapshot.uniqueCommands}
 
 ${recentHistory ? `\nRECENT CONVERSATION HISTORY:\n${recentHistory}\n` : ""}
 
