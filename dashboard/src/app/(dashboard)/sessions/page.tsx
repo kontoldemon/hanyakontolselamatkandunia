@@ -261,7 +261,7 @@ export default function SessionsPage() {
             return;
         }
         const staleFor = Date.now() - lastNonEmptySessionsAtRef.current;
-        if (staleFor > 12000) {
+        if (staleFor > 4000) {
             setDisplayedSessions([]);
         }
     }, [filteredSessions]);

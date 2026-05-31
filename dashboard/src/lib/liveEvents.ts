@@ -755,7 +755,7 @@ export function useLiveThreatLogs(enabled = true) {
       initSocket(url);
       loadRecentEvents();
       if (!pollInterval) {
-        pollInterval = window.setInterval(loadRecentEvents, 12000);
+        pollInterval = window.setInterval(loadRecentEvents, 3000);
       }
     }
 
@@ -1099,7 +1099,7 @@ export function useCapturedSessions() {
   useEffect(() => {
     const tick = () => setNowMs(Date.now());
     tick();
-    const timer = window.setInterval(tick, 5000);
+    const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
   }, []);
 

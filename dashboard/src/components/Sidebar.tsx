@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
-import { useSensorOperations } from "@/lib/liveEvents";
+import { useSensorOperations, useWarRoomState } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 const SIDEBAR_COLLAPSED_KEY = "cloudsentinel.sidebar.collapsed";
 
@@ -21,7 +21,16 @@ export default function Sidebar() {
     const router = useRouter();
     const { theme, setTheme } = useTheme();
     const operations = useSensorOperations();
-    const sensorLive = operations?.source === "live";
+    const warRoom = useWarRoomState();
+    const exposurePaused = warRoom.exposure?.effectiveEnabled === false;
+    const sensorLive =
+        !exposurePaused &&
+        (
+            warRoom.state === "live" ||
+            warRoom.state === "under_attack" ||
+            operations?.source === "live" ||
+            operations?.sensor.readiness.ok === true
+        );
 
     // ── Agent command handlers ──
     useAgentCommand("sidebar.toggle", useCallback((v: string) => {
