@@ -8,6 +8,8 @@ import json
 import os
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from datetime import UTC
 from typing import Any
 
@@ -45,6 +47,60 @@ WAR_ROOM_ATTACK_EVENT_IDS = (
     "cloudsentinel.http.request",
 )
 logger = structlog.get_logger("cloudsentinel.admin_api")
+
+
+def _exposure_provider() -> str:
+    return os.getenv("CLOUDSENTINEL_EXPOSURE_PROVIDER", "iptables").strip().lower()
+
+
+def _do_api_base() -> str:
+    return os.getenv("CLOUDSENTINEL_DO_API_BASE", "https://api.digitalocean.com/v2").rstrip("/")
+
+
+def _do_firewall_id() -> str:
+    return os.getenv("CLOUDSENTINEL_DO_FIREWALL_ID", "").strip()
+
+
+def _do_token() -> str:
+    return os.getenv("DIGITALOCEAN_TOKEN", "").strip()
+
+
+def _exposure_admin_ports() -> set[int]:
+    raw = os.getenv("CLOUDSENTINEL_EXPOSURE_ADMIN_PORTS", "22")
+    ports: set[int] = set()
+    for token in raw.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            value = int(token)
+        except ValueError:
+            continue
+        if 1 <= value <= 65535:
+            ports.add(value)
+    if not ports:
+        ports.add(22)
+    return ports
+
+
+def _exposure_target_ports(settings: Settings) -> list[int]:
+    raw = os.getenv("CLOUDSENTINEL_EXPOSURE_TARGET_PORTS", "").strip()
+    requested: set[int] = set()
+    if raw:
+        for token in raw.split(","):
+            token = token.strip()
+            if not token:
+                continue
+            try:
+                value = int(token)
+            except ValueError:
+                continue
+            if 1 <= value <= 65535:
+                requested.add(value)
+    if not requested:
+        requested.add(int(settings.honeypot.ssh_port))
+    admin_ports = _exposure_admin_ports()
+    return sorted(port for port in requested if port not in admin_ports)
 
 
 def _strict_truth_mode_enabled() -> bool:
@@ -161,6 +217,185 @@ async def _run_command(args: list[str], timeout: float = 5.0) -> tuple[int, str,
         result.stdout or "",
         result.stderr or "",
     )
+
+
+async def _http_json(
+    method: str, url: str, token: str, payload: dict[str, Any] | None = None, timeout: float = 7.0
+) -> tuple[int, dict[str, Any], str]:
+    body = None
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    if payload is not None:
+        body = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(url=url, data=body, method=method.upper(), headers=headers)
+
+    def run() -> tuple[int, dict[str, Any], str]:
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                raw = response.read().decode("utf-8")
+                parsed = json.loads(raw) if raw else {}
+                return int(response.status), parsed if isinstance(parsed, dict) else {}, ""
+        except urllib.error.HTTPError as exc:
+            raw = exc.read().decode("utf-8") if exc.fp else ""
+            try:
+                parsed = json.loads(raw) if raw else {}
+            except Exception:
+                parsed = {}
+            return int(exc.code), parsed if isinstance(parsed, dict) else {}, raw[:300]
+        except Exception as exc:
+            return 0, {}, str(exc)[:300]
+
+    return await asyncio.to_thread(run)
+
+
+def _do_rule_matches_port(rule: dict[str, Any], port: int) -> bool:
+    ports = rule.get("ports")
+    if not isinstance(ports, list):
+        return False
+    return str(port) in {str(item) for item in ports}
+
+
+def _do_rule_is_global(rule: dict[str, Any]) -> bool:
+    sources = rule.get("sources", {})
+    if not isinstance(sources, dict):
+        return False
+    addresses = sources.get("addresses")
+    if not isinstance(addresses, list):
+        return False
+    normalized = {str(item).strip() for item in addresses}
+    return "0.0.0.0/0" in normalized or "::/0" in normalized
+
+
+def _do_rule_is_tcp(rule: dict[str, Any]) -> bool:
+    return str(rule.get("protocol", "")).lower() == "tcp"
+
+
+def _do_read_blocked_ports(firewall: dict[str, Any], target_ports: set[int]) -> set[int]:
+    blocked: set[int] = set()
+    inbound = firewall.get("inbound_rules", [])
+    if not isinstance(inbound, list):
+        return blocked
+    for rule in inbound:
+        if not isinstance(rule, dict):
+            continue
+        if str(rule.get("action", "")).lower() != "drop":
+            continue
+        if not _do_rule_is_tcp(rule):
+            continue
+        if not _do_rule_is_global(rule):
+            continue
+        for port in target_ports:
+            if _do_rule_matches_port(rule, port):
+                blocked.add(port)
+    return blocked
+
+
+async def _toggle_exposure_digitalocean(enabled: bool, settings: Settings) -> dict[str, Any]:
+    firewall_id = _do_firewall_id()
+    token = _do_token()
+    target_ports = _exposure_target_ports(settings)
+    if not firewall_id:
+        return {"ok": False, "error": "missing CLOUDSENTINEL_DO_FIREWALL_ID", "actions": []}
+    if not token:
+        return {"ok": False, "error": "missing DIGITALOCEAN_TOKEN", "actions": []}
+    if not target_ports:
+        return {"ok": False, "error": "no target ports after admin safety filter", "actions": []}
+
+    target_set = set(target_ports)
+    firewall_url = f"{_do_api_base()}/firewalls/{firewall_id}"
+    status, before_json, before_err = await _http_json("GET", firewall_url, token)
+    if status != 200:
+        return {
+            "ok": False,
+            "error": f"digitalocean read failed status={status}",
+            "details": before_err,
+            "actions": [],
+        }
+    before_fw = before_json.get("firewall")
+    if not isinstance(before_fw, dict):
+        return {"ok": False, "error": "digitalocean payload missing firewall object", "actions": []}
+    before_rules = before_fw.get("inbound_rules", [])
+    if not isinstance(before_rules, list):
+        return {"ok": False, "error": "digitalocean firewall inbound_rules invalid", "actions": []}
+    before_blocked = _do_read_blocked_ports(before_fw, target_set)
+
+    new_rules: list[dict[str, Any]] = []
+    for rule in before_rules:
+        if not isinstance(rule, dict):
+            continue
+        remove = (
+            str(rule.get("action", "")).lower() == "drop"
+            and _do_rule_is_tcp(rule)
+            and _do_rule_is_global(rule)
+            and any(_do_rule_matches_port(rule, p) for p in target_set)
+        )
+        if not remove:
+            new_rules.append(rule)
+    if not enabled:
+        for port in sorted(target_set):
+            new_rules.append(
+                {
+                    "protocol": "tcp",
+                    "ports": str(port),
+                    "sources": {"addresses": ["0.0.0.0/0", "::/0"]},
+                    "action": "drop",
+                }
+            )
+
+    put_payload = {"inbound_rules": new_rules}
+    put_status, _, put_err = await _http_json("PUT", firewall_url, token, payload=put_payload)
+    if put_status not in {200, 202}:
+        return {
+            "ok": False,
+            "error": f"digitalocean update failed status={put_status}",
+            "details": put_err,
+            "actions": [],
+        }
+
+    verify_status, verify_json, verify_err = await _http_json("GET", firewall_url, token)
+    if verify_status != 200:
+        return {
+            "ok": False,
+            "error": f"digitalocean verify failed status={verify_status}",
+            "details": verify_err,
+            "actions": [],
+        }
+    verify_fw = verify_json.get("firewall")
+    if not isinstance(verify_fw, dict):
+        return {"ok": False, "error": "digitalocean verify payload invalid", "actions": []}
+    after_blocked = _do_read_blocked_ports(verify_fw, target_set)
+    expected_blocked = set() if enabled else target_set
+    verified = after_blocked == expected_blocked
+    if not verified:
+        rollback_payload = {"inbound_rules": before_rules}
+        rollback_status, _, rollback_err = await _http_json("PUT", firewall_url, token, payload=rollback_payload)
+        return {
+            "ok": False,
+            "error": "digitalocean verify mismatch, rollback attempted",
+            "details": rollback_err,
+            "rollback_ok": rollback_status in {200, 202},
+            "actions": [],
+            "desired_enabled": enabled,
+            "effective_enabled": len(before_blocked) == 0,
+        }
+
+    actions: list[dict[str, Any]] = []
+    for port in sorted(target_set):
+        if enabled:
+            changed = port in before_blocked
+            actions.append({"port": port, "action": "opened" if changed else "already_open", "ok": True})
+        else:
+            changed = port not in before_blocked
+            actions.append({"port": port, "action": "paused" if changed else "already_paused", "ok": True})
+    return {
+        "ok": True,
+        "actions": actions,
+        "desired_enabled": enabled,
+        "effective_enabled": enabled,
+        "provider": "digitalocean",
+    }
 
 
 def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -> list[dict[str, Any]]:
@@ -1499,9 +1734,26 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     @app.post("/admin/exposure", dependencies=[Depends(require_auth)])
     async def exposure(body: dict[str, Any]) -> dict[str, Any]:
         enabled = _to_bool(body.get("enabled"))
+        provider = _exposure_provider()
+        if provider == "digitalocean":
+            result = await _toggle_exposure_digitalocean(enabled, settings)
+            paused = not bool(result.get("effective_enabled", enabled))
+            result["enabled"] = not paused
+            result["paused"] = paused
+            return result
+
         firewall_path = settings.soar.firewall_path or "/sbin/iptables"
-        ports = sorted({22, int(settings.honeypot.ssh_port)})
+        ports = _exposure_target_ports(settings)
         actions: list[dict[str, Any]] = []
+        if not ports:
+            return {
+                "ok": False,
+                "enabled": enabled,
+                "paused": not enabled,
+                "provider": provider,
+                "error": "no exposure target ports after admin safety filter",
+                "actions": actions,
+            }
         for port in ports:
             rule = [
                 firewall_path,
@@ -1535,9 +1787,14 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 add.insert(3, "1")
                 code, _, stderr = await _run_command(add)
                 actions.append({"port": port, "action": "paused", "ok": code == 0, "error": stderr[:200]})
-
         paused = not enabled
-        return {"ok": all(item["ok"] for item in actions), "enabled": enabled, "paused": paused, "actions": actions}
+        return {
+            "ok": all(item["ok"] for item in actions),
+            "enabled": enabled,
+            "paused": paused,
+            "provider": provider,
+            "actions": actions,
+        }
 
     @app.get("/attack-distribution", dependencies=[Depends(require_auth)])
     async def attack_distribution() -> list[dict[str, Any]]:

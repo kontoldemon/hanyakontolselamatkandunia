@@ -173,7 +173,78 @@ def test_admin_api_exposure_uses_honeypot_ports(monkeypatch: pytest.MonkeyPatch)
     assert response.status_code == 200
     assert response.json()["paused"] is True
     assert any(call[1:4] == ["-I", "INPUT", "1"] for call in calls)
-    assert {"22", str(settings.honeypot.ssh_port)}.issubset({part for call in calls for part in call})
+    touched_ports = {call[idx + 1] for call in calls for idx, part in enumerate(call) if part == "--dport"}
+    assert str(settings.honeypot.ssh_port) in touched_ports
+    assert "22" not in touched_ports
+
+
+def test_admin_api_exposure_digitalocean_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    settings.admin.token = SecretStr("test-token")
+    pipeline = EventPipeline(settings.redis)
+    app = create_admin_app(settings, pipeline)
+    client = TestClient(app)
+
+    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_PROVIDER", "digitalocean")
+    monkeypatch.setenv("CLOUDSENTINEL_DO_FIREWALL_ID", "fw-test")
+    monkeypatch.setenv("DIGITALOCEAN_TOKEN", "tok-test")
+    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_TARGET_PORTS", str(settings.honeypot.ssh_port))
+    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_ADMIN_PORTS", "22")
+
+    get_payload = {
+        "firewall": {
+            "id": "fw-test",
+            "inbound_rules": [
+                {"protocol": "tcp", "ports": "22", "sources": {"addresses": ["0.0.0.0/0"]}},
+            ],
+        }
+    }
+    verify_payload = {
+        "firewall": {
+            "id": "fw-test",
+            "inbound_rules": [
+                {"protocol": "tcp", "ports": "22", "sources": {"addresses": ["0.0.0.0/0"]}},
+                {
+                    "protocol": "tcp",
+                    "ports": str(settings.honeypot.ssh_port),
+                    "sources": {"addresses": ["0.0.0.0/0", "::/0"]},
+                    "action": "drop",
+                },
+            ],
+        }
+    }
+    calls: list[tuple[str, str]] = []
+
+    async def fake_http_json(
+        method: str,
+        url: str,
+        token: str,
+        payload: dict[str, Any] | None = None,
+        timeout: float = 7.0,
+    ) -> tuple[int, dict[str, Any], str]:
+        calls.append((method, url))
+        if method == "GET" and len(calls) == 1:
+            return 200, get_payload, ""
+        if method == "PUT":
+            return 200, {"firewall": {"id": "fw-test"}}, ""
+        if method == "GET" and len(calls) == 3:
+            return 200, verify_payload, ""
+        return 500, {}, "unexpected call"
+
+    monkeypatch.setattr("cloudsentinel.admin_api._http_json", fake_http_json)
+    response = client.post(
+        "/admin/exposure",
+        headers={"Authorization": "Bearer test-token"},
+        json={"enabled": False},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is True
+    assert data["provider"] == "digitalocean"
+    assert data["paused"] is True
 
 
 # ═══════════════════════════════════════════════════════════════════
