@@ -282,9 +282,29 @@ export default function SessionsPage() {
         }
     }, [displayedSessions, selectSession, listRef]));
 
-    const exactMatch = selectedSessionId ? sessions.find((s) => s.id === selectedSessionId) : null;
-    const selectedByIp = lastSelectedIp ? sessions.find((s) => s.ip === lastSelectedIp) : null;
-    const selectedSession = exactMatch || selectedByIp || lastSelectedSnapshotRef.current;
+    const sessionLastSeenMs = (session: CapturedSession) =>
+        session.lastSeenEpochMs ??
+        session.firstSeenEpochMs ??
+        session.startedAtEpochMs ??
+        0;
+    const exactMatchDisplayed = selectedSessionId ? displayedSessions.find((s) => s.id === selectedSessionId) : null;
+    const exactMatchRaw = selectedSessionId ? sessions.find((s) => s.id === selectedSessionId) : null;
+    const selectedByIpDisplayed = lastSelectedIp
+        ? displayedSessions
+            .filter((s) => s.ip === lastSelectedIp)
+            .sort((a, b) => sessionLastSeenMs(b) - sessionLastSeenMs(a))[0] ?? null
+        : null;
+    const selectedByIpRaw = lastSelectedIp
+        ? sessions
+            .filter((s) => s.ip === lastSelectedIp)
+            .sort((a, b) => sessionLastSeenMs(b) - sessionLastSeenMs(a))[0] ?? null
+        : null;
+    const selectedSession =
+        exactMatchDisplayed ||
+        selectedByIpDisplayed ||
+        exactMatchRaw ||
+        selectedByIpRaw ||
+        lastSelectedSnapshotRef.current;
 
     useEffect(() => {
         if (selectedSession) {
