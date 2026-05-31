@@ -574,6 +574,14 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
         onRegionClick?.(selectedRegion === topIp ? null : topIp);
     }, [onRegionClick, selectedRegion]);
 
+    useEffect(() => {
+        const handleFocusThreatMap = () => {
+            setIsExpanded(true);
+        };
+        window.addEventListener("agent:focus-threat-map", handleFocusThreatMap);
+        return () => window.removeEventListener("agent:focus-threat-map", handleFocusThreatMap);
+    }, []);
+
     const renderSources = useMemo(() => {
         if (!underAttack) return null;
         return sources.map((source, index) => {

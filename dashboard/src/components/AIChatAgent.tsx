@@ -102,6 +102,90 @@ export default function AIChatAgent() {
             topNetwork,
         };
     }, [liveLogs, sessions, operations, stats, intelStats]);
+    const intelligenceFactsJson = useMemo(() => {
+        const topCountries = (intelStats.countries ?? [])
+            .slice(0, 10)
+            .map((item) => ({ name: item.name, count: item.count }));
+        const topNetworks = (intelStats.isps ?? [])
+            .slice(0, 10)
+            .map((item) => ({ name: item.name, count: item.count }));
+
+        const mitreCountMap = new Map<string, number>();
+        for (const session of sessions) {
+            for (const ttp of session.mitreTechniques ?? []) {
+                if (!ttp) continue;
+                mitreCountMap.set(ttp, (mitreCountMap.get(ttp) ?? 0) + Math.max(1, session.sessionCount ?? 1));
+            }
+        }
+        for (const log of liveLogs) {
+            for (const ttp of log.mitreTechniques ?? []) {
+                if (!ttp) continue;
+                mitreCountMap.set(ttp, (mitreCountMap.get(ttp) ?? 0) + 1);
+            }
+        }
+        const mitreTop = [...mitreCountMap.entries()]
+            .map(([id, count]) => ({ id, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 12);
+
+        const hasshCountMap = new Map<string, number>();
+        for (const session of sessions) {
+            const hash = (session.fingerprint ?? "").trim();
+            if (!hash) continue;
+            hasshCountMap.set(hash, (hasshCountMap.get(hash) ?? 0) + Math.max(1, session.sessionCount ?? 1));
+        }
+        for (const log of liveLogs) {
+            const hash = (log.hassh ?? "").trim();
+            if (!hash) continue;
+            hasshCountMap.set(hash, (hasshCountMap.get(hash) ?? 0) + 1);
+        }
+        const hasshTop = [...hasshCountMap.entries()]
+            .map(([hash, count]) => ({ hash, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8);
+
+        const commandCountMap = new Map<string, number>();
+        const addCommand = (raw: string) => {
+            const cmd = raw.trim();
+            if (!cmd || cmd.startsWith("cloudsentinel.") || cmd.includes("[redacted]")) return;
+            commandCountMap.set(cmd, (commandCountMap.get(cmd) ?? 0) + 1);
+        };
+        for (const session of sessions) {
+            for (const cmd of session.input ?? []) addCommand(cmd);
+        }
+        for (const log of liveLogs) {
+            if (log.role === "attacker") addCommand(log.payload ?? "");
+        }
+        const topCommands = [...commandCountMap.entries()]
+            .map(([command, count]) => ({ command, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 12);
+
+        const passwordCounts = new Map<string, number>();
+        for (const log of liveLogs) {
+            const payload = String(log.payload || "").trim();
+            if (!payload.toLowerCase().startsWith("[auth]")) continue;
+            const match = payload.match(/\/\s*([^\s]+)\s*(?:attempt\s+\d+)?$/i);
+            const value = match?.[1]?.trim();
+            if (!value || value.toLowerCase() === "unknown") continue;
+            passwordCounts.set(value, (passwordCounts.get(value) ?? 0) + 1);
+        }
+        const topPasswords = [...passwordCounts.entries()]
+            .map(([password, count]) => ({ password, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 15);
+
+        return JSON.stringify({
+            window: "Last 24h (dashboard default)",
+            kpi: intelligenceSnapshot,
+            topCountries,
+            topNetworks,
+            mitreTop,
+            hasshTop,
+            topCommands,
+            topPasswords,
+        });
+    }, [intelStats, sessions, liveLogs, intelligenceSnapshot]);
 
     // Detect focused session IP from URL (avoids useSearchParams Suspense requirement)
     const [focusIp, setFocusIp] = useState("");
@@ -291,6 +375,13 @@ SYSTEM INSTRUCTIONS:
 You are CloudSentinel AI, an autonomous cybersecurity agent that FULLY CONTROLS the dashboard.
 You can navigate pages, click buttons, change dropdowns, set filters, search, and block IPs.
 
+STRICT DATA INTEGRITY RULES:
+1. NEVER invent or estimate telemetry values.
+2. If user asks summary/analytics, use ONLY values from INTELLIGENCE_FACTS_JSON below.
+3. If a requested field is missing in INTELLIGENCE_FACTS_JSON, say "Not available in current telemetry snapshot".
+4. Do NOT mention any number not present in this prompt context.
+5. Keep the same telemetry window as provided.
+
 PERSONALITY RULES:
 1. For casual greetings (hi, hello, hey, what's up, etc), respond warmly and briefly. Ask how you can help with the honeypot monitoring. Do NOT suggest any actions or include any ACTION markers for greetings.
 2. For questions about specific IPs, attackers, or threats, always reference the focused session context above if available.
@@ -331,6 +422,9 @@ UI CONTROL MARKERS (for controlling dropdowns, search, filters, toggles):
 GLOBAL CONTROLS (work from any page):
 [ACTION:ui_command:sidebar.toggle=VALUE] — Collapse or expand sidebar (collapse, expand, or toggle)
 [ACTION:ui_command:sidebar.theme=VALUE] — Switch theme (dark, light, or toggle)
+
+INTELLIGENCE_FACTS_JSON:
+${intelligenceFactsJson}
         `.trim();
 
         try {

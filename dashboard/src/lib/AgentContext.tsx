@@ -143,7 +143,11 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
           case "show_threat_map": {
             router.push("/dashboard");
-            await wait(1200);
+            // Fire focus signal twice to survive route transition timing.
+            window.dispatchEvent(new Event("agent:focus-threat-map"));
+            await wait(600);
+            window.dispatchEvent(new Event("agent:focus-threat-map"));
+            await wait(600);
             result = "Navigated to the War Room. The Global Threat Map is now visible with real-time attack indicators.";
             break;
           }
