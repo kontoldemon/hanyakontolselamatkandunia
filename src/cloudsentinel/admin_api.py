@@ -34,6 +34,7 @@ WAR_ROOM_REDIS_TTL_SECONDS = 24 * 60 * 60
 WAR_ROOM_DEGRADED_HOLD_MS = 60_000
 WAR_ROOM_STATE_REDIS_KEY = "cloudsentinel:war_room_state:v1"
 EXPOSURE_STATE_REDIS_KEY = "cloudsentinel:exposure_state:v1"
+EXPOSURE_TOGGLE_COOLDOWN_MS = 8_000
 WAR_ROOM_EVIDENCE_LOOKBACK_MINUTES = 30
 HOT_CACHE_PREFIX = "cloudsentinel:hotcache:v1"
 HOT_CACHE_TTL_SUMMARY_SECONDS = 5
@@ -1364,6 +1365,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 "desired_enabled": desired_enabled,
                 "effective_enabled": effective_enabled,
                 "updated_at": _as_int(raw.get("updated_at")),
+                "last_toggle_at": _as_int(raw.get("last_toggle_at")),
             }
         except Exception:
             return {}
@@ -1374,9 +1376,11 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         desired_enabled: bool,
         effective_enabled: bool,
         updated_at_ms: int | None = None,
+        last_toggle_at_ms: int | None = None,
     ) -> None:
         redis_client, _ = await _resolve_war_room_redis()
         stamp = _as_int(updated_at_ms or _now_ms())
+        last_toggle = _as_int(last_toggle_at_ms if last_toggle_at_ms is not None else stamp)
         await redis_client.hset(
             EXPOSURE_STATE_REDIS_KEY,
             mapping={
@@ -1384,6 +1388,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 "desired_enabled": "1" if desired_enabled else "0",
                 "effective_enabled": "1" if effective_enabled else "0",
                 "updated_at": str(stamp),
+                "last_toggle_at": str(last_toggle),
             },
         )
         await redis_client.expire(EXPOSURE_STATE_REDIS_KEY, WAR_ROOM_REDIS_TTL_SECONDS)
@@ -1849,6 +1854,21 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     @app.post("/admin/exposure", dependencies=[Depends(require_auth)])
     async def exposure(body: dict[str, Any]) -> dict[str, Any]:
         enabled = _to_bool(body.get("enabled"))
+        now_ms = _now_ms()
+        existing_exposure = await _load_exposure_state()
+        existing_effective_enabled = _to_bool(existing_exposure.get("effective_enabled", True))
+        existing_last_toggle = _as_int(existing_exposure.get("last_toggle_at"))
+        elapsed_since_toggle = now_ms - existing_last_toggle if existing_last_toggle > 0 else EXPOSURE_TOGGLE_COOLDOWN_MS
+        if enabled != existing_effective_enabled and elapsed_since_toggle < EXPOSURE_TOGGLE_COOLDOWN_MS:
+            remaining = max(0, EXPOSURE_TOGGLE_COOLDOWN_MS - elapsed_since_toggle)
+            return {
+                "ok": False,
+                "error": "cooldown_active",
+                "cooldownRemainingMs": remaining,
+                "enabled": existing_effective_enabled,
+                "paused": not existing_effective_enabled,
+                "provider": str(existing_exposure.get("provider") or _exposure_provider()),
+            }
         provider = _exposure_provider()
         if provider == "digitalocean":
             result = await _toggle_exposure_digitalocean(enabled, settings)
@@ -1859,6 +1879,8 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                         provider=provider,
                         desired_enabled=enabled,
                         effective_enabled=not paused,
+                        updated_at_ms=now_ms,
+                        last_toggle_at_ms=now_ms,
                     )
                 except Exception:
                     pass
@@ -1940,6 +1962,8 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                     provider=provider,
                     desired_enabled=enabled,
                     effective_enabled=enabled,
+                    updated_at_ms=now_ms,
+                    last_toggle_at_ms=now_ms,
                 )
             except Exception:
                 pass

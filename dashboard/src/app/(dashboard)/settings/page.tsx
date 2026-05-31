@@ -22,6 +22,8 @@ export default function SettingsPage() {
     const [showExposureConfirm, setShowExposureConfirm] = useState(false);
     const [pendingExposurePaused, setPendingExposurePaused] = useState<boolean | null>(null);
     const [syncStartedAt, setSyncStartedAt] = useState<number | null>(null);
+    const [exposureCooldownUntil, setExposureCooldownUntil] = useState<number>(0);
+    const [cooldownNow, setCooldownNow] = useState<number>(() => Date.now());
     // Controlled state for all config dropdowns
     const [deceptionLevel, setDeceptionLevel] = useState("High (Full VFS)");
     const [hasshAction, setHashAction] = useState("Immediate Drop");
@@ -42,6 +44,8 @@ export default function SettingsPage() {
     const sensorOnline = operations?.source === "live" || operations?.sensor.readiness.ok === true;
     const exposureSyncing = warRoom.exposure?.syncing === true;
     const effectiveExposureEnabled = warRoom.exposure?.effectiveEnabled;
+    const cooldownRemainingSec = Math.max(0, Math.ceil((exposureCooldownUntil - cooldownNow) / 1000));
+    const exposureCooldownActive = cooldownRemainingSec > 0;
     const latencyRows = [
         { name: "Readiness", value: Number(upstreamLatency.readiness ?? 0) },
         { name: "Metrics", value: Number(upstreamLatency.metrics ?? 0) },
@@ -78,6 +82,17 @@ export default function SettingsPage() {
                     type: "success",
                 });
             } else {
+                if (data.error === "cooldown_active") {
+                    const remainingMs = Number(data.cooldownRemainingMs ?? 0);
+                    if (Number.isFinite(remainingMs) && remainingMs > 0) {
+                        setExposureCooldownUntil(Date.now() + remainingMs);
+                    }
+                    setToast({
+                        message: `Exposure cooldown active. Try again in ${Math.max(1, Math.ceil(remainingMs / 1000))}s.`,
+                        type: "info",
+                    });
+                    return;
+                }
                 if (hasPausedState) {
                     const paused = Boolean(data.paused);
                     setToast({
@@ -98,7 +113,7 @@ export default function SettingsPage() {
     }
 
     function openExposureConfirm() {
-        if (exposureBusy || exposureSyncing || !sensorOnline) return;
+        if (exposureBusy || exposureSyncing || exposureCooldownActive || !sensorOnline) return;
         setPendingExposurePaused(!exposurePaused);
         setShowExposureConfirm(true);
     }
@@ -118,6 +133,11 @@ export default function SettingsPage() {
         const timer = window.setTimeout(() => setToast(null), 2500);
         return () => window.clearTimeout(timer);
     }, [toast]);
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setCooldownNow(Date.now()), 500);
+        return () => window.clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         if (!exposureSyncing) {
@@ -202,12 +222,12 @@ export default function SettingsPage() {
                             </div>
                             <button
                                 type="button"
-                                disabled={exposureBusy || exposureSyncing || !sensorOnline}
+                                disabled={exposureBusy || exposureSyncing || exposureCooldownActive || !sensorOnline}
                                 onClick={openExposureConfirm}
                                 className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
                             >
                                 <Power size={12} />
-                                {exposureBusy || exposureSyncing ? "Applying..." : (exposurePaused ? "Offline" : "Online")}
+                                {exposureBusy || exposureSyncing ? "Applying..." : exposureCooldownActive ? `Cooldown ${cooldownRemainingSec}s` : (exposurePaused ? "Offline" : "Online")}
                             </button>
                         </div>
                         <div className="text-[10px] text-slate-500">

@@ -23,6 +23,7 @@ export default function Sidebar() {
     const operations = useSensorOperations();
     const warRoom = useWarRoomState();
     const exposurePaused = warRoom.exposure?.effectiveEnabled === false;
+    const exposureSyncing = warRoom.exposure?.syncing === true;
     const sensorLive =
         !exposurePaused &&
         (
@@ -136,13 +137,18 @@ export default function Sidebar() {
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-2 whitespace-nowrap">System Status</p>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="relative flex h-2 w-2">
-                                <span className={clsx("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", sensorLive ? "bg-green-400" : "bg-amber-400")}></span>
-                                <span className={clsx("relative inline-flex rounded-full h-2 w-2", sensorLive ? "bg-green-500" : "bg-amber-500")}></span>
+                                <span className={clsx("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", exposureSyncing ? "bg-blue-400" : (sensorLive ? "bg-green-400" : "bg-amber-400"))}></span>
+                                <span className={clsx("relative inline-flex rounded-full h-2 w-2", exposureSyncing ? "bg-blue-500" : (sensorLive ? "bg-green-500" : "bg-amber-500"))}></span>
                             </span>
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                                {sensorLive ? "Sensor Node Online" : "Sensor API Offline"}
+                                {exposureSyncing ? "Exposure Changing..." : (sensorLive ? "Sensor Node Online" : "Sensor API Offline")}
                             </p>
                         </div>
+                        {exposureSyncing && (
+                            <div className="text-[10px] px-2 py-1 rounded border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold">
+                                Node state updating now
+                            </div>
+                        )}
                     </div>
                 </div>
 
