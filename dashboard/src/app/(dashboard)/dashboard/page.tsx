@@ -182,6 +182,7 @@ export default function Dashboard() {
     exposurePaused
       ? "OFFLINE"
       : (initialUnknownState && derivedWarRoomState === "OFFLINE" ? "LIVE" : derivedWarRoomState);
+  const exposureSyncing = warRoom.exposure?.syncing === true;
   const underAttack = exposurePaused
     ? false
     : (useEmergencyFallback ? inferredUnderAttack : (backendUnderAttack || hasRealtimeAttackHint));
@@ -281,6 +282,11 @@ export default function Dashboard() {
             {warRoom.degraded && (
               <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 degraded
+              </span>
+            )}
+            {exposureSyncing && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                syncing
               </span>
             )}
           </div>

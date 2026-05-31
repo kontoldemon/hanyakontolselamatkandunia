@@ -2,7 +2,7 @@
 
 import { Shield, Zap, Fingerprint, Database, Save, Activity, Check, Power, Maximize2, Minimize2 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
-import { useSensorOperations, useSocketTelemetry } from "@/lib/liveEvents";
+import { useSensorOperations, useSocketTelemetry, useWarRoomState } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 
 import CustomDropdown from "@/components/CustomDropdown";
@@ -11,6 +11,7 @@ const EXPOSURE_STATE_KEY = "cloudsentinel.exposure.paused";
 export default function SettingsPage() {
     const operations = useSensorOperations();
     const socketTelemetry = useSocketTelemetry();
+    const warRoom = useWarRoomState();
     const [exposurePaused, setExposurePaused] = useState(() => {
         if (typeof window === "undefined") return false;
         return window.sessionStorage.getItem(EXPOSURE_STATE_KEY) === "1";
@@ -38,6 +39,8 @@ export default function SettingsPage() {
     useAgentCommand("socket.fullscreen", useCallback(() => setIsSocketFullScreen((p) => !p), []));
     const upstreamLatency = operations?.telemetry?.upstreamLatencyMs ?? {};
     const sensorOnline = operations?.source === "live" || operations?.sensor.readiness.ok === true;
+    const exposureSyncing = warRoom.exposure?.syncing === true;
+    const effectiveExposureEnabled = warRoom.exposure?.effectiveEnabled;
     const latencyRows = [
         { name: "Readiness", value: Number(upstreamLatency.readiness ?? 0) },
         { name: "Metrics", value: Number(upstreamLatency.metrics ?? 0) },
@@ -173,8 +176,12 @@ export default function SettingsPage() {
                                 className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
                             >
                                 <Power size={12} />
-                                {exposurePaused ? "Offline" : "Online"}
+                                {exposureBusy || exposureSyncing ? "Applying..." : (exposurePaused ? "Offline" : "Online")}
                             </button>
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                            Effective: <span className="font-semibold text-slate-700 dark:text-slate-300">{effectiveExposureEnabled === false ? "Offline" : "Online"}</span>
+                            {exposureSyncing ? <span className="ml-2 text-blue-600 dark:text-blue-400 font-semibold">Syncing...</span> : null}
                         </div>
                     </div>
 
