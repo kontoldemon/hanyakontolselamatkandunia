@@ -57,12 +57,20 @@ jobs:
         run: pip install -r src/cloudsentinel/requirements.txt
 
       - name: Run unit tests
-        run: pytest src/cloudsentinel/tests/test_stage1.py -v --cov=cloudsentinel --cov-report=term-missing --cov-fail-under=25 --timeout=60 -o addopts=""
+        run: pytest src/cloudsentinel/tests -v --cov=cloudsentinel --cov-report=term-missing --cov-report=xml --cov-fail-under=45 --timeout=120 -o addopts=""
         env:
           PYTHONPATH: src
           REDIS_URL: redis://localhost:6379/0
           CLICKHOUSE_ENABLED: "false"
           SOAR_FIREWALL_DRY_RUN: "true"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore
 
       - name: Run MTTB benchmark (dry-run)
         run: python -m cloudsentinel.mttb_benchmark --iterations 3 --delay 0.02 --redis-url redis://localhost:6379/0
