@@ -161,6 +161,8 @@ class DNSHoneypot:
             if length == 0:
                 break
             if (length & 0xC0) == 0xC0:
+                if offset + 1 >= len(data):
+                    break
                 if not jumped:
                     offset = ((length & 0x3F) << 8) | data[offset + 1]
                     jumped = True
