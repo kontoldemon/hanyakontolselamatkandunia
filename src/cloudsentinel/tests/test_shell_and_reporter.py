@@ -138,6 +138,9 @@ async def test_threat_reporter_paths(monkeypatch) -> None:
 
     fake_redis_module = types.ModuleType("redis.asyncio")
     fake_redis_module.from_url = lambda *_a, **_k: FakeRedis()
+    fake_redis_package = types.ModuleType("redis")
+    fake_redis_package.asyncio = fake_redis_module
+    monkeypatch.setitem(sys.modules, "redis", fake_redis_package)
     monkeypatch.setitem(sys.modules, "redis.asyncio", fake_redis_module)
     data = await reporter.fetch_session_data("s", "redis://unit")
     assert data["attacker_ip"] == "8.8.8.8"
