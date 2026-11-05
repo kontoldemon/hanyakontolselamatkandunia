@@ -11,7 +11,6 @@ Phase 2 (AWS): Migrate to App Runner with IAM auth.
 from __future__ import annotations
 
 import asyncio
-import logging
 import urllib.parse
 from collections import deque
 from typing import Any
@@ -77,7 +76,7 @@ class LiveStream:
         self._sio = socketio.AsyncServer(
             async_mode="aiohttp",
             cors_allowed_origins=self._cors_origins,
-            logger=logger if logger.level <= logging.DEBUG else False,
+            logger=False,
         )
         self._app = web.Application()
         self._sio.attach(self._app)
