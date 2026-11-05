@@ -173,27 +173,19 @@ async def test_malicious_command_triggers_mitre(harness: E2ETestHarness):
 @pytest.mark.asyncio
 async def test_failed_auth_increments_risk(harness: E2ETestHarness):
     """Verify repeated failed auth attempts increase SOAR risk score."""
-    try:
-        await asyncssh.connect(
-            "127.0.0.1", harness.port,
-            username="admin",
-            password="wrong_password_1",
-            known_hosts=None,
-            login_timeout=5,
-        )
-    except Exception:
-        pass  # Expected to fail or succeed (honeypot accepts all)
-
-    try:
-        await asyncssh.connect(
-            "127.0.0.1", harness.port,
-            username="admin",
-            password="wrong_password_2",
-            known_hosts=None,
-            login_timeout=5,
-        )
-    except Exception:
-        pass
+    for password in ("wrong_password_1", "wrong_password_2"):
+        try:
+            conn = await asyncssh.connect(
+                "127.0.0.1", harness.port,
+                username="admin",
+                password=password,
+                known_hosts=None,
+                login_timeout=5,
+            )
+        except Exception:
+            continue  # Expected to fail or succeed (honeypot accepts all)
+        conn.close()
+        await conn.wait_closed()
 
     # After failed auths, risk should be non-zero
     # (We can't directly check SOAR state without API, but no crash = pass)

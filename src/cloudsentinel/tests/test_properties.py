@@ -208,7 +208,7 @@ class TestCodecProperties:
             max_size=10,
         )
     )
-    @settings(max_examples=200)
+    @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
     def test_text_roundtrip(self, data):
         """dumps_text -> loads_text round-trips correctly."""
         encoded = dumps_text(data)
@@ -216,7 +216,7 @@ class TestCodecProperties:
         assert decoded == data
 
     @given(value=st.text(min_size=0, max_size=500))
-    @settings(max_examples=200)
+    @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
     def test_text_never_raises(self, value):
         """dumps_text should never raise on any string."""
         result = dumps_text(value)
