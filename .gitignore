@@ -24,6 +24,10 @@ dist/
 # Local audit artifacts
 dashboard/artifacts/
 
+# Test and coverage artifacts
+.coverage
+coverage.xml
+
 # CloudSentinel runtime artifacts
 /var/
 /src/var/
