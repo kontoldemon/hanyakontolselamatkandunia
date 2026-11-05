@@ -354,10 +354,10 @@ class SOAREngine:
 
         if not self.firewall_enabled: return finish("detect_only")
         if self.firewall_dry_run:
-            logger.warning("SOAR DRY RUN BLOCK %s (risk=%d)",ip,event.get("cloudsentinel_risk_score"))
+            logger.warning("SOAR DRY RUN BLOCK %s (risk=%d)",ip,int(event.get("cloudsentinel_risk_score") or 0))
             return finish("dry_run_block")
 
-        logger.warning("SOAR PUBLISHING BLOCK EVENT FOR %s (risk=%d)",ip,event.get("cloudsentinel_risk_score"))
+        logger.warning("SOAR PUBLISHING BLOCK EVENT FOR %s (risk=%d)",ip,int(event.get("cloudsentinel_risk_score") or 0))
         
         try:
             if self._redis:
