@@ -23,10 +23,10 @@ Last reviewed: 2026-11-05.
 
 | Document | Status |
 |---|---|
-| `docs/working-paper/Pitching/core content/FYP Pitching Content.docx` | Current report source |
-| `docs/working-paper/Pitching/core content/FYP_content.txt` | Plain-text working copy of the report |
-| `docs/working-paper/Pitching2/slidecontent.txt` | Current slide content |
-| `docs/working-paper/Pitching2/presentation slide/pitching2 slides.pptx` | Current slide deck source |
+| `docs/working-paper/report/FYP Pitching Content.docx` | Current report source |
+| `docs/working-paper/report/FYP_content.txt` | Plain-text working copy of the report |
+| `docs/working-paper/slides/slidecontent.txt` | Current slide content |
+| `docs/working-paper/slides/CloudSentinel-slides.pptx` | Current slide deck source |
 
 ## Rule
 

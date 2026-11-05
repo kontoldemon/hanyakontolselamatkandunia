@@ -13,7 +13,7 @@ from pydantic import SecretStr
 from cloudsentinel.config import load_settings
 from cloudsentinel.dns_honeypot import DNSHoneypot
 from cloudsentinel.pipeline import EventPipeline
-from cloudsentinel.sandbox_v2 import GVisorSandbox
+from cloudsentinel.sandbox import GVisorSandbox
 from cloudsentinel.stream import LiveStream
 from cloudsentinel.stress_test import StressTest
 from cloudsentinel.threat_reporter import ThreatReport, generate_report_string
@@ -143,7 +143,7 @@ async def test_report_string() -> None:
 
 @pytest.mark.asyncio
 async def test_gvisor_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("cloudsentinel.sandbox_v2.shutil.which", lambda _: "/usr/bin/runsc")
+    monkeypatch.setattr("cloudsentinel.sandbox.shutil.which", lambda _: "/usr/bin/runsc")
     calls: list[tuple[str, ...]] = []
 
     class FakeProc:

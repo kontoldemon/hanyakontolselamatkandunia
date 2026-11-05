@@ -36,8 +36,8 @@ For a server deployment, see [docs/DEPLOY.md](docs/DEPLOY.md).
 | Deployment steps | [docs/DEPLOY.md](docs/DEPLOY.md) |
 | ClickHouse truth checks | [docs/CLICKHOUSE_TRUTH_QA.md](docs/CLICKHOUSE_TRUTH_QA.md) |
 | Measured evidence | [artifacts/](artifacts/) |
-| FYP report source | [docs/working-paper/Pitching/core content/FYP Pitching Content.docx](docs/working-paper/Pitching/core%20content/FYP%20Pitching%20Content.docx) |
-| Slide content | [docs/working-paper/Pitching2/slidecontent.txt](docs/working-paper/Pitching2/slidecontent.txt) |
+| FYP report source | [docs/working-paper/report/FYP Pitching Content.docx](docs/working-paper/report/FYP%20Pitching%20Content.docx) |
+| Slide content | [docs/working-paper/slides/slidecontent.txt](docs/working-paper/slides/slidecontent.txt) |
 | Code map | [src/cloudsentinel/PROJECT_STRUCTURE.md](src/cloudsentinel/PROJECT_STRUCTURE.md) |
 
 ## Evidence

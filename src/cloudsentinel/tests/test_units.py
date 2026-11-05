@@ -28,7 +28,7 @@ from cloudsentinel.event_codec import dumps_text, loads_text
 from cloudsentinel.firewall import IPTablesBackend, NFTablesBackend, create_firewall
 from cloudsentinel.mttb_benchmark import write_artifacts
 from cloudsentinel.pipeline import EventEnvelope, EventPipeline, LocalWAL
-from cloudsentinel.sandbox_v2 import DockerSandbox, create_sandbox
+from cloudsentinel.sandbox import DockerSandbox, create_sandbox
 from cloudsentinel.server import ConnectionLimiter, _split_algorithms, detect_fuzz
 from cloudsentinel.threat_reporter import ThreatReport
 from cloudsentinel.vfs_agent import VFSAgent, VFSContext
@@ -157,7 +157,7 @@ async def test_docker_sandbox_command(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "docker" in calls[0]
     assert "--network" in calls[0]
     assert "--read-only" in calls[0]
-    monkeypatch.setattr("cloudsentinel.sandbox_v2.shutil.which", lambda _: None)
+    monkeypatch.setattr("cloudsentinel.sandbox.shutil.which", lambda _: None)
     assert isinstance(create_sandbox("gvisor"), DockerSandbox)
 
 

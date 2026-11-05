@@ -92,7 +92,7 @@ async def test_vault_provider(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.asyncio
 async def test_docker_sdk_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("docker")
-    from cloudsentinel.sandbox_v2 import DockerSDKSandbox
+    from cloudsentinel.sandbox import DockerSDKSandbox
 
     class FakeContainer:
         def wait(self, timeout: int) -> dict:

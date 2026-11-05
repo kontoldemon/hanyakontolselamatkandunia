@@ -17,7 +17,7 @@ from cloudsentinel.config import load_settings
 from cloudsentinel.firewall import IPTablesBackend
 from cloudsentinel.geoip import _enrich_fallback, _enrich_http
 from cloudsentinel.pipeline import EventPipeline
-from cloudsentinel.sandbox_v2 import FirecrackerSandbox, GVisorSandbox, create_sandbox
+from cloudsentinel.sandbox import FirecrackerSandbox, GVisorSandbox, create_sandbox
 from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.stream import LiveStream
 from cloudsentinel.stress_test import StressTest
@@ -87,7 +87,7 @@ async def test_firewall_failure_paths(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_sandbox_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("cloudsentinel.sandbox_v2.shutil.which", lambda _: None)
+    monkeypatch.setattr("cloudsentinel.sandbox.shutil.which", lambda _: None)
     gvisor = GVisorSandbox()
     code, message = await gvisor.execute("whoami", "~")
     assert code == 1

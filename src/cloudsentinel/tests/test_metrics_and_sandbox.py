@@ -11,7 +11,7 @@ from cloudsentinel.config import load_settings
 from cloudsentinel.firewall import NFTablesBackend
 from cloudsentinel.metrics import get_metrics
 from cloudsentinel.pipeline import EventEnvelope
-from cloudsentinel.sandbox_v2 import DockerSDKSandbox, GVisorSandbox
+from cloudsentinel.sandbox import DockerSDKSandbox, GVisorSandbox
 from cloudsentinel.server import CloudSentinelSSHServer, ConnectionLimiter
 
 
@@ -53,7 +53,7 @@ async def test_nftables_success_paths(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_gvisor_error_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("cloudsentinel.sandbox_v2.shutil.which", lambda _: "/usr/bin/runsc")
+    monkeypatch.setattr("cloudsentinel.sandbox.shutil.which", lambda _: "/usr/bin/runsc")
 
     async def fake_exec(*_args: object, **_kwargs: object):
         raise OSError("runsc failed")

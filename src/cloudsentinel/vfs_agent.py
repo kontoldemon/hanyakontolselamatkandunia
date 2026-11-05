@@ -22,7 +22,7 @@ import httpx
 import structlog
 
 from .config import LLMSettings, secret_to_str
-from .sandbox_v2 import create_sandbox
+from .sandbox import create_sandbox
 
 logger = structlog.get_logger("cloudsentinel.vfs_agent")
 
