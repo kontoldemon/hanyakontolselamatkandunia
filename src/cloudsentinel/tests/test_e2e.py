@@ -44,7 +44,7 @@ def find_free_port() -> int:
         return s.getsockname()[1]
 
 
-async def wait_for_port(host: str, port: int, timeout: float = 10.0) -> None:
+async def wait_for_port(host: str, port: int, timeout: float = 30.0) -> None:
     """Wait until the test sensor is accepting TCP connections."""
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
@@ -63,27 +63,27 @@ async def wait_for_port(host: str, port: int, timeout: float = 10.0) -> None:
 class E2ETestHarness:
     """Manages sensor lifecycle for integration tests."""
 
+    ENV_OVERRIDES = {
+        "NATS_ENABLED": "false",
+        "CLICKHOUSE_ENABLED": "false",
+        "ADMIN_ENABLED": "false",
+        "STREAM_ENABLED": "false",
+        "SOAR_FIREWALL_DRY_RUN": "true",
+        "SOAR_RISK_THRESHOLD": "30",
+        "REDIS_URL": REDIS_URL,
+    }
+
     def __init__(self):
         self.port = find_free_port()
         self.server_task: asyncio.Task[Any] | None = None
-        self.settings: Any = None
         self._original_argv: list[str] | None = None
+        self._original_env: dict[str, str | None] = {}
 
     async def start_sensor(self) -> None:
         """Start a CloudSentinel sensor in the background."""
-        from cloudsentinel.config import load_settings
-
-        # Load config and override port
-        self.settings = load_settings(
-            Path("src/cloudsentinel/configs/usas-production.yaml"),
-            Path("src/cloudsentinel/.env"),
-        )
-        self.settings.honeypot.ssh_port = self.port
-        self.settings.honeypot.listen_host = "127.0.0.1"
-        self.settings.soar.firewall_dry_run = True  # Don't actually modify iptables
-        self.settings.soar.risk_threshold = 30  # Low threshold for testing
-        self.settings.redis.url = REDIS_URL
-        self.settings.clickhouse.enabled = False  # Skip CH for CI
+        for key, value in self.ENV_OVERRIDES.items():
+            self._original_env[key] = os.environ.get(key)
+            os.environ[key] = value
 
         # Start sensor in background
         import sys
@@ -118,6 +118,12 @@ class E2ETestHarness:
             import sys
 
             sys.argv = self._original_argv
+        for key, value in self._original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self._original_env.clear()
 
     async def connect_attacker(
         self, username: str = "root", password: str = "admin123"

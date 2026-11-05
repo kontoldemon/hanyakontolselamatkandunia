@@ -108,8 +108,8 @@ COMMAND_PATTERNS: ClassVar[list[tuple[re.Pattern, int, str]]] = [
 def deobfuscate_bash(command: str) -> str:
     """Remove basic bash obfuscation to improve regex matching."""
     # Normalize unicode homoglyphs (Cyrillic а → ASCII a, etc.)
-    cmd = _normalize_homoglyphs(command)
-    cmd = unicodedata.normalize("NFKC", cmd)
+    cmd = unicodedata.normalize("NFKC", command)
+    cmd = _normalize_homoglyphs(cmd)
     # Remove quotes
     cmd = cmd.replace("'", "").replace('"', "")
     # Remove backslashes

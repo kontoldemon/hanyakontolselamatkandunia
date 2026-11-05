@@ -1276,31 +1276,32 @@ async def main() -> None:
         except NotImplementedError:
             pass
 
-    await stop_event.wait()
-
-    # Teardown
-    ssh_server.close()
-    await ssh_server.wait_closed()
-
-    if admin_task:
-        admin_task.cancel()
-    if http_task:
-        http_task.cancel()
-    if dns_task:
-        dns_task.cancel()
-    if stream:
-        await stream.stop()
-
-    # Save anomaly model state
     try:
-        anomaly_detector.save()
-    except Exception:
-        pass
+        await stop_event.wait()
+    finally:
+        # Teardown
+        ssh_server.close()
+        await ssh_server.wait_closed()
 
-    await pipeline.stop()
-    await soar.stop()
-    await forwarder.stop()
-    logger.info("CloudSentinel stopped")
+        if admin_task:
+            admin_task.cancel()
+        if http_task:
+            http_task.cancel()
+        if dns_task:
+            dns_task.cancel()
+        if stream:
+            await stream.stop()
+
+        # Save anomaly model state
+        try:
+            anomaly_detector.save()
+        except Exception:
+            pass
+
+        await pipeline.stop()
+        await soar.stop()
+        await forwarder.stop()
+        logger.info("CloudSentinel stopped")
 
 
 if __name__ == "__main__":
