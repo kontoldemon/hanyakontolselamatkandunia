@@ -65,6 +65,8 @@ class LLMSettings(BaseModel):
     api_key: SecretStr = SecretStr("")
     response_policy_enabled: bool = True
     llm_safe_fallback_enabled: bool = True
+    session_call_limit: int = Field(default=20, ge=0)
+    global_hourly_limit: int = Field(default=200, ge=0)
     response_template_max_lines: int = Field(default=16, ge=2, le=200)
     blocked_command_prefixes: list[str] = Field(default_factory=lambda: [
         "clickhouse-client",
@@ -91,7 +93,7 @@ class RedisSettings(BaseModel):
 
     url: str = "redis://redis:6379/0"
     stream: str = "cloudsentinel.events"
-    maxlen: int = Field(default=10000, ge=100)
+    maxlen: int = Field(default=200000, ge=100)
 
 
 class NATSSettings(BaseModel):
@@ -295,6 +297,8 @@ class EnvOverrides(BaseSettings):
     llm_fallback_models: str | None = None
     llm_response_policy_enabled: bool | None = None
     llm_safe_fallback_enabled: bool | None = None
+    llm_session_call_limit: int | None = None
+    llm_global_hourly_limit: int | None = None
     llm_response_template_max_lines: int | None = None
     llm_blocked_command_prefixes: str | None = None
     redis_url: str | None = None
@@ -431,6 +435,8 @@ def load_settings(
     _set_if_present(settings.llm, "fallback_models", _split_csv(env.llm_fallback_models))
     _set_if_present(settings.llm, "response_policy_enabled", env.llm_response_policy_enabled)
     _set_if_present(settings.llm, "llm_safe_fallback_enabled", env.llm_safe_fallback_enabled)
+    _set_if_present(settings.llm, "session_call_limit", env.llm_session_call_limit)
+    _set_if_present(settings.llm, "global_hourly_limit", env.llm_global_hourly_limit)
     _set_if_present(settings.llm, "response_template_max_lines", env.llm_response_template_max_lines)
     _set_if_present(settings.llm, "blocked_command_prefixes", _split_csv(env.llm_blocked_command_prefixes))
     _set_if_present(settings.redis, "url", env.redis_url)

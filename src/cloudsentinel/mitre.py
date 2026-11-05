@@ -224,4 +224,11 @@ def score_event(event_type: str, event_data: dict[str, object]) -> dict[str, obj
         command = str(event_data.get("input", ""))
         return score_command(command)
 
+    if event_type == "cloudsentinel.honeytoken.access":
+        return {
+            "risk_score": 85,
+            "mitre_techniques": ["T1555"],
+            "mitre_names": {"T1555": str(MITRE_TECHNIQUES["T1555"]["name"])},
+        }
+
     return {"risk_score": 0, "mitre_techniques": [], "mitre_names": {}}

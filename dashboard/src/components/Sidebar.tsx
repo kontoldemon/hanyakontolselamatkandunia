@@ -24,11 +24,13 @@ export default function Sidebar() {
     const warRoom = useWarRoomState();
     const exposurePaused = warRoom.exposure?.effectiveEnabled === false;
     const exposureSyncing = warRoom.exposure?.syncing === true;
+    const statusPending = !exposurePaused && warRoom.updatedAt <= 0 && warRoom.ok === false;
     const sensorLive =
-        !exposurePaused &&
+        (statusPending || !exposurePaused) &&
         (
             warRoom.state === "live" ||
             warRoom.state === "under_attack" ||
+            statusPending ||
             operations?.source === "live" ||
             operations?.sensor.readiness.ok === true
         );
@@ -141,7 +143,11 @@ export default function Sidebar() {
                                 <span className={clsx("relative inline-flex rounded-full h-2 w-2", exposureSyncing ? "bg-blue-500" : (sensorLive ? "bg-green-500" : "bg-amber-500"))}></span>
                             </span>
                             <p className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                                {exposureSyncing ? "Exposure Changing..." : (sensorLive ? "Sensor Node Online" : "Sensor API Offline")}
+                                {exposureSyncing
+                                    ? "Exposure Changing..."
+                                    : statusPending
+                                        ? "Checking Sensor Status..."
+                                        : (sensorLive ? "Sensor Node Online" : "Sensor API Offline")}
                             </p>
                         </div>
                         {exposureSyncing && (

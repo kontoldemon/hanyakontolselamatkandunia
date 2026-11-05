@@ -13,9 +13,16 @@ build/
 .env.prod
 .env.production
 .env.vercel
+.vercel/
 .DS_Store
 dist/
 *.log
+
+# Local backups and snapshots
+*.bak
+
+# Local audit artifacts
+dashboard/artifacts/
 
 # CloudSentinel runtime artifacts
 /var/

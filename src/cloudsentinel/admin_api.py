@@ -108,6 +108,43 @@ def _exposure_target_ports(settings: Settings) -> list[int]:
     return sorted(port for port in requested if port not in admin_ports)
 
 
+def _truth_window_hours() -> int:
+    raw = os.getenv("CLOUDSENTINEL_TRUTH_WINDOW_HOURS", "0").strip()
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+def _truth_time_filter() -> str:
+    hours = _truth_window_hours()
+    return "1=1" if hours == 0 else f"timestamp >= now() - INTERVAL {hours} HOUR"
+
+
+def _clickhouse_health_sync(settings: Settings) -> bool:
+    import clickhouse_connect
+
+    client = clickhouse_connect.get_client(
+        host=settings.clickhouse.host,
+        port=settings.clickhouse.port,
+        username=settings.clickhouse.username,
+        password=secret_to_str(settings.clickhouse.password),
+        database=settings.clickhouse.database,
+        connect_timeout=2,
+        send_receive_timeout=2,
+    )
+    return bool(client.query("SELECT 1").result_rows)
+
+
+async def _clickhouse_health(settings: Settings) -> bool | None:
+    if not settings.clickhouse.enabled:
+        return None
+    try:
+        return await asyncio.to_thread(_clickhouse_health_sync, settings)
+    except Exception:
+        return False
+
+
 def _strict_truth_mode_enabled() -> bool:
     raw = os.getenv("CLOUDSENTINEL_STRICT_TRUTH", "1").strip().lower()
     return raw not in {"0", "false", "no", "off"}
@@ -475,7 +512,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                 arrayDistinct(arrayFlatten(groupArray(cloudsentinel_mitre_techniques))) AS techniques,
                 max(cloudsentinel_risk_score) AS max_risk
             FROM {settings.clickhouse.table}
-            WHERE timestamp >= now() - INTERVAL 24 HOUR
+            WHERE {_truth_time_filter()}
               AND session != ''
               AND src_ip != ''
               AND src_ip != '0.0.0.0'
@@ -772,7 +809,7 @@ def _load_recent_events_from_clickhouse(settings: Settings, limit: int = 100) ->
                 mttb_ms,
                 timestamp
             FROM {settings.clickhouse.table}
-            WHERE timestamp >= now() - INTERVAL 24 HOUR
+            WHERE {_truth_time_filter()}
               AND src_ip != ''
               AND src_ip != '0.0.0.0'
             ORDER BY timestamp DESC
@@ -861,7 +898,7 @@ def _latest_mttb_from_clickhouse(settings: Settings) -> float:
         query = f"""
             SELECT anyLast(mttb_ms)
             FROM {settings.clickhouse.table}
-            WHERE timestamp >= now() - INTERVAL 24 HOUR
+            WHERE {_truth_time_filter()}
               AND mttb_ms > 0
               AND cloudsentinel_soar_action != 'none'
         """
@@ -894,7 +931,7 @@ def _load_attack_distribution_from_clickhouse(settings: Settings) -> dict[str, i
         query = f"""
             SELECT eventid, count() AS hits
             FROM {settings.clickhouse.table}
-            WHERE timestamp >= now() - INTERVAL 24 HOUR
+            WHERE {_truth_time_filter()}
               AND src_ip != ''
               AND src_ip != '0.0.0.0'
               AND eventid IN (
@@ -944,7 +981,7 @@ def _load_attack_graph_from_clickhouse(settings: Settings, limit: int = 60) -> d
                 arrayDistinct(arrayFlatten(groupArray(cloudsentinel_mitre_techniques))) AS techniques,
                 anyIf(hassh_md5, hassh_md5 != '') AS hassh_md5
             FROM {settings.clickhouse.table}
-            WHERE timestamp >= now() - INTERVAL 24 HOUR
+            WHERE {_truth_time_filter()}
               AND src_ip != ''
               AND src_ip != '0.0.0.0'
             GROUP BY src_ip
@@ -1047,7 +1084,7 @@ def _load_truth_summary_from_clickhouse(settings: Settings) -> dict[str, Any] | 
                     cloudsentinel_risk_score > 0
                 ) AS avg_risk
             FROM {settings.clickhouse.table}
-            WHERE timestamp >= now() - INTERVAL 24 HOUR
+            WHERE {_truth_time_filter()}
               AND src_ip != ''
               AND src_ip != '0.0.0.0'
         """
@@ -1596,11 +1633,13 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     @app.get("/readiness", dependencies=[Depends(require_auth)])
     async def readiness() -> dict[str, Any]:
         clickhouse_enabled = bool(getattr(settings.clickhouse, "enabled", False))
+        clickhouse_ok = await _clickhouse_health(settings)
         return {
             "ok": pipeline.connected or pipeline.pending_count >= 0,
             "redis_connected": pipeline.connected,
             "pending_events": pipeline.pending_count,
             "clickhouse_enabled": clickhouse_enabled,
+            "clickhouse_ok": clickhouse_ok,
             "stream_enabled": bool(settings.stream.enabled),
         }
 

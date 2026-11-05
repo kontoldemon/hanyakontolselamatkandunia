@@ -211,7 +211,7 @@ export default function SettingsPage() {
     return (
         <div className="h-full flex flex-col gap-6">
             {toast && (
-                <div className={`fixed top-5 right-5 z-[160] px-3 py-2 rounded-lg border shadow-lg text-xs font-semibold ${
+                <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[160] px-3 py-2 rounded-lg border shadow-lg text-xs font-semibold ${
                     toast.type === "success"
                         ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
                         : toast.type === "error"

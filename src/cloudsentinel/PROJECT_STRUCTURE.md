@@ -1,62 +1,54 @@
-# CloudSentinel v2.0 — Production-Grade Honeypot
+# CloudSentinel Code Map
 
-## Architecture
-```
-src/cloudsentinel/
-  server.py              # Unified async SSH + HTTP + DNS honeypot entrypoint
-  auth.py                # HS256 JWT auth (zero-dependency)
-  tls.py                 # Self-signed TLS cert auto-generation
-  anomaly.py             # ML anomaly detection (IsolationForest + heuristics)
-  dns_honeypot.py        # UDP DNS honeypot (T1590 trap)
-  webhook.py             # Slack/Discord/Telegram alerting
-  soar.py                # SOAR engine (attack chains, IP profiling, iptables)
-  pipeline.py            # Redis Streams + ClickHouse + WAL
-  config.py              # Pydantic Settings (YAML + .env + env vars)
-  admin_api.py           # JWT-protected REST API (health, stats, attack-graph)
-  vfs.py                 # Virtual filesystem (61 entries, 18 honeytokens)
-  vfs_agent.py           # LLM-backed command output generator
-  commands/              # 163 fake Linux commands
-    __init__.py           #   Command base class + CommandAdapter
-    base.py               #   55+ registered command implementations
-  hassh.py               # HASSH fingerprinting (18 real-MD5 fingerprints)
-  mitre.py               # MITRE ATT&CK mapping (20 techniques, 21 regex)
-  geoip.py               # MaxMind GeoIP2 enrichment
-  metrics.py             # Prometheus metrics (12 gauge/counter)
-  observability.py       # loguru + structlog + sentry + OpenTelemetry
-  http_server.py         # HTTP honeypot (WordPress, Tomcat, phpMyAdmin, .env trap)
-  stream.py              # Socket.io live event streaming
-  sandbox.py             # Docker sandbox for payload execution
-  threat_reporter.py     # AI threat report generation (Gemini/OpenAI)
-  shell.py               # Interactive shell protocol (pipe, redirect, TAB)
-  event_codec.py         # msgspec fast serialization
-  output.py              # ClickHouse batch output writer
-  stress_test.py         # 500-connection concurrent stress test
-  validate_phase1.py     # Live deployment validation
-  ttp_coverage_test.py   # MITRE TTP coverage evidence generator
-  mttb_benchmark.py      # SOAR mean-time-to-block benchmark
-  configs/
-    usas-production.yaml  # Production profile
-  tests/
-    test_stage1.py        # 45 integration/unit tests (11 categories)
-  .pre-commit-config.yaml # ruff + bandit + general hooks
-  pyproject.toml          # ruff, mypy, bandit, pytest-cov config
-  Dockerfile              # Python 3.12 + healthcheck
-  docker-compose.yml      # Redis + NATS + Redpanda + CloudSentinel
-  deploy.sh               # DigitalOcean deployment script
-  requirements.txt        # 30+ production dependencies
-  log_config.json         # Structured JSON logging configuration
-  schema.sql              # ClickHouse schema (MergeTree + materialized views)
-```
+Architecture and trust boundaries: `../../docs/ARCHITECTURE.md`.
 
-## Key Metrics
-- **HASSH fingerprints**: 18 real cryptographically-computed MD5 hashes
-- **Botnets detected**: Mirai (4 variants), Gafgyt (2), Mozi, Hajime, Tsunami, Dark.IoT, Qbot, RIoT, Meris, 3ve
-- **Scanners detected**: Nmap, Zgrab2 (2), Masscan (2), SSH-audit
-- **Commands**: 163 registered Linux utilities
-- **VFS entries**: 61 files, 18 honeytoken traps
-- **MITRE techniques**: 20 mapped, 21 regex patterns
-- **Tests**: 45 cases across 11 categories
-- **MTTB**: 0.96ms median (target: 100ms)
-- **API endpoints**: /healthz, /readiness, /stats, /attack-graph, /auth/login
-- **Alert platforms**: Slack, Discord, Telegram
-- **Logging**: loguru (rotation) + structlog (JSON) + sentry (error tracking)
+## Entry point
+
+| File | Job |
+|---|---|
+| `server.py` | Unified async entrypoint: SSH sensor, session handling, event pipeline, SOAR, admin API, stream, optional HTTP and DNS honeypots |
+
+The Dockerfile, systemd unit, and `deploy.sh` all start `python -m cloudsentinel.server`.
+
+## Core modules
+
+| Area | Files |
+|---|---|
+| Config | `config.py`, `configs/usas-production.yaml` |
+| SSH session | `server.py`, `shell.py`, `vfs.py`, `vfs_agent.py`, `commands/` |
+| Fingerprinting | `hassh.py`, `geoip.py`, `tls.py` |
+| Detection and scoring | `mitre.py`, `anomaly.py`, `attack_graph.py` |
+| Response | `soar.py`, `firewall.py`, `webhook.py` |
+| Data pipeline | `pipeline.py`, `event_codec.py` |
+| Admin API | `admin_api.py`, `auth.py` |
+| Live stream | `stream.py` |
+| Other honeypot services | `http_server.py`, `dns_honeypot.py` |
+| Threat feeds and reports | `misp_feed.py`, `abuseipdb.py`, `threat_reporter.py` |
+| Metrics and logging | `metrics.py`, `observability.py`, `exceptions.py` |
+| Secrets | `_secrets.py` |
+| Schema | `schema.sql`, `migrations/` |
+
+## Tools and evidence
+
+| File | Job |
+|---|---|
+| `mttb_benchmark.py` | MTTB benchmark used by CI and the CLI |
+| `validate_phase1.py` | Phase 1 deployment checks |
+| `ttp_coverage_test.py` | MITRE coverage evidence |
+| `stress_test.py` | Concurrency stress test |
+| `honeyfs_seed.py` | Generate the seeded VFS files under `honeyfs/` |
+| `cli.py` | `serve`, `benchmark`, `status`, `validate` commands |
+
+## Tests
+
+| File | Job |
+|---|---|
+| `tests/test_stage1.py` | Main integration tests |
+| `tests/test_e2e.py` | End-to-end sensor test |
+| `tests/test_properties.py` | Property-based tests |
+| `tests/test_benchmarks.py` | Benchmark tests |
+| `tests/conftest.py` | Shared fixtures |
+
+## Dashboard
+
+The Next.js dashboard is in `../../dashboard/`. Its API routes call the admin API, not the sensor directly.

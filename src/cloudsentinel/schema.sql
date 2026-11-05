@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS cloudsentinel_events (
 ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)
 ORDER BY (eventid, timestamp, src_ip)
-TTL timestamp + INTERVAL 90 DAY
+TTL timestamp + INTERVAL 3650 DAY
 SETTINGS index_granularity = 8192;
 
 ALTER TABLE cloudsentinel_events ADD COLUMN IF NOT EXISTS detected_at DateTime64(3) DEFAULT toDateTime64(0, 3);

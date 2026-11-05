@@ -73,7 +73,7 @@ export default function IntelligencePage() {
     const [commandMode, setCommandMode] = useState<"most" | "least">("most");
     const [commandSearch, setCommandSearch] = useState("");
     const [commandPage, setCommandPage] = useState(1);
-    const [timeline, setTimeline] = useState<GlobalTimeline>("24h");
+    const [timeline, setTimeline] = useState<GlobalTimeline>("all");
     
     // 1. Core State
     const [hoveredAttack, setHoveredAttack] = useState<{name: string, count: number, x: number, y: number, alignRight: boolean} | null>(null);

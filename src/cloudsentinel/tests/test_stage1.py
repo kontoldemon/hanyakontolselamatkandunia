@@ -479,6 +479,23 @@ async def test_soar_scores_malicious_command() -> None:
 
 
 @pytest.mark.asyncio
+async def test_soar_preserves_precomputed_honeytoken_score() -> None:
+    soar = SOAREngine()
+    event = {
+        "eventid": "cloudsentinel.honeytoken.access",
+        "session": "h1",
+        "src_ip": "203.0.113.77",
+        "input": "cat /root/.aws/credentials",
+        "risk_score": 85,
+        "mitre_techniques": ["T1555"],
+        "country_code": "US",
+    }
+    result = await soar.process_event("h1", event)
+    assert result["cloudsentinel_risk_score"] >= 85
+    assert "T1555" in result["cloudsentinel_mitre_techniques"]
+
+
+@pytest.mark.asyncio
 async def test_soar_time_decay() -> None:
     soar = SOAREngine(decay_rate=100.0)  # Fast decay for testing
     event = {
@@ -606,7 +623,8 @@ async def test_soar_active_block_uses_duplicate_check(monkeypatch: pytest.Monkey
     result = await soar.process_event("active1", event)
     assert result["cloudsentinel_soar_action"] == "iptables_block"
     assert calls[0][1] == "-C"
-    assert calls[1][1] == "-A"
+    assert calls[1][1] == "-I"
+    assert calls[1][3] == "1"
     assert isinstance(result["mttb_ms"], float)
 
 
@@ -984,6 +1002,69 @@ def test_clickhouse_forwarder_checkpoint_round_trip(tmp_path: Path) -> None:
     assert forwarder._load_checkpoint() == "0-0"
     forwarder._save_checkpoint("1710000000000-3")
     assert forwarder._load_checkpoint() == "1710000000000-3"
+
+
+def test_clickhouse_forwarder_spill_round_trip(tmp_path: Path) -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    forwarder = ClickHouseForwarder(settings.redis, settings.clickhouse)
+    forwarder._spill_path = tmp_path / "spill.jsonl"
+    envelope = EventEnvelope(
+        event_type="cloudsentinel.command.input",
+        session_id="spill1",
+        src_ip="8.8.8.8",
+        src_port=4444,
+        timestamp=1710000000.123,
+        payload={"eventid": "cloudsentinel.command.input", "input": "whoami"},
+    )
+    fields = envelope.to_redis_fields()
+    forwarder._spill_append([fields])
+    assert forwarder._spill_read() == [fields]
+    forwarder._spill_clear()
+    assert not forwarder._spill_path.exists()
+
+
+def test_redact_secrets_for_llm_prompt() -> None:
+    from cloudsentinel.vfs_agent import redact_secrets
+
+    assert "secret123" not in redact_secrets("export PASSWORD=secret123")
+    assert "AKIAIOSFODNN7EXAMPLE" not in redact_secrets(
+        "export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"
+    )
+    assert "sk-abcdefghijklmnopqrstuvwxyz" not in redact_secrets(
+        "curl -H 'Authorization: Bearer sk-abcdefghijklmnopqrstuvwxyz'"
+    )
+    assert "Sup3rS3cret" not in redact_secrets("mysql -u root -pSup3rS3cret")
+    private_key = (
+        "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+        "secret-key-body\n"
+        "-----END OPENSSH PRIVATE KEY-----"
+    )
+    assert "secret-key-body" not in redact_secrets(private_key)
+    assert redact_secrets("ls -la /tmp") == "ls -la /tmp"
+
+
+def test_global_llm_budget() -> None:
+    import cloudsentinel.vfs_agent as vfs_agent
+
+    vfs_agent._GLOBAL_LLM_CALLS.clear()
+    try:
+        assert vfs_agent._reserve_global_llm_call(2) is True
+        assert vfs_agent._reserve_global_llm_call(2) is True
+        assert vfs_agent._reserve_global_llm_call(2) is False
+    finally:
+        vfs_agent._GLOBAL_LLM_CALLS.clear()
+
+
+def test_llm_budget_defaults() -> None:
+    settings = load_settings(
+        Path("src/cloudsentinel/configs/usas-production.yaml"),
+        Path("src/cloudsentinel/.env"),
+    )
+    assert settings.llm.session_call_limit == 20
+    assert settings.llm.global_hourly_limit == 200
 
 
 def test_server_emits_connect_event_and_has_cli_args() -> None:

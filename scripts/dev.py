@@ -2,8 +2,8 @@
 CloudSentinel Dev Reloader — auto-restart on code changes.
 
 Usage:
-    python -m cloudsentinel.dev       # Start sensor with hot-reload
-    python -m cloudsentinel.dev --test # Watch + run tests on change
+    python scripts/dev.py         # Start sensor with hot-reload
+    python scripts/dev.py --test  # Watch + run tests on change
 
 Requires: pip install watchfiles
 """
@@ -15,6 +15,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
+SRC_ROOT = ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
 
 async def dev_server():
     """Start sensor with hot-reload on code changes."""
@@ -24,7 +29,7 @@ async def dev_server():
         print("watchfiles not installed. Install with: pip install watchfiles")
         return
 
-    PACKAGE_ROOT = Path(__file__).resolve().parent
+    PACKAGE_ROOT = SRC_ROOT / "cloudsentinel"
     process: subprocess.Popen | None = None
 
     async def restart():
@@ -62,7 +67,7 @@ async def dev_test():
         print("watchfiles not installed")
         return
 
-    PACKAGE_ROOT = Path(__file__).resolve().parent
+    PACKAGE_ROOT = SRC_ROOT / "cloudsentinel"
 
     async def run_tests():
         proc = await asyncio.create_subprocess_exec(

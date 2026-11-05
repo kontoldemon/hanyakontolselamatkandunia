@@ -230,6 +230,15 @@ class SOAREngine:
         current_score = await self._get_score(session_id)
         techniques = await self._get_techniques(session_id)
         event_score=0
+        precomputed_score = max(
+            int(event.get("cloudsentinel_risk_score", 0) or 0),
+            int(event.get("risk_score", 0) or 0),
+        )
+        for key in ("cloudsentinel_mitre_techniques", "mitre_techniques"):
+            for tech in event.get(key, []) or []:
+                tech_id = str(tech).strip()
+                if tech_id:
+                    techniques.add(tech_id)
 
         # Time-decay: reduce score by decay_rate/sec since last activity
         now=time.monotonic()
@@ -286,6 +295,9 @@ class SOAREngine:
         if ip and session_id not in existing_sessions and existing_sessions:
             event_score += 5
             techniques.add("T1083")
+
+        if precomputed_score > event_score:
+            event_score = precomputed_score
 
         current_score+=event_score
         await self._set_score(session_id, current_score)

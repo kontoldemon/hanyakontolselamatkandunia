@@ -1,14 +1,15 @@
 # CloudSentinel Deployment Guide
 
+> Status: the droplet used for Phase 1 validation is now offline. This guide remains for redeployment. For a zero-cost local demo, see `docs/LOCAL_DEMO.md`.
+
 ## Phase 1: DigitalOcean Dev/MVP
 
-Current status as of 2026-05-26:
+Status snapshot from 2026-05-26:
 
 - Dashboard production URL: `https://dashboard-l7529dwmb-zis3cs-projects.vercel.app`
 - Vercel alias: `https://dashboard-six-mu-20.vercel.app`
 - Validation target: `188.166.184.42`
-- Current validation: SSH honeypot PASS, MITRE coverage PASS, management SSH FAIL, Socket.io FAIL, admin API FAIL
-- Blocker: this workstation cannot reach `188.166.184.42:22222`, so backend deployment cannot be completed remotely until management SSH is open or valid access details are provided.
+- Current validation: see `artifacts/phase1-validation.md` for the recorded result. The snapshot in this guide may be stale.
 
 ### Prerequisites
 
@@ -169,3 +170,5 @@ curl http://localhost:8080/healthz
 | ClickHouse connection refused | Check `CLICKHOUSE_PASSWORD` in `.env` |
 | MTTB > 100ms | Check firewall backend: `nftables` is faster than `iptables` |
 | No attacks showing | Verify port 22 is exposed to internet: `curl ifconfig.me` |
+| Dashboard totals look small | Check `CLOUDSENTINEL_TRUTH_WINDOW_HOURS` (0 means all time) and the `clickhouse_ok` field in `/readiness`. |
+| Data missing after a ClickHouse outage | Check `var/lib/cloudsentinel/clickhouse_spill.jsonl`. The forwarder replays it when ClickHouse returns. |

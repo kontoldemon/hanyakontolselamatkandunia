@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CloudSentinel Dashboard
 
-## Getting Started
+Next.js dashboard for the CloudSentinel SSH honeypot. It shows the war room, threat map, sessions, command replay, and the AI analysis panel.
 
-First, run the development server:
+The dashboard reads data through its own API routes. Those routes call the admin API on the sensor. The browser never talks to the sensor directly.
+
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build and lint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+Create `.env.local` with the values below. Do not commit it.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Purpose |
+|---|---|
+| `CLOUDSENTINEL_ADMIN_API_URL` | Admin API base URL |
+| `CLOUDSENTINEL_ADMIN_TOKEN` | Bearer token for the admin API |
+| `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL` | Socket.io stream URL |
+| `DASHBOARD_USERNAME` | Dashboard login user |
+| `DASHBOARD_PASSWORD` | Dashboard login password |
+| `DASHBOARD_AUTH_SECRET` | HMAC secret for the session cookie |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key |
+| `RESEND_API_KEY` | Email provider key for OTP delivery |
+| `ADMIN_EMAIL` | Destination for the OTP email |
+| `OTP_SECRET` | HMAC secret for the OTP hash |
+| `CLOUDSENTINEL_EXPOSURE_PROVIDER` | Exposure provider, for example `digitalocean` |
+| `DIGITALOCEAN_TOKEN` | DigitalOcean API token for the exposure toggle |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The admin token and the DigitalOcean token are privileged. Keep them in the Vercel environment, never in the repository.
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+vercel deploy --prod --yes
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set the same variables in the Vercel project settings.
+
+## Auth flow
+
+1. The user submits username, password, and a Turnstile token.
+2. The server checks the credentials and sends a six-digit OTP to `ADMIN_EMAIL`.
+3. The OTP hash is stored in an HttpOnly cookie.
+4. The user submits the OTP, and the server sets an HMAC-signed session cookie.
+
+See `../docs/ARCHITECTURE.md` for the known auth gaps.

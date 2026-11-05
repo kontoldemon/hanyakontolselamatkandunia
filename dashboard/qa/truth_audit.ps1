@@ -339,7 +339,7 @@ SELECT
   countIf(eventid = 'cloudsentinel.command.input'),
   countIf(positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0),
   uniqExactIf(src_ip, positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0),
-  uniqExactIf(src_ip, timestamp >= now() - INTERVAL 3 MINUTE),
+  uniqExactIf(src_ip, timestamp >= now() - INTERVAL 90 SECOND),
   avgIf(mttb_ms, mttb_ms > 0 AND positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0),
   count()
 FROM $ClickHouseDb.$ClickHouseTable

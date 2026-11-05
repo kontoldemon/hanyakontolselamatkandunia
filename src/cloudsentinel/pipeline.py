@@ -457,6 +457,7 @@ class ClickHouseForwarder:
         self._task: asyncio.Task[None] | None = None
         self._stopped = asyncio.Event()
         self._checkpoint_path = Path("var/lib/cloudsentinel/clickhouse_forwarder.lastid")
+        self._spill_path = Path("var/lib/cloudsentinel/clickhouse_spill.jsonl")
 
     async def start(self) -> None:
         if not self.clickhouse_settings.enabled:
@@ -514,26 +515,69 @@ class ClickHouseForwarder:
         last_id = await asyncio.to_thread(self._load_checkpoint)
         while not self._stopped.is_set():
             try:
+                await self._flush_spill()
                 streams = await self._redis.xread(
                     {self.redis_settings.stream: last_id},
                     count=self.clickhouse_settings.batch_size,
                     block=int(self.clickhouse_settings.flush_interval_seconds * 1000),
                 )
-                rows: list[dict[str, Any]] = []
+                messages: list[dict[str, str]] = []
                 batch_last_id = last_id
-                for _, messages in streams:
-                    for message_id, fields in messages:
+                for _, entries in streams or []:
+                    for message_id, fields in entries:
                         batch_last_id = message_id
-                        rows.append(self._redis_fields_to_row(fields))
-                if rows:
-                    await asyncio.to_thread(self._insert_rows, rows)
+                        messages.append(fields)
+                if messages:
+                    await asyncio.to_thread(self._spill_append, messages)
                     last_id = batch_last_id
                     await asyncio.to_thread(self._save_checkpoint, last_id)
+                    await self._flush_spill()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
                 logger.warning("ClickHouse forwarder error: %s", exc)
                 await asyncio.sleep(1)
+
+    async def _flush_spill(self) -> None:
+        spilled = await asyncio.to_thread(self._spill_read)
+        if not spilled:
+            return
+        try:
+            rows = [self._redis_fields_to_row(fields) for fields in spilled]
+            await asyncio.to_thread(self._insert_rows, rows)
+            await asyncio.to_thread(self._spill_clear)
+            logger.info("ClickHouse flushed %d spilled events", len(rows))
+        except Exception as exc:
+            logger.warning("ClickHouse spill flush failed: %s", exc)
+
+    def _spill_append(self, messages: list[dict[str, str]]) -> None:
+        if not messages:
+            return
+        self._spill_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self._spill_path, "a", encoding="utf-8") as handle:
+            for fields in messages:
+                handle.write(json.dumps(fields, separators=(",", ":")) + "\n")
+
+    def _spill_read(self) -> list[dict[str, str]]:
+        if not self._spill_path.exists():
+            return []
+        records: list[dict[str, str]] = []
+        with open(self._spill_path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    records.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        return records
+
+    def _spill_clear(self) -> None:
+        try:
+            self._spill_path.unlink()
+        except FileNotFoundError:
+            pass
 
     def _load_checkpoint(self) -> str:
         try:

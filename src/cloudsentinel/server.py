@@ -783,6 +783,16 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             "input": command,
             "username": self.server.username,
         }))
+        honeytoken_hit = self._detect_honeytoken_access(command)
+        if honeytoken_hit is not None:
+            asyncio.create_task(self.server._emit_event("cloudsentinel.honeytoken.access", {
+                "input": command,
+                "username": self.server.username,
+                "honeytoken_path": honeytoken_hit,
+                "risk_score": 85,
+                "mitre_techniques": ["T1555"],
+                "mitre_names": {"T1555": "Credentials from Password Stores"},
+            }))
         try:
             from .metrics import get_metrics
             get_metrics().record_command()
@@ -922,6 +932,21 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             except (BrokenPipeError, OSError):
                 logger.debug("SSH channel already closed during write")
 
+    def _detect_honeytoken_access(self, command: str) -> str | None:
+        normalized = command.lower()
+        targets = (
+            "/root/.aws/credentials",
+            "usas_backup_credentials.txt",
+            "research_grants_2026.txt",
+            "/var/www/html/config.php",
+            "/tmp/.hidden_miner_config",
+            "/root/.ssh/id_rsa",
+        )
+        for token_path in targets:
+            if token_path in normalized:
+                return token_path
+        return None
+
 
 # ── HTTP Honeypot ────────────────────────────────────────────────────
 
@@ -1008,18 +1033,7 @@ async def start_admin_api(
 
         _USE_GRANIAN = False
 
-    # Admin API backend selection: litestar (40% faster) or fastapi (default)
-    admin_backend = os.getenv("ADMIN_BACKEND", "fastapi").lower()
-    if admin_backend == "litestar":
-        try:
-            from .admin_litestar import create_litestar_app
-            app = create_litestar_app(settings, pipeline)
-            logger.info("Admin API using Litestar backend (ASGI-native)")
-        except ImportError:
-            logger.warning("litestar not installed, falling back to FastAPI")
-            app = create_admin_app(settings, pipeline, soar)
-    else:
-        app = create_admin_app(settings, pipeline, soar)
+    app = create_admin_app(settings, pipeline, soar)
 
     tls_kwargs: dict[str, Any] = {}
     if cert_path and key_path and Path(cert_path).exists() and Path(key_path).exists():

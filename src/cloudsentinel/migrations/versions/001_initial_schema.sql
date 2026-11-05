@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS cloudsentinel_events (
 ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)
 ORDER BY (eventid, timestamp, src_ip)
-TTL timestamp + INTERVAL 90 DAY;
+TTL timestamp + INTERVAL 3650 DAY;
 
 CREATE TABLE IF NOT EXISTS _cloudsentinel_migrations (
     version String,

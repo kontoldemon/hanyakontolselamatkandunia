@@ -6,6 +6,7 @@ This runbook verifies dashboard telemetry truth after deploy.
 - Target URL reachable (default: `https://cloudsentinel.zis3c.dev`).
 - Admin API token configured in deployment.
 - Optional direct ClickHouse SSH access for numeric compare.
+- Active freshness window is `90 seconds` for war-room/session live state.
 
 ## Automated Audit
 Run from repo root:

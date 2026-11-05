@@ -1,5 +1,7 @@
 import sys
-sys.path.insert(0, r"C:\Users\RADZ\project io\FYP\sensor")
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 # Test imports
 from cloudsentinel.hassh import calculate_hassh, HASSHDNA

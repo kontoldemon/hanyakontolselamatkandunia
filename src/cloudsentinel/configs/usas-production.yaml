@@ -23,11 +23,13 @@ llm:
     - openai/gpt-4o-mini
   timeout_seconds: 8
   max_output_chars: 4000
+  session_call_limit: 20
+  global_hourly_limit: 200
 
 redis:
   url: redis://redis:6379/0
   stream: cloudsentinel.events
-  maxlen: 10000
+  maxlen: 200000
 
 nats:
   enabled: true

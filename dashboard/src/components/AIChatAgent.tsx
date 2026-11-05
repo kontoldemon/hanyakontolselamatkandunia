@@ -176,7 +176,7 @@ export default function AIChatAgent() {
             .slice(0, 15);
 
         return JSON.stringify({
-            window: "Last 24h (dashboard default)",
+            window: "All time (dashboard default)",
             kpi: intelligenceSnapshot,
             topCountries,
             topNetworks,
