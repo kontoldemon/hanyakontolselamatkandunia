@@ -211,7 +211,11 @@ class FirecrackerSandbox:
 def create_sandbox(runtime: str = RUNTIME) -> SandboxExecutor:
     """Factory: return the appropriate sandbox for the configured runtime."""
     if runtime == "gvisor":
-        return GVisorSandbox()
+        sandbox = GVisorSandbox()
+        if sandbox._available:
+            return sandbox
+        logger.warning("gVisor unavailable, falling back to Docker sandbox")
+        return DockerSandbox()
     if runtime == "firecracker":
         return FirecrackerSandbox()
     return DockerSandbox()

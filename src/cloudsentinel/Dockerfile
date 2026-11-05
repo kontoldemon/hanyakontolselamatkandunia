@@ -6,24 +6,16 @@ ENV CLOUDSENTINEL_VERSION=2.0.0
 
 WORKDIR /app
 
-# System deps for cryptography + nftables + iptables
+# System deps for cryptography + nftables + iptables + gVisor
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-    iptables nftables netbase ca-certificates curl && \
+    iptables nftables netbase ca-certificates curl gnupg && \
     rm -rf /var/lib/apt/lists/*
 
-# Install gVisor (runsc) for sandbox isolation
-RUN ARCH=$(dpkg --print-architecture) && \
-    case "${ARCH}" in \
-        amd64) GVISOR_ARCH="x86_64" ;; \
-        arm64) GVISOR_ARCH="aarch64" ;; \
-        *) echo "Unsupported gVisor arch: ${ARCH}"; exit 1 ;; \
-    esac && \
-    URL="https://storage.googleapis.com/gvisor/releases/release/latest/${GVISOR_ARCH}" && \
-    curl -fsSLO "${URL}/runsc" && \
-    curl -fsSLO "${URL}/runsc.sha512" && \
-    sha512sum -c runsc.sha512 && \
-    install -m 0755 runsc /usr/local/bin/runsc && \
-    rm -f runsc runsc.sha512
+# Install gVisor (runsc) from the official apt repository
+RUN curl -fsSL https://gvisor.dev/archive.key | gpg --batch --yes --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main" > /etc/apt/sources.list.d/gvisor.list && \
+    apt-get update -qq && apt-get install -y -qq --no-install-recommends runsc && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
