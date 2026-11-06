@@ -22,6 +22,7 @@ Do not test against systems you do not own. The local demo and CI are the suppor
 | CodeQL | `.github/workflows/codeql.yml` | Python + JavaScript/TypeScript, `security-extended` | 0 open alerts (2026-11-06) |
 | Python dependency audit | `.github/workflows/security.yml` | `pip-audit -r src/cloudsentinel/requirements.txt` | 0 known vulnerabilities |
 | Node production audit | `.github/workflows/security.yml` | `npm audit --omit=dev --audit-level=high` | 0 vulnerabilities |
+| Node full audit | `.github/workflows/security.yml` | `npm audit --audit-level=moderate` | 0 vulnerabilities |
 | Bandit | `.github/workflows/security.yml` | Python source, high severity | 0 high-severity findings |
 | Secret scan | manual / GitHub | tracked files only | no tracked `.env`, key, or PEM files |
 
@@ -47,7 +48,7 @@ npm audit --omit=dev --audit-level=high
 
 - **Honeypot listeners bind to all interfaces by default.** This is intentional for the sensor profile. The local demo overrides it to `127.0.0.1`.
 - **Bandit medium findings** cover deliberate honeypot behavior: fake `/tmp` paths, permissive listener defaults, local trusted VFS pickle loading, and parameterized ClickHouse query fragments built from constants. They are reported but do not fail CI. High-severity findings do fail CI.
-- **Eight moderate npm findings remain in development-only ESLint/TypeScript tooling.** They are not in the production dependency tree. The production audit is clean. The tooling is pinned to keep the existing lint rules and build stable.
+- **The nested `minimatch` used by `@typescript-eslint/typescript-estree` is pinned to `11.0.5`.** This clears the last dev-only advisory while keeping lint and build passing.
 - **`CLOUDSENTINEL_AUTH_SECRET` is required when auth is enabled.** If it is missing, the manual JWT backend generates a random per-process secret; tokens do not survive a restart. Set the secret in production.
 - **Firewall actions must remain dry-run until the deployment host is verified.** Production mode requires `SOAR_FIREWALL_DRY_RUN=false` and a working firewall backend.
 
