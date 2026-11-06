@@ -41,7 +41,7 @@ exclude_dirs = ["tests"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-v --cov=cloudsentinel --cov-report=term-missing --cov-report=html --cov-fail-under=95 -n auto"
+addopts = "-v --cov=cloudsentinel --cov-report=term-missing --cov-report=html --cov-fail-under=96 -n auto"
 
 [tool.coverage.run]
 source = ["cloudsentinel"]
