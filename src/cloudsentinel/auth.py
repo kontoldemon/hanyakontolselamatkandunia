@@ -100,6 +100,13 @@ class PyJWTAuth:
         except ImportError:
             return None
 
+    def create_login_token(self, username: str) -> dict[str, str | None]:
+        return {
+            "access_token": self.create_token(username),
+            "refresh_token": self.create_refresh_token(username),
+            "token_type": "bearer",
+        }
+
 
 class JWTAuth:
     """Minimal HS256 JWT implementation — zero external dependencies."""
