@@ -42,3 +42,37 @@ def test_server_helpers() -> None:
     hassh, algorithms = extract_hassh(FakeConn())
     assert hassh
     assert "unknown-kex" not in algorithms
+
+class FallbackConn:
+    _kex = types.SimpleNamespace(algorithm=b"curve25519-sha256")
+
+    def get_extra_info(self, name: str, default: object = None) -> object:
+        if name in {"kex_algs", "client_kex_algs", "kex_algorithms"}:
+            raise RuntimeError("missing kex")
+        values = {
+            "recv_cipher": "aes128-ctr",
+            "recv_mac": "hmac-sha2-256",
+            "recv_compression": "none",
+        }
+        return values.get(name, default)
+
+
+def test_hassh_fallback_branches() -> None:
+    hassh, algorithms = extract_hassh(FallbackConn())
+    assert hassh
+    assert "curve25519-sha256" in algorithms
+
+    class LastResortConn:
+        def get_extra_info(self, name: str, default: object = None) -> object:
+            values = {"client_version": "SSH-2.0-client", "server_version": "SSH-2.0-server"}
+            return values.get(name, default)
+
+    hassh, algorithms = extract_hassh(LastResortConn())
+    assert hassh
+    assert "client:SSH-2.0-client" in algorithms
+
+    class StringKexConn(FallbackConn):
+        _kex = types.SimpleNamespace(algorithm="string-kex")
+
+    hassh, algorithms = extract_hassh(StringKexConn())
+    assert "string-kex" in algorithms
