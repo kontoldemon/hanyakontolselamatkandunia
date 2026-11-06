@@ -55,7 +55,9 @@ class WebhookNotifier:
 
     def _on_cooldown(self, ip: str) -> bool:
         now = asyncio.get_event_loop().time()
-        last = self._last_alert.get(ip, 0)
+        last = self._last_alert.get(ip)
+        if last is None:
+            return False
         return (now - last) < self.config.cooldown_seconds
 
     async def send_alert(self, event: dict[str, Any]) -> list[str]:
