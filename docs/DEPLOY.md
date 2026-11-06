@@ -112,41 +112,80 @@ vercel deploy --prod --yes
 # DASHBOARD_AUTH_SECRET=<random-64-byte-secret>
 ```
 
-## Phase 2: AWS Production Migration
+## Phase 2: Azure Production Migration
+
+> This is a planning section. Phase 2 is not deployed. Phase 1 deployment is historical and the droplet is offline.
 
 ### Architecture
 
-```
-Internet --> AWS WAF --> EC2 (Sensor) --> EventBridge --> Lambda (SOAR)
-                                    |
-                            ClickHouse Cloud
-                                    |
-                            Amplify (Dashboard)
-```
-
-### Step 1: AWS Infrastructure (Terraform)
-
-```hcl
-# Coming soon: terraform/ directory with full AWS infra
-# - EC2 t3.micro for sensor
-# - EventBridge event bus
-# - Lambda function for SOAR
-# - Security Hub for intelligence
-# - Amplify for dashboard
-# - App Runner for WebSocket
+```text
+Internet
+  -> Azure public IP + NSG
+  -> Azure VM sensor (Standard_B2ats_v2)
+       -> SSH honeypot :2222
+       -> HASSH + GeoIP + MITRE + risk score
+       -> SOAR decision
+            -> Azure Event Grid topic
+                 -> Azure Function (managed identity)
+                      -> Azure NSG rule with TTL
+            -> self-hosted Redis Stream
+                 -> self-hosted ClickHouse VM (private subnet)
+                 -> Socket.io stream :3001
+                      -> Vercel dashboard
 ```
 
-### Step 2: Migrate Services
+### Azure service map
 
-| Service | Phase 1 | Phase 2 |
+| Service | Phase 1 | Phase 2 Azure target |
 |---|---|---|
-| Sensor | DO Droplet | EC2 t3.micro |
-| Event Bus | Local Python call | EventBridge |
-| SOAR | iptables subprocess | Lambda |
-| Intelligence | Python dict | Security Hub |
-| Database | Self-hosted ClickHouse | ClickHouse Cloud |
-| Dashboard | Vercel | Amplify |
-| WebSocket | Local Socket.io | App Runner |
+| Sensor | DigitalOcean droplet | Azure VM `Standard_B2ats_v2`, Ubuntu 24.04 |
+| Event bus | Local Python call | Azure Event Grid custom topic |
+| SOAR blocking | iptables/nftables subprocess | Azure Function + NSG rule |
+| Intelligence | Python dict | Same core; optional Microsoft Defender for Cloud posture |
+| Database | Self-hosted ClickHouse | Self-hosted ClickHouse `Standard_B2s` VM |
+| Dashboard | Vercel | Vercel (existing) |
+| WebSocket | Local Socket.io | Same Socket.io on sensor VM |
+| Backups | Local files | Azure Blob Storage |
+| Secrets | `.env` / Vault / Infisical | Azure Key Vault + managed identity |
+| IaC | Manual | Bicep |
+
+### Step 1: Azure infrastructure (Bicep)
+
+Planned `infra/` resources:
+
+- Resource group and VNet with a public sensor subnet and a private data subnet.
+- NSG for SSH honeypot exposure, admin/stream allowlist, and outbound HTTPS.
+- Sensor VM `Standard_B2ats_v2` with Ubuntu 24.04 and a managed data disk for TTY logs.
+- ClickHouse VM `Standard_B2s` with a managed data disk; no public IP.
+- Azure Event Grid custom topic.
+- Azure Function (Consumption, Python) with system-assigned managed identity and an NSG Contributor role scoped to the sensor NSG.
+- Azure Key Vault for runtime secrets.
+- Azure Blob Storage container for backups.
+
+The Bicep files are not written yet. Use the existing local Docker demo until they are.
+
+### Step 2: Service migration
+
+| Service | Local/Phase 1 behavior | Azure target behavior |
+|---|---|---|
+| SOAR coordinate | `soar.py` blocks through a local firewall | Publish a `block` event to Event Grid |
+| Firewall adapter | iptables/nftables | Function adds/removes an NSG rule |
+| Redis | Docker Redis | Docker Redis on the sensor VM |
+| ClickHouse | Docker ClickHouse | ClickHouse on the private VM |
+| Dashboard | Vercel | Same Vercel project |
+| Secrets | `.env` | Key Vault references or managed identity |
+
+Keep `SOAR_FIREWALL_DRY_RUN=true` until the Function and NSG rule are verified. The Function must reject private, loopback, link-local, multicast, and allowlisted IPs before creating a rule.
+
+### Step 3: Cutover checks
+
+1. Verify the sensor VM has no unexpected inbound ports.
+2. Verify SSH port 22 redirects to the honeypot on 2222, and management SSH is restricted to the operator IP.
+3. Publish a test block event and confirm the Function creates an NSG rule with a TTL.
+4. Confirm the rule is removed after the TTL.
+5. Confirm Redis, ClickHouse, and the admin API are not publicly reachable.
+6. Confirm ClickHouse rows and dashboard totals match the truth window.
+7. Run the MTTB benchmark and record the result.
 
 ### Monitoring & Alerts
 

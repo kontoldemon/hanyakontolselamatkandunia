@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last reviewed: 2026-11-05.
+Last reviewed: 2026-11-06.
 
 ## Authoritative documents
 
@@ -8,7 +8,7 @@ Last reviewed: 2026-11-05.
 |---|---|---|
 | `README.md` | Start here. Status, quick start, doc map. | Project root |
 | `docs/ARCHITECTURE.md` | Single source of truth for architecture, trust boundaries, metrics, and known gaps. | Architecture |
-| `docs/DEPLOY.md` | Phase 1 DigitalOcean deployment and Phase 2 AWS plan. | Operations |
+| `docs/DEPLOY.md` | Phase 1 DigitalOcean deployment and Phase 2 Azure plan. | Operations |
 | `docs/LOCAL_DEMO.md` | Zero-cost local demo with Docker. Use this now that the Phase 1 droplet is offline. | Operations |
 | `docs/CLICKHOUSE_TRUTH_QA.md` | How to check that the dashboard shows ClickHouse truth. | Data |
 | `src/cloudsentinel/PROJECT_STRUCTURE.md` | Code map for the sensor package. | Code |

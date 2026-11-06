@@ -6,7 +6,7 @@
 > Faculty: FPTM, Universiti Sultan Azlan Shah (USAS)
 > Type: Final Year Project (FYP)
 > Last Updated: 2026-06-01
-> Current Delivery State: Phase 1 deployed and validated on 2026-05-26; droplet now offline. Phase 2 prepared for AWS migration.
+> Current Delivery State: Phase 1 deployed and validated on 2026-05-26; droplet now offline. Phase 2 prepared for Azure migration.
 
 ---
 
@@ -17,12 +17,12 @@
 | System Name | CloudSentinel |
 | Domain | Cybersecurity, Honeypot, Active Deception, SOAR |
 | Primary Threat Focus | SSH botnet campaigns on port 22 |
-| Deployment Strategy | Two-phase: DigitalOcean (Dev and MVP) then AWS (Production-ready) |
+| Deployment Strategy | Two-phase: DigitalOcean (Dev and MVP) then Azure (Production-ready) |
 | Architecture | Event-driven, service-boundary, cloud-agnostic core logic |
 | Frontend | Next.js 16, React 19, TypeScript, TailwindCSS 4 |
 | Phase 1 Host | DigitalOcean Droplet (sensor + SOAR + stream + ClickHouse) |
 | Phase 1 Dashboard | Vercel |
-| Phase 2 Target Host | AWS EC2 + EventBridge + Lambda + Security Hub + Amplify + App Runner |
+| Phase 2 Target Host | Azure VM sensor + Event Grid + Azure Functions + NSG + self-hosted ClickHouse + Vercel |
 | Key Performance Metric | MTTB measured; local dry-run median 0.962 ms |
 | Latest Evidence | Median MTTB 0.962 ms (micro benchmark) and p95 MTTB below 1000 ms up to 600 concurrent events (local dry-run SOAR probe) |
 
@@ -40,7 +40,7 @@ Current direction:
 
 Phase 2 direction:
 - Keep detection and intelligence logic unchanged.
-- Move orchestration and scaling primitives to AWS managed services.
+- Move orchestration and blocking primitives to Azure services while keeping the core cloud-agnostic.
 
 ---
 
@@ -50,7 +50,7 @@ Phase 2 direction:
 |---|---|---|
 | RQ1 | How can SSH-focused honeypot systems detect modern botnets with high confidence? | Build identity-centric SSH telemetry using HASSH and behavior analytics |
 | RQ2 | How can a cloud-hosted honeypot block SSH attacks automatically? | Deliver automated containment for high-risk SSH attackers |
-| RQ3 | How can cloud migration preserve logic while improving scalability? | Use cloud-agnostic core and migrate infra from DO to AWS |
+| RQ3 | How can cloud migration preserve logic while improving scalability? | Use cloud-agnostic core and migrate infra from DO to Azure |
 
 ---
 
@@ -86,8 +86,8 @@ The droplet is offline. These are historical facts from the project artifacts:
 ### Phase 1 (validated, now offline): DigitalOcean
 - Internet -> SSH Sensor -> HASSH + MITRE + Risk -> Local SOAR block -> ClickHouse -> Socket.io -> Vercel dashboard
 
-### Phase 2 (Target): AWS
-- Internet -> EC2 Sensor -> EventBridge -> Security Hub + Lambda SOAR -> ClickHouse Cloud -> App Runner stream -> Amplify dashboard
+### Phase 2 (Target): Azure
+- Internet -> Azure VM Sensor -> Event Grid -> Azure Function SOAR -> NSG rule; ClickHouse VM -> sensor VM stream -> Vercel dashboard
 
 ### Migration rule
 Only infrastructure adapters change. Core detection logic remains same.
@@ -102,7 +102,7 @@ PROJECT: CLOUDSENTINEL (100%)
 1. PLANNING AND ANALYSIS (20%) [Mostly Done]
 1.1 SSH RFC Requirements (8%) [Done]
 1.2 2026 Botnet TTP Research (6%) [Done]
-1.3 AWS Tool Validation (6%) [In Progress]
+1.3 Azure Tool Validation (6%) [In Progress]
 
 2. SYSTEM DESIGN (15%) [Done]
 2.1 Microservices Architecture (7%) [Done]
@@ -115,16 +115,16 @@ PROJECT: CLOUDSENTINEL (100%)
 3.1.2 HASSH Extraction Engine (3%) [Done]
 3.1.3 Stateful Deceptive VFS Logic (2%) [Done]
 
-3.2 STAGE 2 SOAR PIPELINE (12%) [Done on DO, AWS Adapter Planned]
+3.2 STAGE 2 SOAR PIPELINE (12%) [Done on DO, Azure Adapter Planned]
 3.2.1 DigitalOcean Local SOAR Blocking (iptables) [Done]
-3.2.2 EventBridge Orchestration Adapter (5%) [Planned]
+3.2.2 Event Grid Orchestration Adapter (5%) [Planned]
 3.2.3 MITRE ATT&CK Parser and Risk Scoring (4%) [Done]
-3.2.4 Lambda Blocking API Adapter (3%) [Planned]
+3.2.4 Azure Function Blocking API Adapter (3%) [Planned]
 
 3.3 STAGE 3 COMMAND CENTER (9%) [In Progress]
 3.3.1 Next.js Dashboard Build (4%) [Done]
 3.3.2 WebSocket Live Replay Server (3%) [Done]
-3.3.3 Global Hosting Migration to AWS Amplify (2%) [Planned]
+3.3.3 Global Hosting Migration to Vercel (2%) [Planned]
 
 4. TESTING AND VALIDATION (15%) [In Progress]
 4.1 Brute-force Simulation (8%) [Done]
@@ -132,7 +132,7 @@ PROJECT: CLOUDSENTINEL (100%)
 4.3 User Acceptance Testing UAT (3%) [In Progress]
 
 5. DEPLOYMENT AND DOCUMENTATION (20%) [In Progress]
-5.1 24/7 Production Setup (DO Live, AWS Next) (10%) [In Progress]
+5.1 24/7 Production Setup (DO Live, Azure Next) (10%) [In Progress]
 5.2 Final Report and Diagrams (6%) [In Progress]
 5.3 Pitching Presentation (4%) [In Progress]
 ```
@@ -215,56 +215,53 @@ UC7 --> UC4
 ### 9.2 Component Diagram
 ```plantuml
 @startuml
-package "AWS EC2 Sensor Node" {
+package "Azure VM Sensor Node" {
   [SSH Listener]
   [HASSH Extractor]
   [MITRE Mapper]
   [Risk Scorer]
 }
-package "AWS Security and Event Plane" {
-  [EventBridge]
-  [Security Hub]
-  [Lambda SOAR Blocker]
-  [Security Group Updater]
+package "Azure Security and Event Plane" {
+  [Event Grid]
+  [Microsoft Defender for Cloud]
+  [Azure Function SOAR Blocker]
+  [NSG Updater]
 }
 package "Analytics and Stream Plane" {
-  [ClickHouse Cloud]
-  [App Runner Stream API]
+  [ClickHouse VM]
+  [sensor VM Stream API]
 }
 package "Presentation Plane" {
-  [Amplify War Room Dashboard]
+  [Vercel War Room Dashboard]
 }
 [SSH Listener] --> [HASSH Extractor]
 [HASSH Extractor] --> [MITRE Mapper]
 [MITRE Mapper] --> [Risk Scorer]
-[Risk Scorer] --> [EventBridge]
-[EventBridge] --> [Security Hub]
-[Security Hub] --> [Lambda SOAR Blocker]
-[Lambda SOAR Blocker] --> [Security Group Updater]
-[Risk Scorer] --> [ClickHouse Cloud]
-[ClickHouse Cloud] --> [App Runner Stream API]
-[App Runner Stream API] --> [Amplify War Room Dashboard]
+[Risk Scorer] --> [Event Grid]
+[Event Grid] --> [Azure Function SOAR Blocker]
+[Azure Function SOAR Blocker] --> [NSG Updater]
+[Risk Scorer] --> [ClickHouse VM]
+[ClickHouse VM] --> [sensor VM Stream API]
+[sensor VM Stream API] --> [Vercel War Room Dashboard]
 @enduml
 ```
 
-### 9.3 Sequence Diagram (Phase 2 AWS)
+### 9.3 Sequence Diagram (Phase 2 Azure)
 ```plantuml
 @startuml
 actor Attacker
-participant "EC2 SSH Sensor" as Sensor
-participant "EventBridge" as EB
-participant "Security Hub" as SH
-participant "Lambda SOAR" as LSOAR
-participant "Security Group API" as SG
-participant "ClickHouse Cloud" as CH
-participant "App Runner Stream API" as AR
-participant "Amplify Dashboard" as UI
+participant "Azure VM SSH Sensor" as Sensor
+participant "Event Grid" as EB
+participant "Azure Function SOAR" as LSOAR
+participant "NSG API" as SG
+participant "ClickHouse VM" as CH
+participant "sensor VM Stream API" as AR
+participant "Vercel Dashboard" as UI
 
 Attacker -> Sensor: SSH connect and auth attempts
 Sensor -> Sensor: compute HASSH, map MITRE, score risk
 Sensor -> EB: publish high-risk event
-EB -> SH: route finding
-SH -> LSOAR: trigger automated response
+EB -> LSOAR: trigger automated response
 alt risk above threshold
   LSOAR -> SG: revoke attacker IP
 end
@@ -294,32 +291,30 @@ stop
 @enduml
 ```
 
-### 9.5 Deployment Diagram (Phase 2 AWS Only)
+### 9.5 Deployment Diagram (Phase 2 Azure Only)
 ```plantuml
 @startuml
 node "Internet" {
   component "SSH Attack Traffic"
 }
-node "AWS Cloud" {
-  node "EC2 Sensor Host" {
+node "Azure Cloud" {
+  node "Azure VM Sensor Host" {
     component "CloudSentinel Sensor"
   }
-  component "EventBridge"
-  component "Security Hub"
-  component "Lambda SOAR Blocker"
-  component "Security Group Rule API"
-  database "ClickHouse Cloud"
-  component "App Runner Stream API"
-  component "Amplify Dashboard"
+  component "Event Grid"
+  component "Azure Function SOAR Blocker"
+  component "NSG Rule API"
+  database "ClickHouse VM"
+  component "sensor VM Stream API"
+  component "Vercel Dashboard"
 }
 "SSH Attack Traffic" --> "CloudSentinel Sensor"
-"CloudSentinel Sensor" --> "EventBridge"
-"EventBridge" --> "Security Hub"
-"Security Hub" --> "Lambda SOAR Blocker"
-"Lambda SOAR Blocker" --> "Security Group Rule API"
-"CloudSentinel Sensor" --> "ClickHouse Cloud"
-"ClickHouse Cloud" --> "App Runner Stream API"
-"App Runner Stream API" --> "Amplify Dashboard"
+"CloudSentinel Sensor" --> "Event Grid"
+"Event Grid" --> "Azure Function SOAR Blocker"
+"Azure Function SOAR Blocker" --> "NSG Rule API"
+"CloudSentinel Sensor" --> "ClickHouse VM"
+"ClickHouse VM" --> "sensor VM Stream API"
+"sensor VM Stream API" --> "Vercel Dashboard"
 @enduml
 ```
 
@@ -373,7 +368,7 @@ SESSIONS ||--o{ SOAR_ACTIONS : triggers
 ** Planning and Analysis (20%) [mostly done]
 *** SSH RFC requirements (8%) [done]
 *** 2026 botnet TTP research (6%) [done]
-*** AWS tool validation (6%) [in progress]
+*** Azure tool validation (6%) [in progress]
 ** System Design (15%) [done]
 *** Microservices architecture (7%) [done]
 *** ERD and time-series schema (5%) [done]
@@ -384,19 +379,19 @@ SESSIONS ||--o{ SOAR_ACTIONS : triggers
 **** HASSH extraction (3%) [done]
 **** Stateful deceptive VFS (2%) [done]
 *** Stage 2 Cloud SOAR Pipeline (12%) [in progress]
-**** EventBridge orchestration (5%) [planned]
+**** Event Grid orchestration (5%) [planned]
 **** MITRE parser and scoring (4%) [done]
-**** Lambda blocking API (3%) [planned]
+**** Azure Function blocking API (3%) [planned]
 *** Stage 3 Command Center (9%) [in progress]
 **** Next.js dashboard (4%) [done]
 **** WebSocket live replay server (3%) [done]
-**** AWS Amplify global hosting (2%) [planned]
+**** Vercel global hosting (2%) [planned]
 ** Testing and Validation (15%) [in progress]
 *** Brute-force simulation (8%) [done]
 *** MTTB benchmark testing (4%) [done]
 *** UAT (3%) [in progress]
 ** Deployment and Docs (20%) [in progress]
-*** 24/7 AWS production setup (10%) [in progress]
+*** 24/7 Azure production setup (10%) [in progress]
 *** Final report and diagrams (6%) [in progress]
 *** Pitching presentation (4%) [in progress]
 @endwbs

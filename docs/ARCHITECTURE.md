@@ -2,7 +2,7 @@
 
 This file is the single source of truth for the system architecture. If a report, slide, or README disagrees with this file, this file wins.
 
-Last reviewed: 2026-11-05.
+Last reviewed: 2026-11-06.
 
 ## 1. Purpose
 
@@ -18,7 +18,7 @@ CloudSentinel is a cloud-hosted SSH honeypot with automated containment. It does
 | Phase | Status | Host |
 |---|---|---|
 | Phase 1 | Deployed and validated 2026-05-26; currently offline | DigitalOcean droplet, Vercel dashboard |
-| Phase 2 | Target, not deployed | AWS EC2, EventBridge, Security Hub, Lambda, ClickHouse Cloud, App Runner, Amplify |
+| Phase 2 | Target, not deployed | Azure VM sensor, Event Grid, Azure Functions + NSG, self-hosted ClickHouse, Vercel dashboard |
 
 The detection logic is the same in both phases. Only the cloud adapters change.
 
@@ -71,20 +71,39 @@ If Redis is down, events go to the local WAL and memory queue. The WAL is flushe
 | 8443 | HTTP honeypot | Disabled by default |
 | 53/udp | DNS honeypot | Disabled by default |
 
-## 4. Phase 2 (AWS target)
+## 4. Phase 2 (Azure target)
 
 ```text
 Internet
-  -> EC2 sensor
-  -> EventBridge
-  -> Security Hub
-  -> Lambda SOAR
-  -> Security Group rule
-
-EC2 sensor -> ClickHouse Cloud -> App Runner stream -> Amplify dashboard
+  -> Azure VM sensor (Standard_B2ats_v2, public IP + NSG)
+  -> HASSH + GeoIP + MITRE + risk score
+  -> SOAR decision
+       -> Azure Event Grid custom topic
+            -> Azure Function (managed identity)
+                 -> Azure NSG rule
+       -> self-hosted Redis Stream
+            -> ClickHouse VM (Standard_B2s, private subnet)
+            -> Socket.io stream on the sensor VM
+                 -> Vercel dashboard
 ```
 
 Phase 2 is a migration plan. Do not describe it as deployed.
+
+### Azure service choices
+
+| Job | Azure choice | Reason |
+|---|---|---|
+| Sensor host | `Standard_B2ats_v2` VM, Ubuntu 24.04 | Low-cost, enough for AsyncSSH and the local pipeline |
+| ClickHouse | `Standard_B2s` VM, 4 GB RAM, private subnet | Self-hosted keeps cost predictable; no Azure Data Explorer |
+| Event routing | Event Grid custom topic | Native event delivery to a Function without a broker cluster |
+| Automated block | Azure Function (Consumption) with system-assigned managed identity | Writes an NSG rule through Azure Resource Manager |
+| Firewall | Azure NSG | Native, auditable, removable with a TTL |
+| Backups | Azure Blob Storage | Off-VM copy of ClickHouse and Redis backups |
+| Secrets | Azure Key Vault | Managed identity access; no secrets in VM images |
+| Monitoring | Azure Monitor + Log Analytics | Free-tier friendly; optional |
+| Dashboard | Vercel | Existing Next.js deployment; Azure Static Web Apps is optional later |
+
+Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, managed Kafka/Event Hubs, managed ClickHouse, Azure SQL, and Azure Front Door. They add cost without being needed for this project.
 
 ## 5. Component map
 
@@ -113,6 +132,7 @@ Phase 2 is a migration plan. Do not describe it as deployed.
 | Dashboard to admin API | Admin commands and queries | Bearer token or JWT; TLS when enabled |
 | Admin API to firewall | Block and unblock commands | IP validation, allowlist, public-IP check |
 | Sensor to LLM provider | Attacker commands and session context | Optional feature; disable if data cannot leave the host |
+| Sensor to Azure control plane | Block request (IP, TTL, reason) | Function managed identity; least-privilege NSG role; allowlist and public-IP validation |
 | Sensor to sandbox | Untrusted payload execution | gVisor or Docker isolation, no network, memory and CPU limits |
 | Operator to server | Management SSH | Separate port, key-based access |
 
@@ -125,7 +145,7 @@ Phase 2 is a migration plan. Do not describe it as deployed.
 - SOAR blocks only public IPs and skips the configured allowlist.
 - Admin API supports a static bearer token or JWT. JWT auth is disabled unless configured.
 - The dashboard uses an HMAC-signed session cookie, a password step, a six-digit OTP sent by email, and Cloudflare Turnstile.
-- Secrets can come from environment variables, HashiCorp Vault, or Infisical.
+- Secrets can come from environment variables, HashiCorp Vault, or Infisical. The Azure target adds Azure Key Vault through managed identity.
 - The AI response path is optional. Secrets are redacted before the prompt, and calls are limited per session (20) and globally (200 per hour). If the budget is exhausted or no API key is set, the agent falls back to deterministic output.
 - Optional integrations: Webhook alerts, AbuseIPDB, MISP, AI threat summaries.
 
@@ -166,14 +186,14 @@ These are real gaps, not completed features.
 6. The nftables backend validates the IP in `block()` but not in `unblock()` or `is_blocked()`. Keep those calls behind the admin IP validator.
 7. When Redis reconnects, the memory queue and WAL can both flush the same event. Duplicate rows are possible after an outage.
 8. Session score maps grow for the life of the process. A long-running sensor needs a cleanup job.
-9. Phase 2 AWS is not deployed.
+9. Phase 2 Azure is not deployed.
 10. No uptime percentage has been measured. Do not claim 99.9% or 99.5%.
 11. The Phase 1 droplet is offline. No public sensor is live at the moment. Use the local demo for a working system.
 12. LLM redaction is pattern-based and best-effort. Use `LLM_PROVIDER=mock` or a local model if commands may contain sensitive data.
 
 ## 10. Configuration rule
 
-Environment variables override the YAML profile. Secrets stay in `.env`, Vault, Infisical, or the Vercel environment. Never commit `.env`, `.vercel/`, tokens, or private keys.
+Environment variables override the YAML profile. Secrets stay in `.env`, Vault, Infisical, Azure Key Vault, or the Vercel environment. Never commit `.env`, `.vercel/`, tokens, or private keys.
 
 ## 11. Documentation rule
 

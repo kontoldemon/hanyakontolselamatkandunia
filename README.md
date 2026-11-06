@@ -7,9 +7,30 @@ CloudSentinel is an SSH honeypot and automated response platform. It records att
 - Phase 1 was deployed on a DigitalOcean droplet and validated on 2026-05-26. The droplet is now offline.
 - The dashboard runs on Vercel.
 - For a zero-cost demo, run the full stack locally with Docker. See [docs/LOCAL_DEMO.md](docs/LOCAL_DEMO.md).
-- Phase 2 is the AWS target: EC2, EventBridge, Security Hub, Lambda, ClickHouse Cloud, App Runner, and Amplify. It is not deployed yet.
+- Phase 2 is the Azure target: Azure VM sensor, Event Grid, Azure Functions with NSG blocking, self-hosted ClickHouse, and the existing Vercel dashboard. It is not deployed yet.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writing the report.
+
+## Tech stack
+
+| Layer | Phase 1 (actual) | Phase 2 (Azure target, not deployed) |
+|---|---|---|
+| Sensor compute | DigitalOcean droplet, Ubuntu 24.04 | Azure VM `Standard_B2ats_v2`, Ubuntu 24.04 |
+| SSH honeypot | AsyncSSH on port 2222 | Same, public port 22 redirected to 2222 |
+| Fingerprinting | HASSH, JA4S-style profile, GeoIP | Same |
+| Detection and scoring | MITRE ATT&CK mapping, anomaly and risk scoring | Same |
+| SOAR | Local iptables/nftables block | Azure Event Grid custom topic -> Azure Function -> Azure NSG rule |
+| Event buffer | Self-hosted Redis Streams | Self-hosted Redis on the sensor VM |
+| Analytics database | Self-hosted ClickHouse | Self-hosted ClickHouse on a private Azure VM |
+| Backups | Local daily backup script | Azure Blob Storage target |
+| Live stream | Local Socket.io server | Same Socket.io server on the sensor VM |
+| Admin API | FastAPI on the sensor | Same FastAPI service, token/JWT protected |
+| Dashboard | Next.js 16 on Vercel | Existing Vercel deployment; Azure Static Web Apps is optional later |
+| Secrets | `.env`, Vault, or Infisical | Azure Key Vault with managed identity |
+| Infrastructure as code | Manual droplet setup | Bicep |
+| Observability | Prometheus metrics, structured logs | Azure Monitor and Log Analytics (optional) |
+
+The Azure plan deliberately avoids AKS, Azure Cache for Redis, Azure Data Explorer, managed Kafka, and managed ClickHouse. They add cost and are not needed for the FYP load.
 
 ## Quick start (local demo)
 
