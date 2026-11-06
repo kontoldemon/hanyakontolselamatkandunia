@@ -72,6 +72,7 @@ async def test_misp_refresh_branches(monkeypatch) -> None:
 
 def test_anomaly_import_and_predict_fallback(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "sklearn", None)
+    monkeypatch.setitem(sys.modules, "sklearn.ensemble", None)
     detector = anomaly.CommandAnomalyDetector()
     assert detector._model is None
 

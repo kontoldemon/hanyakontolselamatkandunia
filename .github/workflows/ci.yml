@@ -57,7 +57,7 @@ jobs:
         run: pip install -r src/cloudsentinel/requirements.txt
 
       - name: Run unit tests
-        run: pytest src/cloudsentinel/tests -v --cov=cloudsentinel --cov-report=term-missing --cov-report=xml --cov-fail-under=89 --timeout=120 -o addopts=""
+        run: pytest src/cloudsentinel/tests -v --cov=cloudsentinel --cov-report=term-missing --cov-report=xml --cov-fail-under=90 --timeout=120 -o addopts=""
         env:
           PYTHONPATH: src
           REDIS_URL: redis://localhost:6379/0
