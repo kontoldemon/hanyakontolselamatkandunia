@@ -35,6 +35,7 @@ def test_metrics_prometheus_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.undo()
 
     namespace["uptime_seconds"].set_function(lambda: 3.0)
+    namespace["uptime_seconds"].dec()
     payload = namespace["generate_latest"](namespace["_registry"])
     assert b"cloudsentinel_uptime_seconds" in payload
     fallback_metrics = namespace["Metrics"]()

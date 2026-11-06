@@ -33,6 +33,7 @@ def test_pipeline_tenacity_fallback(monkeypatch) -> None:
     exec(code, module.__dict__)
     monkeypatch.undo()
     assert module._TENACITY is False
+    assert module.retry()(lambda: None)() is None
 
 
 def test_command_issue_and_ssh() -> None:
