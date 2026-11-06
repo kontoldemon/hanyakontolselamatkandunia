@@ -89,5 +89,6 @@ async def test_main_with_optional_services(monkeypatch) -> None:
     monkeypatch.setattr(server_module, "LiveStream", FakeStream)
     monkeypatch.setattr(dns_module, "DNSHoneypot", FakeDNS)
     monkeypatch.setattr(sys, "argv", ["server"])
+    monkeypatch.setitem(sys.modules, "cloudsentinel.metrics", None)
 
     await server_module.main()
