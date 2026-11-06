@@ -556,7 +556,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                 try:
                     import hashlib
 
-                    hassh = hashlib.md5(hassh_algorithms.encode("utf-8")).hexdigest()
+                    hassh = hashlib.md5(hassh_algorithms.encode("utf-8"), usedforsecurity=False).hexdigest()
                 except Exception:
                     pass
             if not hassh and client_version:

@@ -33,6 +33,7 @@ structlog>=24.0.0,<25.0         # Unified structural logging
 orjson>=3.9.0,<4.0              # Ultra-fast JSON parsing
 tenacity>=8.5.0,<9.0            # Retry logic for resilience
 hishel>=0.0.32,<1.0             # HTTP caching for httpx
+filelock>=4.2.1                 # Patched file locking (CVE-2026-112940 family)
 polars>=1.0.0,<2.0              # Fast DataFrames in Rust
 
 # Dev

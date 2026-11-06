@@ -56,7 +56,7 @@ def calculate_hassh(
     cmac = ",".join(normalize_algorithm_list(mac_cs))
     ccomp = ",".join(normalize_algorithm_list(comp_cs))
     hassh_algorithms = f"{ckex};{cenc};{cmac};{ccomp}"
-    hassh = hashlib.md5(hassh_algorithms.encode("utf-8")).hexdigest()
+    hassh = hashlib.md5(hassh_algorithms.encode("utf-8"), usedforsecurity=False).hexdigest()
     return hassh, hassh_algorithms
 
 
@@ -64,7 +64,7 @@ def fallback_hassh_from_version(client_version: str, server_version: str = "") -
     client = client_version.strip() or "unknown-client"
     server = server_version.strip() or "unknown-server"
     algorithms = f"client:{client};server:{server};unknown;none"
-    return hashlib.md5(algorithms.encode("utf-8")).hexdigest(), algorithms
+    return hashlib.md5(algorithms.encode("utf-8"), usedforsecurity=False).hexdigest(), algorithms
 
 
 def infer_client_software(version: str, hassh: str = "") -> str:
@@ -112,7 +112,7 @@ def calculate_hassh_sha256(
     cmac = ",".join(normalize_algorithm_list(mac_cs))
     ccomp = ",".join(normalize_algorithm_list(comp_cs))
     hassh_algorithms = f"{ckex};{cenc};{cmac};{ccomp}"
-    hassh_md5 = hashlib.md5(hassh_algorithms.encode("utf-8")).hexdigest()
+    hassh_md5 = hashlib.md5(hassh_algorithms.encode("utf-8"), usedforsecurity=False).hexdigest()
     hassh_sha256 = hashlib.sha256(hassh_algorithms.encode("utf-8")).hexdigest()
     return hassh_md5, hassh_sha256, hassh_algorithms
 

@@ -35,6 +35,7 @@ For a server deployment, see [docs/DEPLOY.md](docs/DEPLOY.md).
 | Zero-cost local demo | [docs/LOCAL_DEMO.md](docs/LOCAL_DEMO.md) |
 | Deployment steps | [docs/DEPLOY.md](docs/DEPLOY.md) |
 | ClickHouse truth checks | [docs/CLICKHOUSE_TRUTH_QA.md](docs/CLICKHOUSE_TRUTH_QA.md) |
+| Security policy and audit status | [SECURITY.md](SECURITY.md) |
 | Measured evidence | [artifacts/](artifacts/) |
 | FYP report source | [docs/working-paper/report/FYP Pitching Content.docx](docs/working-paper/report/FYP%20Pitching%20Content.docx) |
 | Slide content | [docs/working-paper/slides/slidecontent.txt](docs/working-paper/slides/slidecontent.txt) |

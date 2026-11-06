@@ -1,0 +1,94 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "41 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-dependencies:
+    name: Python Dependencies
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: src/cloudsentinel/requirements.txt
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit Python requirements
+        run: pip-audit -r src/cloudsentinel/requirements.txt --format json --output pip-audit.json
+
+      - name: Upload Python audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit.json
+          if-no-files-found: ignore
+
+  node-dependencies:
+    name: Node Dependencies
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Full dependency audit report
+        if: always()
+        run: npm audit --json > npm-audit.json || true
+
+      - name: Upload Node audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: dashboard/npm-audit.json
+          if-no-files-found: ignore
+
+  bandit:
+    name: Bandit Static Analysis
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Fail on high-severity findings
+        run: bandit -r src/cloudsentinel -x src/cloudsentinel/tests -lll -f json -o bandit-high.json
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-high.json
+          if-no-files-found: ignore
