@@ -17,7 +17,7 @@ Do not test against systems you do not own. The local demo and CI are the suppor
 
 | Check | Workflow | Scope | Current result |
 |---|---|---|---|
-| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 429 passed, 99.24% (gate 99%) |
+| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 432 passed, 99.30% (gate 99%) |
 | SQL/static lint | `.github/workflows/ci.yml` | Ruff critical rules | passing |
 | CodeQL | `.github/workflows/codeql.yml` | Python + JavaScript/TypeScript, `security-extended` | 0 open alerts (2026-11-06) |
 | Python dependency audit | `.github/workflows/security.yml` | `pip-audit -r src/cloudsentinel/requirements.txt` | 0 known vulnerabilities |
