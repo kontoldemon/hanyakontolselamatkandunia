@@ -84,4 +84,5 @@ async def test_main_failure_and_shutdown_paths(monkeypatch) -> None:
     monkeypatch.setattr(server_module.ClickHouseForwarder, "stop", no_op)
     monkeypatch.setattr(server_module.CommandAnomalyDetector, "save", failing_save)
     monkeypatch.setattr(sys, "argv", ["server"])
+    monkeypatch.setitem(sys.modules, "cloudsentinel.metrics", None)
     await server_module.main()
