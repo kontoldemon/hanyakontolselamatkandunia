@@ -2159,9 +2159,10 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             )
             return {"ok": True, "report": report.to_dict()}
         except Exception as exc:
+            logger.warning("Threat summary failed: %s", exc)
             return {
                 "ok": False,
-                "error": str(exc),
+                "error": "AI summary unavailable",
                 "report": {
                     "session_id": session_id,
                     "summary": "AI summary unavailable on sensor",
@@ -2180,7 +2181,8 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             response_text = await chat_with_agent(prompt, context)
             return {"ok": True, "response": response_text}
         except Exception as exc:
-            return {"ok": False, "error": str(exc)}
+            logger.warning("LLM chat failed: %s", exc)
+            return {"ok": False, "error": "AI assistant unavailable"}
 
     @app.post("/auth/login")
     async def login(body: dict[str, str]) -> dict[str, Any]:
