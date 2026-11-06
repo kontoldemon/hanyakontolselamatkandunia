@@ -404,9 +404,6 @@ def validate_settings(settings: Settings) -> Settings:
             "Configuration validation failed:\\n  " + "\\n  ".join(errors)
         )
 
-    # Cross-field validation
-    settings = validate_settings(settings)
-
     return settings
 
 
