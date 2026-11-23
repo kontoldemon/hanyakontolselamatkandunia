@@ -74,10 +74,14 @@ def _create_block(ip: str, ttl: int, reason: str) -> str:
 @app.event_grid_trigger(arg_name="event")
 def block_ip(event: func.EventGridEvent) -> None:
     data = event.get_json()
-    ip, ttl, reason = validate_request(
-        data,
-        os.environ.get("CLOUDSENTINEL_ALLOWLIST", ""),
-    )
+    try:
+        ip, ttl, reason = validate_request(
+            data,
+            os.environ.get("CLOUDSENTINEL_ALLOWLIST", ""),
+        )
+    except (AttributeError, TypeError, ValueError) as exc:
+        logging.warning("Rejected Event Grid block request: %s", exc)
+        return
     _create_block(ip, ttl, reason)
 
 
@@ -110,8 +114,12 @@ def cleanup_expired(timer: func.TimerRequest) -> None:
     connection="AzureWebJobsStorage",
 )
 def unblock_ip(msg: func.QueueMessage) -> None:
-    data = json.loads(msg.get_body().decode("utf-8"))
-    name = str(data["rule"])
+    try:
+        data = json.loads(msg.get_body().decode("utf-8"))
+        name = str(data["rule"])
+    except (AttributeError, KeyError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        logging.warning("Ignored malformed unblock message: %s", exc)
+        return
     client = _network_client()
     resource_group = os.environ["NSG_RESOURCE_GROUP"]
     nsg_name = os.environ["NSG_NAME"]

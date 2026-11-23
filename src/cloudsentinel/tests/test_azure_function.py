@@ -208,6 +208,22 @@ def test_unblock_ip_deletes_rule(monkeypatch) -> None:
     assert client.deleted == ["cs-block-x"]
 
 
+def test_block_ip_rejects_private_ip(monkeypatch) -> None:
+    _set_env(monkeypatch)
+    module = _load_function_app(monkeypatch)
+    FakeNetworkClient.instances.clear()
+    module.block_ip(FakeEventGridEvent({"ip": "10.0.0.1", "ttl": 60}))
+    assert FakeNetworkClient.instances == []
+
+
+def test_unblock_ip_ignores_malformed_message(monkeypatch) -> None:
+    _set_env(monkeypatch)
+    module = _load_function_app(monkeypatch)
+    FakeNetworkClient.instances.clear()
+    module.unblock_ip(FakeQueueMessage(b"not-json"))
+    assert FakeNetworkClient.instances == []
+
+
 def test_cleanup_expired_deletes_old_rule(monkeypatch) -> None:
     _set_env(monkeypatch)
     module = _load_function_app(monkeypatch)
