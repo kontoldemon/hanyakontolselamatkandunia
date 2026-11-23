@@ -207,8 +207,8 @@ sudo KEY_VAULT_NAME="<vault-name>" /opt/cloudsentinel/load_secrets.sh
 
 `load_secrets.sh` also copies `eventgrid-topic-endpoint` and
 `eventgrid-topic-key` (created by Bicep) to `EVENTGRID_TOPIC_ENDPOINT` and
-`EVENTGRID_TOPIC_KEY`. Set `EVENTGRID_ENABLED=true` in `/opt/cloudsentinel/.env`
-and restart `cloudsentinel`.
+`EVENTGRID_TOPIC_KEY`, and enables `EVENTGRID_ENABLED=true` when both are
+present. Restart `cloudsentinel` after the script runs.
 
 ### Step 2: Deploy the Function and Event Grid subscription
 

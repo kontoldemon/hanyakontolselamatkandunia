@@ -42,4 +42,15 @@ for pair in ${SECRETS}; do
     fi
 done
 
+if grep -q '^EVENTGRID_TOPIC_ENDPOINT=.' "${ENV_FILE}" && \
+    grep -q '^EVENTGRID_TOPIC_KEY=.' "${ENV_FILE}"; then
+    if grep -q '^EVENTGRID_ENABLED=' "${ENV_FILE}"; then
+        sed -i 's|^EVENTGRID_ENABLED=.*|EVENTGRID_ENABLED=true|' "${ENV_FILE}"
+    else
+        printf 'EVENTGRID_ENABLED=true\n' >> "${ENV_FILE}"
+    fi
+fi
+
+chmod 600 "${ENV_FILE}"
+chown "${SENSOR_USER}:${SENSOR_USER}" "${ENV_FILE}"
 echo "Secrets loaded into ${ENV_FILE}"

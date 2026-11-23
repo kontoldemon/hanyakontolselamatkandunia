@@ -386,6 +386,11 @@ def validate_settings(settings: Settings) -> Settings:
         if not settings.redis.url:
             errors.append("ClickHouse requires Redis — set redis.url")
 
+    # Event Grid requires both the topic endpoint and key
+    if settings.soar.eventgrid_enabled:
+        if not settings.soar.eventgrid_topic_endpoint or not settings.soar.eventgrid_topic_key.get_secret_value():
+            errors.append("Event Grid enabled but endpoint or key is missing")
+
     # Admin API with auth requires a secret
     if settings.admin.enabled:
         try:

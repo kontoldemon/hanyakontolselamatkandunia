@@ -241,6 +241,17 @@ async def test_soar_eventgrid_also_notifies_host_agent(monkeypatch) -> None:
     assert json.loads(payload)["ip"] == "8.8.8.8"
 
 
+def test_validate_settings_requires_eventgrid_credentials() -> None:
+    from cloudsentinel.config import validate_settings
+
+    settings = _settings()
+    settings.soar.eventgrid_enabled = True
+    settings.soar.eventgrid_topic_endpoint = ""
+    settings.soar.eventgrid_topic_key = SecretStr("")
+    with pytest.raises(ValueError, match="Event Grid"):
+        validate_settings(settings)
+
+
 def test_vault_reads_kv_v2_path(monkeypatch) -> None:
     monkeypatch.setenv("VAULT_ADDR", "http://vault")
     monkeypatch.setenv("VAULT_TOKEN", "token")
