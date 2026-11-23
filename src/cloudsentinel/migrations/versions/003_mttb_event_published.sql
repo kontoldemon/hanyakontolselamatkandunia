@@ -11,5 +11,5 @@ AS SELECT
     avg(mttb_ms) as mttb_avg_ms,
     count() as total_blocks
 FROM cloudsentinel_events
-WHERE mttb_ms > 0 AND cloudsentinel_soar_action IN ('iptables_block', 'dry_run_block', 'event_published')
+WHERE mttb_ms > 0 AND cloudsentinel_soar_action IN ('iptables_block', 'dry_run_block', 'event_published', 'eventgrid_published')
 GROUP BY hour;

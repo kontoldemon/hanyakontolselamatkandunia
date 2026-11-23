@@ -29,6 +29,9 @@ if [ -z "${PUBLIC_TLS_HOST}" ]; then
     exit 1
 fi
 CLICKHOUSE_VERSION="24.12"
+CLICKHOUSE_HOST="${CLICKHOUSE_HOST:-127.0.0.1}"
+CLICKHOUSE_INSTALL="${CLICKHOUSE_INSTALL:-true}"
+CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-}"
 PYTHON_VERSION="3.12"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -96,20 +99,24 @@ fi
 echo "[1b/7] Configuring memory guardrails..."
 setup_swap
 
-# ClickHouse Installation
-echo "[2/7] Installing ClickHouse ${CLICKHOUSE_VERSION}..."
-if ! command -v clickhouse &>/dev/null; then
+# ClickHouse client and optional local server
+echo "[2/7] Preparing ClickHouse ${CLICKHOUSE_VERSION} (host ${CLICKHOUSE_HOST})..."
+if ! command -v clickhouse-client &>/dev/null; then
     install -d -m 0755 /etc/apt/keyrings
     curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key \
         | gpg --dearmor -o /etc/apt/keyrings/clickhouse.gpg
     echo "deb [signed-by=/etc/apt/keyrings/clickhouse.gpg] https://packages.clickhouse.com/deb stable main" \
         > /etc/apt/sources.list.d/clickhouse.list
     apt-get update -qq
-    apt-get install -y -qq clickhouse-server clickhouse-client
+    apt-get install -y -qq clickhouse-client
 fi
 
-mkdir -p /etc/clickhouse-server/config.d
-cat > /etc/clickhouse-server/config.d/cloudsentinel-memory.xml << CLICKHOUSE_MEMORY
+if [ "${CLICKHOUSE_INSTALL}" = "true" ]; then
+    if ! command -v clickhouse-server &>/dev/null; then
+        apt-get install -y -qq clickhouse-server
+    fi
+    mkdir -p /etc/clickhouse-server/config.d
+    cat > /etc/clickhouse-server/config.d/cloudsentinel-memory.xml << CLICKHOUSE_MEMORY
 <clickhouse>
     <max_server_memory_usage>1073741824</max_server_memory_usage>
     <mark_cache_size>134217728</mark_cache_size>
@@ -119,14 +126,18 @@ cat > /etc/clickhouse-server/config.d/cloudsentinel-memory.xml << CLICKHOUSE_MEM
     </query_cache>
 </clickhouse>
 CLICKHOUSE_MEMORY
+    systemctl enable clickhouse-server
+    systemctl restart clickhouse-server
+    echo "ClickHouse status: $(systemctl is-active clickhouse-server)"
+else
+    echo "ClickHouse server install skipped; using ${CLICKHOUSE_HOST}."
+fi
 
-systemctl enable clickhouse-server
-systemctl restart clickhouse-server
 systemctl enable redis-server
 systemctl restart redis-server
-echo "ClickHouse status: $(systemctl is-active clickhouse-server)"
 echo "Redis status: $(systemctl is-active redis-server)"
-wait_for_port 127.0.0.1 8123 "ClickHouse"
+wait_for_port "${CLICKHOUSE_HOST}" 8123 "ClickHouse HTTP"
+wait_for_port "${CLICKHOUSE_HOST}" 9000 "ClickHouse native"
 wait_for_port 127.0.0.1 6379 "Redis"
 
 # Sensor User & Directory
@@ -170,9 +181,13 @@ echo "Python packages installed."
 PYTHONPATH=/opt ${SENSOR_HOME}/venv/bin/python -m cloudsentinel.server --help >/dev/null
 
 # Apply CloudSentinel Schema
-echo "[5b/7] Applying ClickHouse schema..."
+echo "[5b/7] Applying ClickHouse schema on ${CLICKHOUSE_HOST}..."
 sleep 3
-clickhouse-client --multiquery < ${SENSOR_HOME}/schema.sql || {
+CH_CLIENT_ARGS=(--host "${CLICKHOUSE_HOST}")
+if [ -n "${CLICKHOUSE_PASSWORD}" ]; then
+    CH_CLIENT_ARGS+=(--password "${CLICKHOUSE_PASSWORD}")
+fi
+clickhouse-client "${CH_CLIENT_ARGS[@]}" --multiquery < ${SENSOR_HOME}/schema.sql || {
     echo "Schema already exists or applied via alternative method"
 }
 echo "Schema applied."
@@ -310,8 +325,8 @@ systemctl reload caddy || systemctl restart caddy
 cat > /etc/systemd/system/cloudsentinel.service << SERVICE
 [Unit]
 Description=CloudSentinel SSH Defense Sensor
-After=network.target clickhouse-server.service redis-server.service
-Wants=clickhouse-server.service redis-server.service
+After=network.target redis-server.service
+Wants=network.target redis-server.service
 
 [Service]
 Type=simple
@@ -327,11 +342,10 @@ SyslogIdentifier=cloudsentinel
 Environment=PYTHONPATH=/opt
 Environment=REDIS_URL=redis://127.0.0.1:6379/0
 Environment=CLICKHOUSE_ENABLED=true
-Environment=CLICKHOUSE_HOST=127.0.0.1
+Environment=CLICKHOUSE_HOST=${CLICKHOUSE_HOST}
 Environment=CLICKHOUSE_PORT=8123
 Environment=CLICKHOUSE_DATABASE=default
 Environment=CLICKHOUSE_USERNAME=default
-Environment=CLICKHOUSE_PASSWORD=
 Environment=NATS_ENABLED=false
 Environment=KAFKA_ENABLED=false
 Environment=SOAR_FIREWALL_ENABLED=true
@@ -438,7 +452,7 @@ echo " View logs:"
 echo "   sudo journalctl -u cloudsentinel -f"
 echo ""
 echo " ClickHouse query:"
-echo "   clickhouse-client --query 'SELECT count() FROM cloudsentinel_events'"
+echo "   clickhouse-client --host ${CLICKHOUSE_HOST} --query 'SELECT count() FROM cloudsentinel_events'"
 echo ""
 echo " Honeypot SSH port: ${SSH_PORT}"
 echo " Public honeypot SSH: ${HONEYPOT_PUBLIC_PORT} -> ${SSH_PORT}"

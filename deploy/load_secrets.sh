@@ -10,7 +10,7 @@ set -euo pipefail
 : "${KEY_VAULT_NAME:?Set KEY_VAULT_NAME to the Key Vault name}"
 ENV_FILE="${ENV_FILE:-/opt/cloudsentinel/.env}"
 SENSOR_USER="${SENSOR_USER:-cloudsentinel}"
-SECRET_NAMES="${SECRET_NAMES:-ADMIN_TOKEN LLM_API_KEY CLICKHOUSE_PASSWORD CLOUDSENTINEL_AUTH_SECRET CLOUDSENTINEL_ADMIN_PASS}"
+SECRETS="${SECRETS:-admin-token:ADMIN_TOKEN llm-api-key:LLM_API_KEY clickhouse-password:CLICKHOUSE_PASSWORD auth-secret:CLOUDSENTINEL_AUTH_SECRET admin-pass:CLOUDSENTINEL_ADMIN_PASS eventgrid-topic-endpoint:EVENTGRID_TOPIC_ENDPOINT eventgrid-topic-key:EVENTGRID_TOPIC_KEY}"
 
 if ! command -v az >/dev/null 2>&1; then
     echo "Azure CLI (az) is required." >&2
@@ -24,7 +24,9 @@ touch "${ENV_FILE}"
 chmod 600 "${ENV_FILE}"
 chown "${SENSOR_USER}:${SENSOR_USER}" "${ENV_FILE}"
 
-for name in ${SECRET_NAMES}; do
+for pair in ${SECRETS}; do
+    name="${pair%%:*}"
+    env_name="${pair#*:}"
     value=$(az keyvault secret show \
         --vault-name "${KEY_VAULT_NAME}" \
         --name "${name}" \
@@ -33,10 +35,10 @@ for name in ${SECRET_NAMES}; do
     if [ -z "${value}" ]; then
         continue
     fi
-    if grep -q "^${name}=" "${ENV_FILE}"; then
-        sed -i "s|^${name}=.*|${name}=${value}|" "${ENV_FILE}"
+    if grep -q "^${env_name}=" "${ENV_FILE}"; then
+        sed -i "s|^${env_name}=.*|${env_name}=${value}|" "${ENV_FILE}"
     else
-        printf '%s=%s\n' "${name}" "${value}" >> "${ENV_FILE}"
+        printf '%s=%s\n' "${env_name}" "${value}" >> "${ENV_FILE}"
     fi
 done
 

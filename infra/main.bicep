@@ -6,29 +6,49 @@ param location string = resourceGroup().location
 @description('Public admin IP in CIDR form, for example 203.0.113.10/32.')
 param adminIpCidr string
 
-@description('SSH public key for the admin user on the sensor VM.')
+@description('SSH public key for the admin user on both VMs.')
 param adminSshPublicKey string
 
 @description('VM size for the sensor.')
-param vmSize string = 'Standard_B2ats_v2'
+param sensorVmSize string = 'Standard_B2ats_v2'
+
+@description('VM size for the private ClickHouse VM.')
+param clickHouseVmSize string = 'Standard_B2s'
 
 @description('Admin username for SSH.')
 param adminUsername string = 'azureuser'
 
+@description('Sensor data disk size in GB.')
+param sensorDataDiskSizeGB int = 64
+
+@description('ClickHouse data disk size in GB.')
+param clickHouseDataDiskSizeGB int = 64
+
 var prefix = 'cloudsentinel'
 var vnetName = '${prefix}-vnet'
-var subnetName = 'sensor'
-var nsgName = '${prefix}-nsg'
-var publicIpName = '${prefix}-pip'
-var nicName = '${prefix}-nic'
-var vmName = '${prefix}-sensor'
-var kvName = 'cs-kv-${uniqueString(resourceGroup().id)}'
+var sensorSubnetName = 'sensor'
+var dataSubnetName = 'data'
+var sensorSubnetCidr = '10.20.1.0/24'
+var dataSubnetCidr = '10.20.2.0/24'
+var sensorSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, sensorSubnetName)
+var dataSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, dataSubnetName)
+var sensorNsgName = '${prefix}-sensor-nsg'
+var dataNsgName = '${prefix}-data-nsg'
+var sensorPublicIpName = '${prefix}-sensor-pip'
+var sensorNicName = '${prefix}-sensor-nic'
+var sensorVmName = '${prefix}-sensor'
+var clickHouseNicName = '${prefix}-clickhouse-nic'
+var clickHouseVmName = '${prefix}-clickhouse'
 var storageName = 'cs${uniqueString(resourceGroup().id)}'
-var storageContainer = 'backups'
-var subnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, subnetName)
+var backupContainerName = 'backups'
+var unblockQueueName = 'cloudsentinel-unblock'
+var keyVaultName = 'cs-kv-${uniqueString(resourceGroup().id)}'
+var eventGridTopicName = '${prefix}-blocks'
+var functionPlanName = '${prefix}-plan'
+var functionAppName = 'cs-fn-${uniqueString(resourceGroup().id)}'
 
-resource nsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
-  name: nsgName
+resource sensorNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
+  name: sensorNsgName
   location: location
   properties: {
     securityRules: [
@@ -101,6 +121,67 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
   }
 }
 
+resource dataNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
+  name: dataNsgName
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'Allow-ClickHouse-HTTP-From-Sensor'
+        properties: {
+          priority: 100
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '8123'
+          sourceAddressPrefix: sensorSubnetCidr
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Allow-ClickHouse-Native-From-Sensor'
+        properties: {
+          priority: 110
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '9000'
+          sourceAddressPrefix: sensorSubnetCidr
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Allow-SSH-From-Sensor'
+        properties: {
+          priority: 120
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '22'
+          sourceAddressPrefix: sensorSubnetCidr
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Deny-Inbound'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
 resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
   name: vnetName
   location: location
@@ -112,11 +193,20 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
     }
     subnets: [
       {
-        name: subnetName
+        name: sensorSubnetName
         properties: {
-          addressPrefix: '10.20.1.0/24'
+          addressPrefix: sensorSubnetCidr
           networkSecurityGroup: {
-            id: nsg.id
+            id: sensorNsg.id
+          }
+        }
+      }
+      {
+        name: dataSubnetName
+        properties: {
+          addressPrefix: dataSubnetCidr
+          networkSecurityGroup: {
+            id: dataNsg.id
           }
         }
       }
@@ -124,8 +214,8 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
   }
 }
 
-resource publicIp 'Microsoft.Network/publicIPAddresses@2024-05-01' = {
-  name: publicIpName
+resource sensorPublicIp 'Microsoft.Network/publicIPAddresses@2024-05-01' = {
+  name: sensorPublicIpName
   location: location
   sku: {
     name: 'Standard'
@@ -138,8 +228,8 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2024-05-01' = {
   }
 }
 
-resource nic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
-  name: nicName
+resource sensorNic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
+  name: sensorNicName
   location: location
   properties: {
     ipConfigurations: [
@@ -148,16 +238,16 @@ resource nic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
         properties: {
           privateIPAllocationMethod: 'Dynamic'
           subnet: {
-            id: subnetId
+            id: sensorSubnetId
           }
           publicIPAddress: {
-            id: publicIp.id
+            id: sensorPublicIp.id
           }
         }
       }
     ]
     networkSecurityGroup: {
-      id: nsg.id
+      id: sensorNsg.id
     }
   }
   dependsOn: [
@@ -165,18 +255,42 @@ resource nic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
   ]
 }
 
-resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
-  name: vmName
+resource clickHouseNic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
+  name: clickHouseNicName
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          privateIPAllocationMethod: 'Dynamic'
+          subnet: {
+            id: dataSubnetId
+          }
+        }
+      }
+    ]
+    networkSecurityGroup: {
+      id: dataNsg.id
+    }
+  }
+  dependsOn: [
+    vnet
+  ]
+}
+
+resource sensorVm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
+  name: sensorVmName
   location: location
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
     hardwareProfile: {
-      vmSize: vmSize
+      vmSize: sensorVmSize
     }
     osProfile: {
-      computerName: vmName
+      computerName: sensorVmName
       adminUsername: adminUsername
       linuxConfiguration: {
         disablePasswordAuthentication: true
@@ -207,9 +321,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
       dataDisks: [
         {
           lun: 0
-          name: '${vmName}-data'
+          name: '${sensorVmName}-data'
           createOption: 'Empty'
-          diskSizeGB: 64
+          diskSizeGB: sensorDataDiskSizeGB
           managedDisk: {
             storageAccountType: 'StandardSSD_LRS'
           }
@@ -220,46 +334,84 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
     networkProfile: {
       networkInterfaces: [
         {
-          id: nic.id
+          id: sensorNic.id
         }
       ]
     }
   }
   dependsOn: [
-    nic
+    sensorNic
   ]
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: kvName
+resource clickHouseVm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
+  name: clickHouseVmName
   location: location
   properties: {
-    tenantId: subscription().tenantId
-    sku: {
-      family: 'A'
-      name: 'standard'
+    hardwareProfile: {
+      vmSize: clickHouseVmSize
     }
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 7
-    publicNetworkAccess: 'Enabled'
-    networkAcls: {
-      defaultAction: 'Allow'
-      bypass: 'AzureServices'
+    osProfile: {
+      computerName: clickHouseVmName
+      adminUsername: adminUsername
+      linuxConfiguration: {
+        disablePasswordAuthentication: true
+        ssh: {
+          publicKeys: [
+            {
+              path: '/home/${adminUsername}/.ssh/authorized_keys'
+              keyData: adminSshPublicKey
+            }
+          ]
+        }
+      }
+      customData: base64(loadTextContent('clickhouse-cloud-init.sh'))
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'Canonical'
+        offer: 'ubuntu-24_04-lts'
+        sku: 'server'
+        version: 'latest'
+      }
+      osDisk: {
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'StandardSSD_LRS'
+        }
+        deleteOption: 'Delete'
+      }
+      dataDisks: [
+        {
+          lun: 0
+          name: '${clickHouseVmName}-data'
+          createOption: 'Empty'
+          diskSizeGB: clickHouseDataDiskSizeGB
+          managedDisk: {
+            storageAccountType: 'StandardSSD_LRS'
+          }
+          deleteOption: 'Delete'
+        }
+      ]
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: clickHouseNic.id
+        }
+      ]
     }
   }
+  dependsOn: [
+    clickHouseNic
+  ]
 }
 
-resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, vm.id, 'kv-secrets-user')
-  scope: keyVault
+resource eventGridTopic 'Microsoft.EventGrid/topics@2022-06-15' = {
+  name: eventGridTopicName
+  location: location
   properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '4633458b-17de-408a-b874-0445c86b69e6'
-    )
-    principalId: vm.identity.principalId
-    principalType: 'ServicePrincipal'
+    inputSchema: 'CloudEventSchemaV1_0'
   }
 }
 
@@ -285,29 +437,183 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
 
 resource backupContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
-  name: storageContainer
+  name: backupContainerName
   properties: {
     publicAccess: 'None'
   }
 }
 
-resource blobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storage.id, vm.id, 'blob-contributor')
+resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2023-05-01' = {
+  parent: storage
+  name: 'default'
+}
+
+resource unblockQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-05-01' = {
+  parent: queueService
+  name: unblockQueueName
+}
+
+var storageConnection = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${listKeys(storage.id, '2023-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+
+resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: functionPlanName
+  location: location
+  kind: 'functionapp'
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+  properties: {
+    reserved: true
+  }
+}
+
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: functionAppName
+  location: location
+  kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: functionPlan.id
+    httpsOnly: true
+    clientAffinityEnabled: false
+    siteConfig: {
+      linuxFxVersion: 'PYTHON|3.12'
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: storageConnection
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'python'
+        }
+        {
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'true'
+        }
+        {
+          name: 'ENABLE_ORYX_BUILD'
+          value: 'true'
+        }
+        {
+          name: 'AZURE_SUBSCRIPTION_ID'
+          value: subscription().subscriptionId
+        }
+        {
+          name: 'NSG_RESOURCE_GROUP'
+          value: resourceGroup().name
+        }
+        {
+          name: 'NSG_NAME'
+          value: sensorNsgName
+        }
+        {
+          name: 'UNBLOCK_QUEUE'
+          value: unblockQueueName
+        }
+        {
+          name: 'CLOUDSENTINEL_ALLOWLIST'
+          value: '${adminIpCidr},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16'
+        }
+      ]
+    }
+  }
+}
+
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: keyVaultName
+  location: location
+  properties: {
+    tenantId: subscription().tenantId
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 7
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      defaultAction: 'Allow'
+      bypass: 'AzureServices'
+    }
+  }
+}
+
+resource eventGridEndpointSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'eventgrid-topic-endpoint'
+  properties: {
+    value: eventGridTopic.properties.endpoint
+  }
+}
+
+resource eventGridKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'eventgrid-topic-key'
+  properties: {
+    value: listKeys(eventGridTopic.id, '2022-06-15').key1
+  }
+}
+
+resource sensorKeyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, sensorVm.id, 'kv-secrets-user')
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '4633458b-17de-408a-b874-0445c86b69e6'
+    )
+    principalId: sensorVm.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource sensorBlobRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, sensorVm.id, 'blob-contributor')
   scope: storage
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
       'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
     )
-    principalId: vm.identity.principalId
+    principalId: sensorVm.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
-output publicIpAddress string = publicIp.properties.ipAddress
-output fqdn string = publicIp.properties.dnsSettings.fqdn
-output sshCommand string = 'ssh ${adminUsername}@${publicIp.properties.ipAddress}'
-output managementSshCommand string = 'ssh -p 22222 ${adminUsername}@${publicIp.properties.ipAddress}'
+resource functionNsgRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(sensorNsg.id, functionApp.id, 'network-contributor')
+  scope: sensorNsg
+  properties: {
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '4d97b98b-1d4f-4787-a291-c67834d212e7'
+    )
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+output sensorPublicIpAddress string = sensorPublicIp.properties.ipAddress
+output sensorFqdn string = sensorPublicIp.properties.dnsSettings.fqdn
+output sensorSshCommand string = 'ssh ${adminUsername}@${sensorPublicIp.properties.ipAddress}'
+output managementSshCommand string = 'ssh -p 22222 ${adminUsername}@${sensorPublicIp.properties.ipAddress}'
+output clickHousePrivateIp string = clickHouseNic.properties.ipConfigurations[0].properties.privateIPAddress
+output eventGridTopicName string = eventGridTopic.name
+output eventGridTopicEndpoint string = eventGridTopic.properties.endpoint
+output functionAppName string = functionApp.name
+output sensorNsgName string = sensorNsg.name
 output keyVaultName string = keyVault.name
 output storageAccountName string = storage.name
-output backupContainerName string = storageContainer
+output backupContainerName string = backupContainerName
+output resourceGroupName string = resourceGroup().name

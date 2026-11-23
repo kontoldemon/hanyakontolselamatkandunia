@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last reviewed: 2026-11-22.
+Last reviewed: 2026-11-23.
 
 ## Authoritative documents
 
@@ -31,3 +31,4 @@ Last reviewed: 2026-11-22.
 ## Rule
 
 When a fact changes, update `docs/ARCHITECTURE.md` first, then the report and slides. If two current documents disagree, the architecture document wins.
+

@@ -93,6 +93,8 @@ soar:
     - 169.254.169.254
   active_profile: production
   mttb_target_ms: 100
+  eventgrid_enabled: false
+  eventgrid_topic_endpoint: ""
 
 stream:
   enabled: true

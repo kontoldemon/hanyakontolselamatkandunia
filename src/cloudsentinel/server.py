@@ -30,7 +30,7 @@ from .anomaly import CommandAnomalyDetector
 from .auth import get_auth
 from .commands import CommandAdapter
 from .commands.base import commands as cmd_registry
-from .config import Settings, load_settings
+from .config import Settings, load_settings, secret_to_str
 from .geoip import enrich as geo_enrich
 from .hassh import HASSHDNA, calculate_hassh, fallback_hassh_from_version, infer_client_software
 from .mitre import score_command
@@ -1155,6 +1155,9 @@ async def main() -> None:
         allowlist=settings.soar.allowlist,
         active_profile=settings.soar.active_profile,
         mttb_target_ms=settings.soar.mttb_target_ms,
+        eventgrid_enabled=settings.soar.eventgrid_enabled,
+        eventgrid_endpoint=settings.soar.eventgrid_topic_endpoint,
+        eventgrid_key=secret_to_str(settings.soar.eventgrid_topic_key),
         redis_settings=settings.redis,
     )
     hassh_dna = HASSHDNA()

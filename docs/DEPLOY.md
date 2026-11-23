@@ -122,30 +122,29 @@ vercel deploy --prod --yes
 Internet
   -> Azure public IP + NSG
        :22 public, :22222 admin CIDR, :80/:443 dashboard
-  -> Azure VM sensor (Standard_B2ats_v2)
+  -> Azure sensor VM (Standard_B2ats_v2)
        -> SSH honeypot :2222
        -> HASSH + GeoIP + MITRE + risk score
        -> SOAR decision
-            -> Redis channel cloudsentinel:soar:blocks
-                 -> host agent -> iptables block with TTL
+            -> Event Grid custom topic
+                 -> Azure Function (managed identity)
+                      -> NSG deny rule with TTL
+                      -> storage queue -> delete rule after TTL
             -> self-hosted Redis Stream
-                 -> ClickHouse on the same VM
+                 -> private ClickHouse VM (Standard_B2s, data subnet)
                  -> Socket.io stream :3001
                       -> Vercel dashboard
 ```
-
-The minimal Azure path is one VM. A private ClickHouse VM and Event Grid/Function
-are optional scale-up work, not required for the FYP demo.
 
 ### Azure service map
 
 | Service | Phase 1 | Phase 2 Azure target |
 |---|---|---|
 | Sensor | DigitalOcean droplet | Azure VM `Standard_B2ats_v2`, Ubuntu 24.04 |
-| Event bus | Local Python call | Local Redis channel `cloudsentinel:soar:blocks` |
-| SOAR blocking | iptables subprocess | Host agent on the VM applies iptables with TTL |
+| Event bus | Local Python call | Event Grid custom topic |
+| SOAR blocking | iptables subprocess | Azure Function + NSG deny rule with TTL |
 | Intelligence | Python dict | Same core; optional Microsoft Defender for Cloud posture |
-| Database | Self-hosted ClickHouse | Self-hosted ClickHouse on the same VM |
+| Database | Self-hosted ClickHouse | Self-hosted ClickHouse `Standard_B2s` VM, private subnet |
 | Dashboard | Vercel | Vercel (existing) |
 | WebSocket | Local Socket.io | Same Socket.io on sensor VM |
 | Backups | Local files | Azure Blob Storage |
@@ -154,13 +153,18 @@ are optional scale-up work, not required for the FYP demo.
 
 ### Step 1: Azure infrastructure (Bicep)
 
-The minimal Bicep is in `infra/main.bicep`. It creates:
+`infra/main.bicep` creates:
 
-- A VNet and an NSG. NSG allows public `22`, admin `22222` from `adminIpCidr`, and `80`/`443`, then denies the rest.
+- A VNet with a public sensor subnet and a private data subnet.
+- A sensor NSG: public `22`, admin `22222` from `adminIpCidr`, `80`/`443`, then deny the rest.
+- A data NSG: ClickHouse `8123`/`9000` and SSH from the sensor subnet only.
 - A `Standard_B2ats_v2` Ubuntu 24.04 sensor VM with a public IP and a 64 GB data disk.
-- A system-assigned managed identity on the VM.
-- A Key Vault (RBAC) with `Key Vault Secrets User` for the VM.
-- A Storage account with a private `backups` container and `Storage Blob Data Contributor` for the VM.
+- A `Standard_B2s` ClickHouse VM with no public IP and a 64 GB data disk.
+- An Event Grid custom topic that accepts CloudEvents v1.0.
+- A Python 3.12 Function App (Consumption) with a system-assigned managed identity and `Network Contributor` on the sensor NSG.
+- A Storage account with a private `backups` container and a `cloudsentinel-unblock` queue.
+- A Key Vault with the Event Grid endpoint/key and `Key Vault Secrets User` for the sensor VM.
+- `Storage Blob Data Contributor` for the sensor VM.
 
 Deploy it:
 
@@ -174,55 +178,88 @@ az deployment group create \
       adminSshPublicKey="$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
-Then mount the data disk and run the normal installer on the VM. The first SSH
-login uses port `22`; after `deploy.sh`, management SSH moves to `22222`.
+The deployment identity needs Owner or User Access Administrator for the role
+assignments. Note the outputs: `sensorPublicIpAddress`, `clickHousePrivateIp`,
+`functionAppName`, `eventGridTopicName`, `keyVaultName`.
+
+Then mount the sensor data disk and run the installer with the private
+ClickHouse host. The first SSH login uses port `22`; after `deploy.sh`,
+management SSH moves to `22222`.
 
 ```bash
-ssh azureuser@<public-ip>
+ssh azureuser@<sensor-public-ip>
 sudo mkfs.ext4 /dev/disk/azure/scsi1/lun0
 sudo mkdir -p /opt/cloudsentinel
 sudo mount /dev/disk/azure/scsi1/lun0 /opt/cloudsentinel
-sudo ADMIN_IP="<your-public-ip>" ./deploy.sh
+sudo CLICKHOUSE_HOST="<clickhouse-private-ip>" CLICKHOUSE_INSTALL=false \
+    ADMIN_IP="<your-public-ip>" ./deploy.sh
 ```
 
 Store the admin token and LLM key in Key Vault, then copy them into `.env`
-through the VM identity. Install the Azure CLI first if it is missing:
+through the sensor VM identity. Install the Azure CLI first if it is missing:
 
 ```bash
-az keyvault secret set --vault-name "<vault-name>" --name ADMIN_TOKEN --value "$(openssl rand -hex 32)"
-az keyvault secret set --vault-name "<vault-name>" --name LLM_API_KEY --value "<provider-key>"
+az keyvault secret set --vault-name "<vault-name>" --name admin-token --value "$(openssl rand -hex 32)"
+az keyvault secret set --vault-name "<vault-name>" --name llm-api-key --value "<provider-key>"
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 sudo KEY_VAULT_NAME="<vault-name>" /opt/cloudsentinel/load_secrets.sh
 ```
 
-The Event Grid topic, Function, and separate ClickHouse VM from earlier drafts
-are not part of this minimal path.
+`load_secrets.sh` also copies `eventgrid-topic-endpoint` and
+`eventgrid-topic-key` (created by Bicep) to `EVENTGRID_TOPIC_ENDPOINT` and
+`EVENTGRID_TOPIC_KEY`. Set `EVENTGRID_ENABLED=true` in `/opt/cloudsentinel/.env`
+and restart `cloudsentinel`.
 
-### Step 2: Service migration
+### Step 2: Deploy the Function and Event Grid subscription
+
+The Function code is in `azure/function/`. Install Azure Functions Core Tools
+if `func` is not available, then publish it to the Function App:
+
+```bash
+cd azure/function
+func azure functionapp publish <functionAppName>
+```
+
+Then create the Event Grid subscription that points at `block_ip`:
+
+```bash
+az deployment group create \
+  --resource-group cloudsentinel-rg \
+  --template-file infra/event-subscription.bicep \
+  --parameters \
+      eventGridTopicName="<eventGridTopicName>" \
+      functionAppName="<functionAppName>"
+```
+
+The Function App settings from Bicep already include `NSG_RESOURCE_GROUP`,
+`NSG_NAME`, `AZURE_SUBSCRIPTION_ID`, `UNBLOCK_QUEUE`, and
+`CLOUDSENTINEL_ALLOWLIST`.
+
+### Step 3: Service migration
 
 | Service | Local/Phase 1 behavior | Azure target behavior |
 |---|---|---|
-| SOAR coordinate | `soar.py` publishes to Redis | Same; the channel is local to the VM |
-| Firewall adapter | iptables subprocess | Host agent applies iptables with TTL |
+| SOAR coordinate | `soar.py` publishes to Redis | `soar.py` publishes a CloudEvent to Event Grid when enabled |
+| Firewall adapter | iptables subprocess | Function creates/deletes NSG deny rules |
 | Redis | Docker Redis | Native Redis on the sensor VM |
-| ClickHouse | Docker ClickHouse | Native ClickHouse on the sensor VM |
+| ClickHouse | Docker ClickHouse | ClickHouse on the private data VM |
 | Dashboard | Vercel | Same Vercel project |
 | Secrets | `.env` | Key Vault through `load_secrets.sh` and the VM identity |
 
-Keep `SOAR_FIREWALL_DRY_RUN=true` until the host agent is running and a test
-block has been verified. The host agent only accepts public IPs that are not
-allowlisted; the SOAR engine enforces the same rules before publishing.
+Keep `SOAR_FIREWALL_DRY_RUN=true` until the Function, Event Grid subscription,
+and NSG role assignment are verified. The sensor and the Function both reject
+private, loopback, link-local, multicast, and allowlisted IPs.
 
-### Step 3: Cutover checks
+### Step 4: Cutover checks
 
 1. Verify the sensor VM has no unexpected inbound ports.
 2. Verify SSH port 22 redirects to the honeypot on 2222, and management SSH is restricted to the operator IP.
-3. Trigger a test block and confirm the host agent adds an iptables rule.
-4. Confirm the rule is removed after the TTL.
-5. Confirm Redis, ClickHouse, and the admin API are not publicly reachable.
-6. Confirm `sudo systemctl status cloudsentinel-host-agent` is active.
+3. Trigger a high-risk event and confirm Event Grid delivers it to the `block_ip` Function.
+4. Confirm the Function creates a `cs-block-*` NSG deny rule and that it is deleted after the TTL.
+5. Confirm the Function identity has `Network Contributor` on the sensor NSG.
+6. Confirm Redis, ClickHouse, and the admin API are not publicly reachable.
 7. Confirm ClickHouse rows and dashboard totals match the truth window.
-8. Run the MTTB benchmark and record the result.
+8. Run the MTTB benchmark and record the result. Note that this is the sensor-side publish time, not the full NSG write time.
 
 ### Monitoring & Alerts
 
@@ -242,10 +279,11 @@ curl http://localhost:8080/healthz
 | Issue | Fix |
 |---|---|
 | Port 22 already in use | `lsof -i :22` to find process, stop SSH server |
-| Redis connection refused | `docker compose restart redis-plain` |
-| ClickHouse connection refused | Check `CLICKHOUSE_PASSWORD` in `.env` |
-| Automatic blocks do nothing | `systemctl status cloudsentinel-host-agent`; check the Redis channel `cloudsentinel:soar:blocks` |
-| MTTB > 100ms | Check the host agent and iptables latency with `iptables -L INPUT -v -n` |
+| Redis connection refused | `systemctl restart redis-server` (native) or `docker compose restart redis-plain` |
+| ClickHouse connection refused | Check `CLICKHOUSE_HOST`, the data NSG, and `systemctl status clickhouse-server` on the data VM |
+| Automatic blocks do nothing | Check `EVENTGRID_ENABLED`, the Event Grid subscription, Function logs, and the NSG role assignment. For non-Azure installs check `cloudsentinel-host-agent` |
+| MTTB > 100ms | The recorded value is sensor-side. Check Event Grid delivery and Function NSG-write logs; for local installs check iptables |
+| Function returns 403 from Azure | Confirm the Function identity has `Network Contributor` on the sensor NSG and that `NSG_NAME`/`NSG_RESOURCE_GROUP` are set |
 | No attacks showing | Verify port 22 is exposed to internet: `curl ifconfig.me` |
 | Dashboard totals look small | Check `CLOUDSENTINEL_TRUTH_WINDOW_HOURS` (0 means all time) and the `clickhouse_ok` field in `/readiness`. |
 | Data missing after a ClickHouse outage | Check `var/lib/cloudsentinel/clickhouse_spill.jsonl`. The forwarder replays it when ClickHouse returns. |

@@ -13,6 +13,7 @@ from typing import Any, ClassVar
 import redis.asyncio as aioredis
 
 from . import geoip, mitre
+from .eventgrid import publish_block
 
 # Optional integrations (graceful if not configured)
 try:
@@ -48,12 +49,18 @@ class SOAREngine:
         allowlist: list[str] | None = None,
         active_profile: str = "local",
         mttb_target_ms: int = 100,
+        eventgrid_enabled: bool = False,
+        eventgrid_endpoint: str = "",
+        eventgrid_key: str = "",
         redis_settings: Any = None,
     ):
         self.risk_threshold=risk_threshold; self.firewall_enabled=firewall_enabled
         self.firewall_dry_run=firewall_dry_run; self.firewall_path=firewall_path
         self.block_ttl=block_ttl; self.decay_rate=decay_rate
         self.active_profile=active_profile; self.mttb_target_ms=mttb_target_ms
+        self.eventgrid_enabled=eventgrid_enabled
+        self.eventgrid_endpoint=eventgrid_endpoint
+        self.eventgrid_key=eventgrid_key
         self._allowlist_raw=allowlist or ["127.0.0.1","10.0.0.0/8","172.16.0.0/12","192.168.0.0/16"]
         self._allowlist_networks=self._parse_allowlist(self._allowlist_raw)
         
@@ -351,7 +358,23 @@ class SOAREngine:
             return finish("dry_run_block")
 
         logger.warning("SOAR PUBLISHING BLOCK EVENT FOR %s (risk=%d)",ip,int(event.get("cloudsentinel_risk_score") or 0))
-        
+
+        if self.eventgrid_enabled and self.eventgrid_endpoint and self.eventgrid_key:
+            ok, error = await publish_block(
+                endpoint=self.eventgrid_endpoint,
+                key=self.eventgrid_key,
+                ip=ip,
+                ttl=self.block_ttl,
+                reason=str(event.get("reason") or event.get("eventid") or "soar"),
+                risk_score=int(event.get("cloudsentinel_risk_score") or 0),
+                session_id=str(event.get("session") or ""),
+            )
+            if ok:
+                await self._mark_blocked(ip)
+                event["block_command"] = "eventgrid.publish"
+                return finish("eventgrid_published")
+            logger.error("Event Grid block publish failed for %s: %s", ip, error)
+
         try:
             if self._redis:
                 # Publish block event for the Host Agent worker to pick up

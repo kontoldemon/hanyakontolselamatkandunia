@@ -8,7 +8,7 @@
 > Last Updated: 2026-06-01
 > Current Delivery State: Phase 1 deployed and validated on 2026-05-26; droplet now offline. Phase 2 prepared for Azure migration.
 >
-> Phase 2 note (2026-11-22): the implemented minimal path is one Azure VM plus the host firewall agent and NSG exposure rules (`infra/main.bicep`). Event Grid and Azure Function sections below describe an optional scale-up path, not the current deployment.
+> Phase 2 note (2026-11-22): the implemented path is the Event Grid custom topic -> Azure Function -> NSG rule flow, with a private ClickHouse VM. The host firewall agent remains for local/non-Azure installs.
 
 ---
 
@@ -24,7 +24,7 @@
 | Frontend | Next.js 16, React 19, TypeScript, TailwindCSS 4 |
 | Phase 1 Host | DigitalOcean Droplet (sensor + SOAR + stream + ClickHouse) |
 | Phase 1 Dashboard | Vercel |
-| Phase 2 Target Host | Azure VM sensor + host firewall agent + NSG + self-hosted ClickHouse + Vercel (Event Grid/Function optional) |
+| Phase 2 Target Host | Azure VM sensor + Event Grid + Azure Function + NSG + private ClickHouse VM + Vercel |
 | Key Performance Metric | MTTB measured; local dry-run median 0.962 ms |
 | Latest Evidence | Median MTTB 0.962 ms (micro benchmark) and p95 MTTB below 1000 ms up to 600 concurrent events (local dry-run SOAR probe) |
 

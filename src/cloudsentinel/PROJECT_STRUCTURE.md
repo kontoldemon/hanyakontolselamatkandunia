@@ -18,7 +18,8 @@ The Dockerfile, systemd unit, and `deploy.sh` all start `python -m cloudsentinel
 | SSH session | `server.py`, `shell.py`, `vfs.py`, `vfs_agent.py`, `commands/` |
 | Fingerprinting | `hassh.py`, `geoip.py`, `tls.py` |
 | Detection and scoring | `mitre.py`, `anomaly.py`, `attack_graph.py` |
-| Response | `soar.py`, `webhook.py`; host firewall agent in `../host_agent/iptables_worker.py` |
+| Response | `soar.py`, `eventgrid.py`, `webhook.py`; host firewall agent in `../host_agent/iptables_worker.py` |
+| Azure Function | `../../azure/function/function_app.py`, `block_logic.py` |
 | Data pipeline | `pipeline.py`, `event_codec.py` |
 | Admin API | `admin_api.py`, `auth.py` |
 | Live stream | `stream.py` |
