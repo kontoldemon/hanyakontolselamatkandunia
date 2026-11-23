@@ -32,6 +32,7 @@ CLICKHOUSE_VERSION="24.12"
 CLICKHOUSE_HOST="${CLICKHOUSE_HOST:-127.0.0.1}"
 CLICKHOUSE_INSTALL="${CLICKHOUSE_INSTALL:-true}"
 CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 PYTHON_VERSION="3.12"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -115,6 +116,20 @@ if [ "${CLICKHOUSE_INSTALL}" = "true" ]; then
     if ! command -v clickhouse-server &>/dev/null; then
         apt-get install -y -qq clickhouse-server
     fi
+    if [ -z "${CLICKHOUSE_PASSWORD}" ]; then
+        CLICKHOUSE_PASSWORD="$(openssl rand -hex 32)"
+    fi
+    mkdir -p /etc/clickhouse-server/users.d
+    cat > /etc/clickhouse-server/users.d/cloudsentinel-password.xml << CLICKHOUSE_AUTH
+<clickhouse>
+    <users>
+        <default>
+            <password>${CLICKHOUSE_PASSWORD}</password>
+        </default>
+    </users>
+</clickhouse>
+CLICKHOUSE_AUTH
+    chown -R clickhouse:clickhouse /etc/clickhouse-server/users.d 2>/dev/null || true
     mkdir -p /etc/clickhouse-server/config.d
     cat > /etc/clickhouse-server/config.d/cloudsentinel-memory.xml << CLICKHOUSE_MEMORY
 <clickhouse>
@@ -133,6 +148,28 @@ else
     echo "ClickHouse server install skipped; using ${CLICKHOUSE_HOST}."
 fi
 
+install -m 0600 /dev/null /root/cloudsentinel-clickhouse-password
+printf '%s\n' "${CLICKHOUSE_PASSWORD}" > /root/cloudsentinel-clickhouse-password
+
+if [ -z "${REDIS_PASSWORD}" ]; then
+    REDIS_PASSWORD="$(openssl rand -hex 32)"
+fi
+if [ -f /etc/redis/redis.conf ]; then
+    if grep -q '^requirepass ' /etc/redis/redis.conf; then
+        sed -i "s/^requirepass .*/requirepass ${REDIS_PASSWORD}/" /etc/redis/redis.conf
+    elif grep -q '^# requirepass ' /etc/redis/redis.conf; then
+        sed -i "s/^# requirepass .*/requirepass ${REDIS_PASSWORD}/" /etc/redis/redis.conf
+    else
+        echo "requirepass ${REDIS_PASSWORD}" >> /etc/redis/redis.conf
+    fi
+    if grep -q '^bind ' /etc/redis/redis.conf; then
+        sed -i 's/^bind .*/bind 127.0.0.1 ::1/' /etc/redis/redis.conf
+    else
+        echo 'bind 127.0.0.1 ::1' >> /etc/redis/redis.conf
+    fi
+fi
+install -m 0600 /dev/null /root/cloudsentinel-redis-password
+printf '%s\n' "${REDIS_PASSWORD}" > /root/cloudsentinel-redis-password
 systemctl enable redis-server
 systemctl restart redis-server
 echo "Redis status: $(systemctl is-active redis-server)"
@@ -340,12 +377,13 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=cloudsentinel
 Environment=PYTHONPATH=/opt
-Environment=REDIS_URL=redis://127.0.0.1:6379/0
+Environment=REDIS_URL=redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0
 Environment=CLICKHOUSE_ENABLED=true
 Environment=CLICKHOUSE_HOST=${CLICKHOUSE_HOST}
 Environment=CLICKHOUSE_PORT=8123
 Environment=CLICKHOUSE_DATABASE=default
 Environment=CLICKHOUSE_USERNAME=default
+Environment=CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
 Environment=NATS_ENABLED=false
 Environment=KAFKA_ENABLED=false
 Environment=SOAR_FIREWALL_ENABLED=true
@@ -397,7 +435,7 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=${SENSOR_HOME}
-ExecStart=${SENSOR_HOME}/venv/bin/python ${SENSOR_HOME}/host_agent/iptables_worker.py --redis redis://127.0.0.1:6379/0 --firewall-path /sbin/iptables
+ExecStart=${SENSOR_HOME}/venv/bin/python ${SENSOR_HOME}/host_agent/iptables_worker.py --redis redis://:${REDIS_PASSWORD}@127.0.0.1:6379/0 --firewall-path /sbin/iptables
 Restart=always
 RestartSec=5
 NoNewPrivileges=true

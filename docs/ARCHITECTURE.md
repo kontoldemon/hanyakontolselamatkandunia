@@ -189,7 +189,7 @@ The spill file protects against ClickHouse outages, but it uses disk. If the dis
 These are real gaps, not completed features.
 
 1. MTTB is measured in dry-run mode. A live end-to-end run with real firewall changes is still needed.
-2. The sample config leaves Redis, ClickHouse, and NATS without authentication. They must stay on a private network.
+2. Redis and ClickHouse use generated passwords on the deployment paths. NATS remains without authentication; keep all three on a private network.
 3. The public live stream is read-only but unauthenticated. Passwords are removed, but other attacker commands are visible.
 4. Session score maps grow for the life of the process. A long-running sensor needs a cleanup job.
 5. Phase 2 Azure is not deployed.

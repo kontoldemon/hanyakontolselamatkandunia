@@ -280,6 +280,18 @@ def test_bicep_mounts_sensor_disk_and_private_vault() -> None:
     assert Path("infra/sensor-cloud-init.sh").is_file()
 
 
+def test_deploy_sets_redis_and_clickhouse_auth() -> None:
+    deploy = Path("src/cloudsentinel/deploy.sh").read_text(encoding="utf-8")
+    assert "requirepass" in deploy
+    assert "cloudsentinel-password.xml" in deploy
+    backup = Path("deploy/backup.sh").read_text(encoding="utf-8")
+    assert "REDISCLI_AUTH" in backup
+    bicep = Path("infra/main.bicep").read_text(encoding="utf-8")
+    assert "clickHousePassword" in bicep
+    cloud_init = Path("infra/clickhouse-cloud-init.sh").read_text(encoding="utf-8")
+    assert "__CLICKHOUSE_PASSWORD__" in cloud_init
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

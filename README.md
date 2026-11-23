@@ -78,7 +78,7 @@ The `0.86 s` MTTB in the literature is from Chin et al. (2025). It is not a resu
 ## Security
 
 - Honeypot credentials are accepted on purpose. The sensor is not a production SSH server.
-- Keep Redis, ClickHouse, NATS, and the admin API on a private network or behind a firewall.
+- Redis and ClickHouse use passwords on the deployment paths. Keep them, NATS, and the admin API on a private network or behind a firewall.
 - The admin API fails closed: it returns `503` when neither `ADMIN_TOKEN` nor JWT auth is configured. The Prometheus `/metrics` endpoint stays private.
 - The public Socket.io stream removes captured passwords before emitting events.
 - The Event Grid Function accepts only public, non-allowlisted IPs; it creates an NSG deny rule and queues its deletion after the TTL. A five-minute timer trigger cleans up expired rules if a queue message is lost. Manual dashboard blocks use the same path.

@@ -34,5 +34,17 @@ cat > /etc/clickhouse-server/config.d/cloudsentinel-network.xml <<'XML'
 </clickhouse>
 XML
 
+mkdir -p /etc/clickhouse-server/users.d
+cat > /etc/clickhouse-server/users.d/cloudsentinel-password.xml <<'XML'
+<clickhouse>
+    <users>
+        <default>
+            <password>__CLICKHOUSE_PASSWORD__</password>
+        </default>
+    </users>
+</clickhouse>
+XML
+chown -R clickhouse:clickhouse /etc/clickhouse-server/users.d
+
 systemctl enable clickhouse-server
 systemctl restart clickhouse-server

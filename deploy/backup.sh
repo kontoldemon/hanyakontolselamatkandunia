@@ -47,6 +47,12 @@ esac
 if [ "${CLICKHOUSE_HOST}" = "clickhouse" ]; then
     CLICKHOUSE_HOST="127.0.0.1"
 fi
+if [ -z "${REDIS_PASSWORD:-}" ] && [ -f /root/cloudsentinel-redis-password ]; then
+    REDIS_PASSWORD="$(cat /root/cloudsentinel-redis-password)"
+fi
+if [ -z "${CLICKHOUSE_PASSWORD:-}" ] && [ -f /root/cloudsentinel-clickhouse-password ]; then
+    CLICKHOUSE_PASSWORD="$(cat /root/cloudsentinel-clickhouse-password)"
+fi
 
 mode() {
     if [ "${BACKUP_MODE}" != "auto" ]; then
@@ -68,6 +74,8 @@ backup_redis() {
             -a "${REDIS_PASSWORD:-cloudsentinel_redis}" BGSAVE
         sleep 2
         docker cp "${REDIS_CONTAINER}:/data/dump.rdb" "${target}/redis_dump.rdb"
+    elif [ -n "${REDIS_PASSWORD:-}" ]; then
+        REDISCLI_AUTH="${REDIS_PASSWORD}" redis-cli -u "${REDIS_URL}" --rdb "${target}/redis_dump.rdb"
     else
         redis-cli -u "${REDIS_URL}" --rdb "${target}/redis_dump.rdb"
     fi

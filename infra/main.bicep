@@ -28,6 +28,10 @@ param clickHouseDataDiskSizeGB int = 64
 @description('Optional LLM provider key. Stored in Key Vault when supplied.')
 param llmApiKey string = ''
 
+@secure()
+@description('ClickHouse default-user password. Must match the value passed to deploy.sh.')
+param clickHousePassword string
+
 var prefix = 'cloudsentinel'
 var vnetName = '${prefix}-vnet'
 var sensorSubnetName = 'sensor'
@@ -379,7 +383,7 @@ resource clickHouseVm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
           ]
         }
       }
-      customData: base64(loadTextContent('clickhouse-cloud-init.sh'))
+      customData: base64(replace(loadTextContent('clickhouse-cloud-init.sh'), '__CLICKHOUSE_PASSWORD__', clickHousePassword))
     }
     storageProfile: {
       imageReference: {
@@ -584,6 +588,14 @@ resource llmKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (llmAp
   name: 'llm-api-key'
   properties: {
     value: llmApiKey
+  }
+}
+
+resource clickHousePasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'clickhouse-password'
+  properties: {
+    value: clickHousePassword
   }
 }
 
