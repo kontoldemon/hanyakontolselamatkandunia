@@ -81,6 +81,6 @@ The `0.86 s` MTTB in the literature is from Chin et al. (2025). It is not a resu
 - Keep Redis, ClickHouse, NATS, and the admin API on a private network or behind a firewall.
 - The admin API fails closed: it returns `503` when neither `ADMIN_TOKEN` nor JWT auth is configured. The Prometheus `/metrics` endpoint stays private.
 - The public Socket.io stream removes captured passwords before emitting events.
-- The Event Grid Function accepts only public, non-allowlisted IPs; it creates an NSG deny rule and queues its deletion after the TTL. A five-minute timer trigger cleans up expired rules if a queue message is lost.
+- The Event Grid Function accepts only public, non-allowlisted IPs; it creates an NSG deny rule and queues its deletion after the TTL. A five-minute timer trigger cleans up expired rules if a queue message is lost. Manual dashboard blocks use the same path.
 - Do not commit `.env` files or `.vercel/` secrets. Rotate any key that was shared. Store runtime secrets in Azure Key Vault; `deploy/load_secrets.sh` copies them into `.env`.
 - The LLM response path is optional. Prompts are best-effort redacted and rate-limited. Set `LLM_PROVIDER=mock` if commands must not leave the host.

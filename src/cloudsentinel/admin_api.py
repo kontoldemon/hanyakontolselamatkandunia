@@ -19,6 +19,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .config import Settings, secret_to_str
+from .eventgrid import publish_block
 from .geoip import enrich as geo_enrich
 from .geoip import is_public_ip
 from .hassh import HASSHDNA, fallback_hassh_from_version, infer_client_software
@@ -1887,6 +1888,27 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         check = _manual_block_args(firewall_path, "-C", ip, reason)
         add = _manual_block_args(firewall_path, "-I", ip, reason)
 
+        action = ""
+        if (
+            soar is not None
+            and getattr(soar, "eventgrid_enabled", False)
+            and getattr(soar, "eventgrid_endpoint", "")
+            and getattr(soar, "eventgrid_key", "")
+        ):
+            ok, error = await publish_block(
+                endpoint=soar.eventgrid_endpoint,
+                key=soar.eventgrid_key,
+                ip=ip,
+                ttl=ttl,
+                reason=reason,
+                risk_score=0,
+                session_id="manual",
+            )
+            if ok:
+                action = "eventgrid_published"
+            else:
+                logger.warning("manual_eventgrid_block_failed", ip=ip, error=error)
+
         if soar is not None and getattr(soar, "_redis", None) is not None:
             payload = json.dumps(
                 {
@@ -1900,8 +1922,9 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             )
             await soar._redis.publish("cloudsentinel:soar:blocks", payload)
             await soar._redis.set(f"soar:block:{ip}", "1", ex=ttl if ttl > 0 else None)
-            action = "event_published"
-        else:
+            if not action:
+                action = "event_published"
+        elif not action:
             existing_code, _, _ = await _run_command(check)
             if existing_code == 0:
                 action = "already_blocked"

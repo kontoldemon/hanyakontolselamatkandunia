@@ -241,6 +241,37 @@ async def test_soar_eventgrid_also_notifies_host_agent(monkeypatch) -> None:
     assert json.loads(payload)["ip"] == "8.8.8.8"
 
 
+def test_manual_block_uses_eventgrid(monkeypatch) -> None:
+    calls: list[dict] = []
+
+    async def fake_publish(**kwargs):
+        calls.append(kwargs)
+        return True, ""
+
+    monkeypatch.setattr("cloudsentinel.admin_api.publish_block", fake_publish)
+    settings = _settings()
+    settings.admin.token = SecretStr("unit-token")
+    fake_redis = _FakeRedis()
+    soar = types.SimpleNamespace(
+        eventgrid_enabled=True,
+        eventgrid_endpoint="https://topic.example.com/api/events",
+        eventgrid_key="unit-key",
+        _redis=fake_redis,
+    )
+    client = TestClient(create_admin_app(settings, EventPipeline(settings.redis), soar))
+    response = client.post(
+        "/admin/block-ip",
+        headers={"Authorization": "Bearer unit-token"},
+        json={"ip": "8.8.8.8", "ttl": 60, "reason": "unit"},
+    )
+    assert response.status_code == 200
+    assert response.json()["action"] == "eventgrid_published"
+    assert calls
+    assert calls[0]["ip"] == "8.8.8.8"
+    assert calls[0]["ttl"] == 60
+    assert fake_redis.published
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 
