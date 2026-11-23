@@ -179,6 +179,7 @@ The phase 1 validation artifact reports `21` MITRE techniques mapped. The covera
 | ClickHouse | `TTL timestamp + INTERVAL 3650 DAY` | Keeps ten years. No 90-day deletion. |
 | Redis Stream | `maxlen: 200000` | Buffer for the forwarder. Oldest entries trim only after 200k events. |
 | ClickHouse forwarder | Spill file | If ClickHouse is down, raw events go to `var/lib/cloudsentinel/clickhouse_spill.jsonl` and replay when it returns. |
+| ClickHouse dedup | `insert_deduplication_token` + 1,000-block window | A retried spill batch after a crash is deduplicated. |
 | Dashboard totals | `CLOUDSENTINEL_TRUTH_WINDOW_HOURS=0` | All-time by default. Set `24` for a rolling 24-hour view. |
 | Backup | `deploy/backup.sh` | Daily cron backs up Redis, ClickHouse, TTY logs, and buffer files; refreshes the VM managed identity, uploads to Azure Blob, and prunes old Blob copies using `AZURE_RETENTION_DAYS`. |
 

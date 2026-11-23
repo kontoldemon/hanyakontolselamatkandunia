@@ -68,7 +68,7 @@ ENGINE = MergeTree()
 PARTITION BY toYYYYMMDD(timestamp)
 ORDER BY (eventid, timestamp, src_ip)
 TTL timestamp + INTERVAL 3650 DAY
-SETTINGS index_granularity = 8192;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 1000;
 
 ALTER TABLE cloudsentinel_events ADD COLUMN IF NOT EXISTS detected_at DateTime64(3) DEFAULT toDateTime64(0, 3);
 ALTER TABLE cloudsentinel_events ADD COLUMN IF NOT EXISTS block_started_at DateTime64(3) DEFAULT toDateTime64(0, 3);

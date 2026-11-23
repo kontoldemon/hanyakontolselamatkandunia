@@ -10,6 +10,7 @@ not block the asyncio loop.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -551,7 +552,10 @@ class ClickHouseForwarder:
             return
         try:
             rows = [self._redis_fields_to_row(fields) for fields in spilled]
-            await asyncio.to_thread(self._insert_rows, rows)
+            token = hashlib.sha256(
+                json.dumps(spilled, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            await asyncio.to_thread(self._insert_rows, rows, token)
             await asyncio.to_thread(self._spill_clear)
             logger.info("ClickHouse flushed %d spilled events", len(rows))
         except Exception as exc:
@@ -676,11 +680,12 @@ class ClickHouseForwarder:
             ),
         }
 
-    def _insert_rows(self, rows: list[dict[str, Any]]) -> None:
+    def _insert_rows(self, rows: list[dict[str, Any]], token: str) -> None:
         assert self._client is not None
         data = [[row.get(column) for column in self.COLUMNS] for row in rows]
         self._client.insert(
             self.clickhouse_settings.table,
             data,
             column_names=self.COLUMNS,
+            settings={"insert_deduplication_token": token},
         )

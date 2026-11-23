@@ -433,6 +433,24 @@ def test_deploy_detects_public_ip_after_curl_install() -> None:
     assert source.index("apt-get install -y -qq") < source.index("PUBLIC_IP=")
 
 
+def test_clickhouse_insert_uses_dedup_token() -> None:
+    from cloudsentinel.config import ClickHouseSettings, RedisSettings
+    from cloudsentinel.pipeline import ClickHouseForwarder
+
+    forwarder = ClickHouseForwarder(RedisSettings(), ClickHouseSettings())
+
+    class FakeClient:
+        def __init__(self) -> None:
+            self.kwargs: dict | None = None
+
+        def insert(self, *_args: object, **kwargs: object) -> None:
+            self.kwargs = kwargs
+
+    forwarder._client = FakeClient()
+    forwarder._insert_rows([{"eventid": "e"}], "token-1")
+    assert forwarder._client.kwargs["settings"]["insert_deduplication_token"] == "token-1"
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 
