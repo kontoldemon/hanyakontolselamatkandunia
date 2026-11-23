@@ -334,6 +334,20 @@ def test_docker_nats_requires_auth() -> None:
     assert "NATS_URL: nats://${NATS_USER" in source
 
 
+def test_soar_memory_is_bounded() -> None:
+    from cloudsentinel.soar import SOAREngine
+
+    engine = SOAREngine(risk_threshold=30, firewall_enabled=False)
+    engine._MAX_MEM_ENTRIES = 3
+    for index in range(5):
+        engine._update_ip_profile(f"8.8.8.{index}", f"s{index}", 10, {"T1"}, float(index))
+    engine._mem_session_scores.update({f"s{index}": 1 for index in range(5)})
+    engine._mem_last_activity.update({f"s{index}": float(index) for index in range(5)})
+    engine._prune_memory()
+    assert set(engine._mem_ip_first_seen) == {"8.8.8.2", "8.8.8.3", "8.8.8.4"}
+    assert set(engine._mem_session_scores) == {"s2", "s3", "s4"}
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

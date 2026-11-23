@@ -75,8 +75,6 @@ class SOAREngine:
         self._mem_session_techniques: dict[str,set[str]]={}
         self._mem_blocked_ips: set[str]=set()
         self._mem_last_activity: dict[str,float]={}
-        self._mem_hassh_sessions: dict[str,set[str]]=defaultdict(set)
-        self._mem_hassh_total_risk: dict[str,int]=defaultdict(int)
         self._mem_ip_sessions: dict[str,set[str]]=defaultdict(set)
         self._mem_ip_total_risk: dict[str,int]=defaultdict(int)
         self._mem_ip_techniques: dict[str,set[str]]=defaultdict(set)
@@ -212,6 +210,45 @@ class SOAREngine:
         self._mem_ip_total_risk[ip] += max(event_score, 0)
         self._mem_ip_techniques[ip].update(techniques)
 
+    def _prune_memory(self) -> None:
+        if len(self._mem_ip_first_seen) > self._MAX_MEM_ENTRIES:
+            keep_ips = set(
+                sorted(
+                    self._mem_ip_last_seen,
+                    key=self._mem_ip_last_seen.get,
+                    reverse=True,
+                )[: self._MAX_MEM_ENTRIES]
+            )
+            for ip in list(self._mem_ip_first_seen):
+                if ip in keep_ips:
+                    continue
+                for store in (
+                    self._mem_ip_first_seen,
+                    self._mem_ip_last_seen,
+                    self._mem_ip_sessions,
+                    self._mem_ip_total_risk,
+                    self._mem_ip_techniques,
+                ):
+                    store.pop(ip, None)
+        if len(self._mem_session_scores) > self._MAX_MEM_ENTRIES:
+            keep_sessions = set(
+                sorted(
+                    self._mem_last_activity,
+                    key=self._mem_last_activity.get,
+                    reverse=True,
+                )[: self._MAX_MEM_ENTRIES]
+            )
+            for session_id in list(self._mem_session_scores):
+                if session_id in keep_sessions:
+                    continue
+                for store in (
+                    self._mem_session_scores,
+                    self._mem_session_failed_auth,
+                    self._mem_session_techniques,
+                    self._mem_last_activity,
+                ):
+                    store.pop(session_id, None)
+
     def get_ip_profile(self, ip: str) -> dict[str, Any]:
         """Return in-memory profile used by dashboard and tests."""
         return {
@@ -303,6 +340,7 @@ class SOAREngine:
         await self._set_score(session_id, current_score)
         await self._add_techniques(session_id, techniques)
         self._update_ip_profile(ip, session_id, event_score, techniques, time.time())
+        self._prune_memory()
 
         event["cloudsentinel_risk_score"]=current_score
         event["cloudsentinel_mitre_techniques"]=sorted(techniques)

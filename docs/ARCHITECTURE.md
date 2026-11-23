@@ -191,7 +191,7 @@ These are real gaps, not completed features.
 1. MTTB is measured in dry-run mode. A live end-to-end run with real firewall changes is still needed.
 2. Redis and ClickHouse use generated passwords on the deployment paths. NATS uses a compose default password; override `NATS_PASSWORD` for shared environments. Keep all three on a private network.
 3. The public live stream is read-only but unauthenticated. Passwords are removed, but other attacker commands are visible.
-4. Session score maps grow for the life of the process. A long-running sensor needs a cleanup job.
+4. In-memory SOAR IP/session maps are capped at 10,000 entries; the oldest entries are pruned. Active entries beyond the cap can be evicted under extreme load.
 5. Phase 2 Azure is not deployed.
 6. No uptime percentage has been measured. Do not claim 99.9% or 99.5%.
 7. The Phase 1 droplet is offline. No public sensor is live at the moment. Use the local demo for a working system.
