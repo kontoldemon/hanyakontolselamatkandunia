@@ -1909,7 +1909,8 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             else:
                 logger.warning("manual_eventgrid_block_failed", ip=ip, error=error)
 
-        if soar is not None and getattr(soar, "_redis", None) is not None:
+        redis_available = soar is not None and getattr(soar, "_redis", None) is not None
+        if redis_available:
             payload = json.dumps(
                 {
                     "ip": ip,
@@ -1920,11 +1921,16 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                     "session_id": "manual",
                 }
             )
-            await soar._redis.publish("cloudsentinel:soar:blocks", payload)
-            await soar._redis.set(f"soar:block:{ip}", "1", ex=ttl if ttl > 0 else None)
-            if not action:
-                action = "event_published"
-        elif not action:
+            try:
+                await soar._redis.publish("cloudsentinel:soar:blocks", payload)
+                await soar._redis.set(f"soar:block:{ip}", "1", ex=ttl if ttl > 0 else None)
+                if not action:
+                    action = "event_published"
+            except Exception as exc:
+                logger.warning("manual_host_agent_publish_failed", ip=ip, error=str(exc))
+                redis_available = False
+
+        if not action and not redis_available:
             existing_code, _, _ = await _run_command(check)
             if existing_code == 0:
                 action = "already_blocked"

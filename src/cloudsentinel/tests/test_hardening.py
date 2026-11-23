@@ -176,6 +176,7 @@ class _FakeRedis:
     def __init__(self) -> None:
         self.store: dict[str, object] = {}
         self.published: list[tuple[str, str]] = []
+        self.fail_publish = False
 
     async def get(self, key: str):
         return self.store.get(key)
@@ -200,6 +201,8 @@ class _FakeRedis:
         return 1
 
     async def publish(self, channel: str, payload: str) -> int:
+        if self.fail_publish:
+            raise RuntimeError("redis publish failed")
         self.published.append((channel, payload))
         return 1
 
@@ -297,6 +300,31 @@ def test_bicep_has_function_monitoring() -> None:
     assert "Microsoft.Insights/components" in bicep
     assert "Microsoft.OperationalInsights/workspaces" in bicep
     assert "APPLICATIONINSIGHTS_CONNECTION_STRING" in bicep
+
+
+def test_manual_block_survives_host_agent_publish_failure(monkeypatch) -> None:
+    async def fake_publish(**kwargs):
+        return True, ""
+
+    monkeypatch.setattr("cloudsentinel.admin_api.publish_block", fake_publish)
+    settings = _settings()
+    settings.admin.token = SecretStr("unit-token")
+    fake_redis = _FakeRedis()
+    fake_redis.fail_publish = True
+    soar = types.SimpleNamespace(
+        eventgrid_enabled=True,
+        eventgrid_endpoint="https://topic.example.com/api/events",
+        eventgrid_key="unit-key",
+        _redis=fake_redis,
+    )
+    client = TestClient(create_admin_app(settings, EventPipeline(settings.redis), soar))
+    response = client.post(
+        "/admin/block-ip",
+        headers={"Authorization": "Bearer unit-token"},
+        json={"ip": "8.8.8.8", "ttl": 60, "reason": "unit"},
+    )
+    assert response.status_code == 200
+    assert response.json()["action"] == "eventgrid_published"
 
 
 def test_validate_settings_requires_eventgrid_credentials() -> None:
