@@ -5,6 +5,7 @@
 #
 # BACKUP_MODE=auto|docker|native. Auto uses Docker when a Redis container is
 # running, otherwise the native Redis/ClickHouse services installed by deploy.sh.
+# The optional Azure Blob upload refreshes the VM managed identity first.
 
 set -euo pipefail
 
@@ -135,14 +136,18 @@ backup() {
 
     if [ -n "${AZURE_STORAGE_ACCOUNT}" ] && command -v az >/dev/null 2>&1; then
         echo "Uploading to Azure Blob Storage..."
-        az storage blob upload \
-            --account-name "${AZURE_STORAGE_ACCOUNT}" \
-            --container-name "${AZURE_STORAGE_CONTAINER}" \
-            --name "$(basename "${BACKUP_PATH}.tar.gz")" \
-            --file "${BACKUP_PATH}.tar.gz" \
-            --auth-mode login \
-            --overwrite \
-            --only-show-errors
+        if ! az login --identity --only-show-errors >/dev/null 2>&1; then
+            echo "Azure managed-identity login failed; skipping offsite upload." >&2
+        else
+            az storage blob upload \
+                --account-name "${AZURE_STORAGE_ACCOUNT}" \
+                --container-name "${AZURE_STORAGE_CONTAINER}" \
+                --name "$(basename "${BACKUP_PATH}.tar.gz")" \
+                --file "${BACKUP_PATH}.tar.gz" \
+                --auth-mode login \
+                --overwrite \
+                --only-show-errors
+        fi
     else
         echo "Offsite upload skipped (set AZURE_STORAGE_ACCOUNT and install az)."
     fi

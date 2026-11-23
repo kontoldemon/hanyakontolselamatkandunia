@@ -415,6 +415,12 @@ def test_login_fails_closed_without_email_delivery() -> None:
     assert "OTP delivery is not configured" in source
 
 
+def test_backup_offsite_uses_managed_identity() -> None:
+    source = Path("deploy/backup.sh").read_text(encoding="utf-8")
+    assert "az login --identity" in source
+    assert "az storage blob upload" in source
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

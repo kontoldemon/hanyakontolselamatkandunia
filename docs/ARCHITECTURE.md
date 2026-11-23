@@ -180,7 +180,7 @@ The phase 1 validation artifact reports `21` MITRE techniques mapped. The covera
 | Redis Stream | `maxlen: 200000` | Buffer for the forwarder. Oldest entries trim only after 200k events. |
 | ClickHouse forwarder | Spill file | If ClickHouse is down, raw events go to `var/lib/cloudsentinel/clickhouse_spill.jsonl` and replay when it returns. |
 | Dashboard totals | `CLOUDSENTINEL_TRUTH_WINDOW_HOURS=0` | All-time by default. Set `24` for a rolling 24-hour view. |
-| Backup | `deploy/backup.sh` | Daily cron backs up Redis, ClickHouse, TTY logs, and buffer files; uploads to Azure Blob when configured. |
+| Backup | `deploy/backup.sh` | Daily cron backs up Redis, ClickHouse, TTY logs, and buffer files; refreshes the VM managed identity and uploads to Azure Blob when configured. |
 
 The spill file protects against ClickHouse outages, but it uses disk. If the disk fills, events can still be lost. Monitor disk space.
 
