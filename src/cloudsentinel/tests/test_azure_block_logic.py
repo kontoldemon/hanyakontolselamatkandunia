@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -48,6 +49,14 @@ def test_validate_request_caps_ttl() -> None:
     assert ttl == logic.MAX_TTL_SECONDS
     _, ttl, _ = logic.validate_request({"ip": "8.8.8.8", "ttl": -5})
     assert ttl == 1
+
+
+def test_parse_rule_expiry() -> None:
+    logic = _load_logic()
+    description = "CloudSentinel block until 2026-11-23T10:00:00Z (unit-test)"
+    assert logic.parse_rule_expiry(description) == datetime(2026, 11, 23, 10, 0, tzinfo=UTC)
+    assert logic.parse_rule_expiry("some other rule") is None
+    assert logic.parse_rule_expiry("CloudSentinel block until not-a-time (unit)") is None
 
 
 def test_rule_name_and_priority() -> None:

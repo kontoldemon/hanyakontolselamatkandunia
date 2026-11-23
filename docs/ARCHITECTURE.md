@@ -152,7 +152,8 @@ Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, manage
 - The dashboard uses an HMAC-signed session cookie, a password step, a six-digit OTP sent by email, and Cloudflare Turnstile. OTP verification is capped at five attempts.
 - The public Socket.io stream removes captured passwords. Full event replay remains behind the dashboard session.
 - The host agent applies SOAR blocks on the VM and auto-unblocks after the configured TTL. `deploy.sh` installs it as `cloudsentinel-host-agent.service` for non-Azure installs.
-- On Azure, `eventgrid.py` publishes a CloudEvent to the block topic. The Function validates public/non-allowlisted IPs, creates an NSG deny rule, and queues its deletion after the TTL.
+- On Azure, `eventgrid.py` publishes a CloudEvent to the block topic. The Function validates public/non-allowlisted IPs, creates an NSG deny rule, and queues its deletion after the TTL. A five-minute timer trigger deletes expired `cs-block-*` rules if a queue message is lost.
+- The sensor also publishes the block to the local host-agent channel when Redis is available, so the sensor VM still blocks if Event Grid delivery or the Function fails.
 - Secrets can come from environment variables, HashiCorp Vault, or Infisical. On Azure, `deploy/load_secrets.sh` copies Key Vault secrets into the sensor `.env` through the VM managed identity.
 - The AI response path is optional. Secrets are redacted before the prompt, and calls are limited per session (20) and globally (200 per hour). If the budget is exhausted or no API key is set, the agent falls back to deterministic output.
 - Optional integrations: Webhook alerts, AbuseIPDB, MISP, AI threat summaries.

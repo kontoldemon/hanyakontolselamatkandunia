@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import ipaddress
+from datetime import UTC, datetime
 from typing import Any
 
 DEFAULT_ALLOWLIST = (
@@ -49,3 +50,14 @@ def choose_priority(used: set[int]) -> int:
         if priority not in used:
             return priority
     raise RuntimeError("No free NSG rule priority")
+
+
+def parse_rule_expiry(description: str) -> datetime | None:
+    prefix = "CloudSentinel block until "
+    if not description.startswith(prefix):
+        return None
+    raw = description[len(prefix):].split(" ", 1)[0]
+    try:
+        return datetime.strptime(raw, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    except ValueError:
+        return None

@@ -13,7 +13,7 @@ from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.network.models import SecurityRule
 from azure.storage.queue import QueueClient
 
-from block_logic import choose_priority, rule_name, validate_request
+from block_logic import choose_priority, parse_rule_expiry, rule_name, validate_request
 
 app = func.FunctionApp()
 
@@ -79,6 +79,29 @@ def block_ip(event: func.EventGridEvent) -> None:
         os.environ.get("CLOUDSENTINEL_ALLOWLIST", ""),
     )
     _create_block(ip, ttl, reason)
+
+
+@app.timer_trigger(
+    schedule="0 */5 * * * *",
+    arg_name="timer",
+    run_on_startup=False,
+)
+def cleanup_expired(timer: func.TimerRequest) -> None:
+    client = _network_client()
+    resource_group = os.environ["NSG_RESOURCE_GROUP"]
+    nsg_name = os.environ["NSG_NAME"]
+    now = datetime.now(UTC)
+    for rule in client.security_rules.list(resource_group, nsg_name):
+        if not rule.name or not rule.name.startswith("cs-block-"):
+            continue
+        expires_at = parse_rule_expiry(rule.description or "")
+        if expires_at is None or expires_at > now:
+            continue
+        try:
+            client.security_rules.begin_delete(resource_group, nsg_name, rule.name).result()
+            logging.info("Deleted expired NSG rule %s", rule.name)
+        except Exception as exc:
+            logging.warning("Expired rule delete failed for %s: %s", rule.name, exc)
 
 
 @app.queue_trigger(

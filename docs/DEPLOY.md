@@ -233,7 +233,8 @@ az deployment group create \
 
 The Function App settings from Bicep already include `NSG_RESOURCE_GROUP`,
 `NSG_NAME`, `AZURE_SUBSCRIPTION_ID`, `UNBLOCK_QUEUE`, and
-`CLOUDSENTINEL_ALLOWLIST`.
+`CLOUDSENTINEL_ALLOWLIST`. The Function also runs `cleanup_expired` every five
+minutes, which deletes expired `cs-block-*` rules if a queue message is lost.
 
 ### Step 3: Service migration
 

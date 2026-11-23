@@ -370,8 +370,28 @@ class SOAREngine:
                 session_id=str(event.get("session") or ""),
             )
             if ok:
-                await self._mark_blocked(ip)
-                event["block_command"] = "eventgrid.publish"
+                try:
+                    await self._mark_blocked(ip)
+                except Exception as exc:
+                    logger.warning("SOAR mark-blocked failed: %s", exc)
+                if self._redis:
+                    payload = json.dumps(
+                        {
+                            "ip": ip,
+                            "action": "block",
+                            "ttl": self.block_ttl,
+                            "risk_score": event.get("cloudsentinel_risk_score"),
+                            "session_id": event.get("session"),
+                        }
+                    )
+                    try:
+                        await self._redis.publish("cloudsentinel:soar:blocks", payload)
+                        event["block_command"] = "eventgrid.publish + redis.publish"
+                    except Exception as exc:
+                        logger.warning("SOAR host-agent fallback publish failed: %s", exc)
+                        event["block_command"] = "eventgrid.publish"
+                else:
+                    event["block_command"] = "eventgrid.publish"
                 return finish("eventgrid_published")
             logger.error("Event Grid block publish failed for %s: %s", ip, error)
 
