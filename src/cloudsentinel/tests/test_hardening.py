@@ -292,6 +292,13 @@ def test_deploy_sets_redis_and_clickhouse_auth() -> None:
     assert "__CLICKHOUSE_PASSWORD__" in cloud_init
 
 
+def test_bicep_has_function_monitoring() -> None:
+    bicep = Path("infra/main.bicep").read_text(encoding="utf-8")
+    assert "Microsoft.Insights/components" in bicep
+    assert "Microsoft.OperationalInsights/workspaces" in bicep
+    assert "APPLICATIONINSIGHTS_CONNECTION_STRING" in bicep
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

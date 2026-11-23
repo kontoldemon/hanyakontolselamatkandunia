@@ -28,7 +28,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writin
 | Dashboard | Next.js 16 on Vercel | Existing Vercel deployment; Azure Static Web Apps is optional later |
 | Secrets | `.env`, Vault, or Infisical | Azure Key Vault with private endpoint and managed identity |
 | Infrastructure as code | Manual droplet setup | Bicep |
-| Observability | Prometheus metrics, structured logs | Azure Monitor and Log Analytics (optional) |
+| Observability | Prometheus metrics, structured logs | Application Insights + Log Analytics for the Function; Prometheus on the VM |
 
 The Azure plan deliberately avoids AKS, Azure Cache for Redis, Azure Data Explorer, managed Kafka, and managed ClickHouse. They add cost and are not needed for the FYP load.
 

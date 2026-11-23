@@ -57,6 +57,8 @@ var keyVaultName = 'cs-kv-${uniqueString(resourceGroup().id)}'
 var eventGridTopicName = '${prefix}-blocks'
 var functionPlanName = '${prefix}-plan'
 var functionAppName = 'cs-fn-${uniqueString(resourceGroup().id)}'
+var logAnalyticsName = 'cs-logs-${uniqueString(resourceGroup().id)}'
+var appInsightsName = 'cs-appi-${uniqueString(resourceGroup().id)}'
 
 resource sensorNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
   name: sensorNsgName
@@ -473,6 +475,27 @@ resource unblockQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@20
 
 var storageConnection = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${listKeys(storage.id, '2023-05-01').keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: logAnalyticsName
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+    retentionInDays: 30
+  }
+}
+
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: appInsightsName
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalytics.id
+  }
+}
+
 resource functionPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: functionPlanName
   location: location
@@ -521,6 +544,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'ENABLE_ORYX_BUILD'
           value: 'true'
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsights.properties.ConnectionString
         }
         {
           name: 'AZURE_SUBSCRIPTION_ID'
@@ -698,6 +725,8 @@ output clickHousePrivateIp string = clickHouseNic.properties.ipConfigurations[0]
 output eventGridTopicName string = eventGridTopic.name
 output eventGridTopicEndpoint string = eventGridTopic.properties.endpoint
 output functionAppName string = functionApp.name
+output logAnalyticsName string = logAnalytics.name
+output appInsightsName string = appInsights.name
 output sensorNsgName string = sensorNsg.name
 output keyVaultName string = keyVault.name
 output storageAccountName string = storage.name

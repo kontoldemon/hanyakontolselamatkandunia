@@ -104,7 +104,7 @@ the Function.
 | Firewall | Azure NSG | Native, auditable, removable with a TTL |
 | Backups | Azure Blob Storage | Off-VM copy of ClickHouse and Redis backups |
 | Secrets | Azure Key Vault + private endpoint + managed identity | `deploy/load_secrets.sh` copies secrets into `.env` over the private endpoint |
-| Monitoring | Azure Monitor + Log Analytics | Free-tier friendly; optional |
+| Monitoring | Application Insights + Log Analytics for the Function; Prometheus on the VM | Function traces and logs without extra infrastructure |
 | Dashboard | Vercel | Existing Next.js deployment; Azure Static Web Apps is optional later |
 
 Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, managed Kafka/Event Hubs, managed ClickHouse, Azure SQL, and Azure Front Door. They add cost without being needed for this project.

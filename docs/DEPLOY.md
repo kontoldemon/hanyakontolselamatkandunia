@@ -163,6 +163,7 @@ Internet
 - An Event Grid custom topic that accepts CloudEvents v1.0.
 - A Python 3.12 Function App (Consumption) with a system-assigned managed identity and a custom NSG rule operator role scoped to the sensor NSG.
 - A Storage account with a private `backups` container and a `cloudsentinel-unblock` queue.
+- Log Analytics + Application Insights for Function traces and logs.
 - A Key Vault with a private endpoint, public access disabled, the Event Grid endpoint/key, the ClickHouse password, and `Key Vault Secrets User` for the sensor VM.
 - `Storage Blob Data Contributor` for the sensor VM.
 
@@ -184,7 +185,8 @@ az deployment group create \
 `llmApiKey` is optional. Save `CH_PASSWORD`; the sensor installer needs the same
 value. The deployment identity needs Owner or User Access Administrator for the
 role assignments. Note the outputs: `sensorPublicIpAddress`,
-`clickHousePrivateIp`, `functionAppName`, `eventGridTopicName`, `keyVaultName`.
+`clickHousePrivateIp`, `functionAppName`, `appInsightsName`,
+`eventGridTopicName`, `keyVaultName`.
 
 The sensor data disk is mounted automatically by cloud-init. SSH to the sensor
 and run the installer with the private ClickHouse host and password. The first
@@ -274,6 +276,12 @@ curl http://localhost:8080/metrics
 
 # Health check
 curl http://localhost:8080/healthz
+
+# Function traces (Application Insights)
+az monitor app-insights query \
+  --app <appInsightsName> \
+  --resource-group cloudsentinel-rg \
+  --analytics-query "traces | order by timestamp desc | take 50"
 ```
 
 ### Troubleshooting
