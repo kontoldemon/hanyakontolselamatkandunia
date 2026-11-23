@@ -1,18 +1,20 @@
 # CloudSentinel Production Override — DO Droplet deployment
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-# This override exposes port 22 directly, enables TLS, and adds nginx.
+# Usage: docker compose --profile prod -f docker-compose.yml -f docker-compose.prod.yml up -d
+# This override exposes port 22 directly, enables TLS, adds nginx, and runs the
+# host-agent container in the host network namespace so iptables blocks the VM.
 
 services:
   cloudsentinel:
+    profiles: ["default", "dev", "prod"]
     ports:
       - "22:2222"          # Expose honeypot on real SSH port
-      - "8080:8080"        # Admin API
-      - "3001:3001"        # WebSocket stream
     environment:
       SOAR_ACTIVE_PROFILE: production
       SOAR_FIREWALL_DRY_RUN: "false"
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN must be set in src/cloudsentinel/.env}
       CLICKHOUSE_ENABLED: "true"
       STREAM_ENABLED: "true"
+      STREAM_CORS_ORIGIN: ${STREAM_CORS_ORIGIN:-https://dashboard-six-mu-20.vercel.app}
       ADMIN_ENABLED: "true"
       OBSERVABILITY_ENABLED: "true"
       OTEL_CONSOLE_EXPORTER: "true"
@@ -30,7 +32,13 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  redis-plain:
+    profiles: ["default", "dev", "prod"]
+    ports:
+      - "127.0.0.1:6379:6379"
+
   nginx:
+    profiles: ["default", "dev", "prod"]
     image: nginx:1.27-alpine
     ports:
       - "443:443"
@@ -47,9 +55,10 @@ services:
         max-file: "2"
 
   prometheus:
+    profiles: ["default", "dev", "prod"]
     image: prom/prometheus:v3.0.0
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ../../deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../../deploy/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
@@ -61,9 +70,10 @@ services:
     restart: unless-stopped
 
   grafana:
+    profiles: ["default", "dev", "prod"]
     image: grafana/grafana:11.3.0
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ../../deploy/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ../../deploy/grafana/datasources:/etc/grafana/provisioning/datasources:ro
@@ -74,6 +84,27 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
     depends_on:
       - prometheus
+    restart: unless-stopped
+
+  host-agent:
+    profiles: ["prod"]
+    build:
+      context: ../..
+      dockerfile: deploy/host-agent.Dockerfile
+    network_mode: host
+    pid: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    command:
+      - python
+      - /app/iptables_worker.py
+      - --redis
+      - redis://:${REDIS_PASSWORD:-cloudsentinel_redis}@127.0.0.1:6379/0
+      - --firewall-path
+      - /sbin/iptables
+    depends_on:
+      - redis-plain
     restart: unless-stopped
 
 volumes:

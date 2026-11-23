@@ -9,7 +9,6 @@ import pytest
 from cloudsentinel import geoip
 from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.config import RedisSettings
-from cloudsentinel.firewall import IPTablesBackend, NFTablesBackend, create_firewall
 from cloudsentinel.honeyfs_seed import is_text_content
 from cloudsentinel.observability import get_tracer, setup_sentry, setup_structlog
 from cloudsentinel.pipeline import EventPipeline
@@ -66,21 +65,6 @@ def test_attack_graph_prune() -> None:
     assert graph._nodes
     graph._prune()
     assert graph._nodes == {}
-
-
-def test_firewall_auto_detection(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        "cloudsentinel.firewall.shutil.which",
-        lambda name: "/usr/sbin/nft" if name == "nft" else None,
-    )
-    assert isinstance(create_firewall("auto"), NFTablesBackend)
-    monkeypatch.setattr(
-        "cloudsentinel.firewall.shutil.which",
-        lambda name: "/sbin/iptables" if name == "iptables" else None,
-    )
-    assert isinstance(create_firewall("auto"), IPTablesBackend)
-    monkeypatch.setattr("cloudsentinel.firewall.shutil.which", lambda _name: None)
-    assert isinstance(create_firewall("auto"), IPTablesBackend)
 
 
 @pytest.mark.asyncio

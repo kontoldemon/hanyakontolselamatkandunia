@@ -29,13 +29,6 @@ except Exception:
     _ABUSEIPDB_AVAILABLE = False
     def _get_abuseipdb(): return None
 
-try:
-    from .firewall import create_firewall as _create_firewall
-    _FIREWALL_AVAILABLE = True
-except Exception:
-    _FIREWALL_AVAILABLE = False
-    def _create_firewall(backend="auto"): return None
-
 logger = logging.getLogger("cloudsentinel.soar")
 
 GEO_THREAT_SCORES: ClassVar[dict[str, int]] = {
@@ -451,7 +444,7 @@ class SOARScheduler:
     def add_cron_task(self, cron_expr: str, name: str, callback) -> bool:
         """Add a cron-scheduled task. Returns True if expression is valid."""
         try:
-            from datetime import datetime, timezone
+            from datetime import datetime
 
             from croniter import croniter
             # Validate the cron expression

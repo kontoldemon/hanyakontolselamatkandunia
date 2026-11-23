@@ -1,22 +1,20 @@
 import { NextResponse } from "next/server";
+import { adminApiConfig, adminApiConfigError } from "@/lib/adminApi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const envUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim();
-  const baseUrl = envUrl && envUrl !== "http://localhost:8080" ? envUrl : "https://188.166.184.42.sslip.io";
+  const configError = adminApiConfigError();
+  if (configError) return configError;
+  const { baseUrl, headers } = adminApiConfig();
 
   try {
-    const token = process.env.CLOUDSENTINEL_ADMIN_TOKEN;
     const body = await request.json();
     const response = await fetch(new URL("/admin/exposure", baseUrl), {
       method: "POST",
       cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(8000),
     });

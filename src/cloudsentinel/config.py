@@ -401,7 +401,7 @@ def validate_settings(settings: Settings) -> Settings:
 
     if errors:
         raise ValueError(
-            "Configuration validation failed:\\n  " + "\\n  ".join(errors)
+            "Configuration validation failed:\n  " + "\n  ".join(errors)
         )
 
     return settings
@@ -466,7 +466,7 @@ def load_settings(
     _set_if_present(settings.admin, "port", env.admin_port)
     _set_if_present(settings.admin, "token", env.admin_token)
 
-    return settings
+    return validate_settings(settings)
 
 
 _SETTINGS_CACHE: Settings | None = None

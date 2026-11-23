@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-import os
 import time
 from pathlib import Path
 
@@ -25,7 +23,6 @@ from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.auth import AuthConfig, JWTAuth
 from cloudsentinel.config import LLMSettings
 from cloudsentinel.event_codec import dumps_text, loads_text
-from cloudsentinel.firewall import IPTablesBackend, NFTablesBackend, create_firewall
 from cloudsentinel.mttb_benchmark import write_artifacts
 from cloudsentinel.pipeline import EventEnvelope, EventPipeline, LocalWAL
 from cloudsentinel.sandbox import DockerSandbox, create_sandbox
@@ -103,37 +100,6 @@ def test_attack_graph_flow() -> None:
     subgraph = graph.get_subgraph("8.8.8.8")
     assert subgraph["nodes"]
     assert graph.to_cytoscape()["elements"]
-
-
-@pytest.mark.asyncio
-async def test_firewall_backends(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[tuple[str, ...]] = []
-
-    class FakeProc:
-        def __init__(self, returncode: int = 0) -> None:
-            self.returncode = returncode
-
-        async def communicate(self) -> tuple[bytes, bytes]:
-            return b"", b""
-
-    async def fake_exec(*args: str, **_kwargs: object) -> FakeProc:
-        calls.append(args)
-        return FakeProc(0)
-
-    monkeypatch.setattr("asyncio.create_subprocess_exec", fake_exec)
-    iptables = IPTablesBackend(path="iptables")
-    block_ok, _ = await iptables.block("8.8.8.8")
-    assert block_ok is True
-    unblock_ok, _ = await iptables.unblock("8.8.8.8")
-    assert unblock_ok is True
-    assert await iptables.is_blocked("8.8.8.8") is True
-    assert calls[0][0] == "iptables"
-    assert calls[0][1] == "-A"
-    assert isinstance(create_firewall("iptables"), IPTablesBackend)
-    assert isinstance(create_firewall("nftables"), NFTablesBackend)
-    nftables = NFTablesBackend(path="nft")
-    nft_ok, _ = await nftables.block("not-an-ip")
-    assert nft_ok is False
 
 
 @pytest.mark.asyncio

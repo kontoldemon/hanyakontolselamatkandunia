@@ -63,11 +63,11 @@ def write_artifacts(report: dict[str, Any], artifacts_dir: Path) -> None:
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Validate CloudSentinel Phase 1 live gates")
-    parser.add_argument("--host", default="188.166.184.42")
+    parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--ssh-port", type=int, default=22)
     parser.add_argument("--management-port", type=int, default=22222)
     parser.add_argument("--socket-port", type=int, default=3001)
-    parser.add_argument("--admin-url", default="http://188.166.184.42:8080")
+    parser.add_argument("--admin-url", default="http://127.0.0.1:8080")
     parser.add_argument("--admin-token", default="")
     parser.add_argument("--allow-self-signed", action="store_true")
     parser.add_argument("--artifacts-dir", default="artifacts")

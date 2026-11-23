@@ -1254,6 +1254,7 @@ async def main() -> None:
         port=settings.honeypot.ssh_port,
         server_host_keys=[host_key],
         server_version=settings.honeypot.server_version,
+        login_timeout=float(os.getenv("CLOUDSENTINEL_LOGIN_TIMEOUT", "120")),
     )
 
     listen_addr = ssh_server.sockets[0].getsockname() if ssh_server.sockets else ("?", 0)

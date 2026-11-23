@@ -48,8 +48,6 @@ spec:
               value: {{ .Values.config.soar.firewallDryRun | quote }}
             - name: SOAR_FIREWALL_ENABLED
               value: {{ .Values.config.soar.firewallEnabled | quote }}
-            - name: CLOUDSENTINEL_FIREWALL_BACKEND
-              value: {{ .Values.config.soar.firewallBackend | quote }}
             - name: CLOUDSENTINEL_SANDBOX_RUNTIME
               value: {{ .Values.config.sandbox.runtime | quote }}
             - name: CLOUDSENTINEL_MISP_URL

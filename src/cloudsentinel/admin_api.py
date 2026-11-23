@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import ipaddress
 import json
 import os
@@ -259,6 +260,41 @@ async def _run_command(args: list[str], timeout: float = 5.0) -> tuple[int, str,
         result.stdout or "",
         result.stderr or "",
     )
+
+
+_MANUAL_UNBLOCK_TASKS: set[asyncio.Task[None]] = set()
+
+
+def _manual_block_args(firewall_path: str, action: str, ip: str, reason: str) -> list[str]:
+    return [
+        firewall_path,
+        action,
+        "INPUT",
+        "-s",
+        ip,
+        "-m",
+        "comment",
+        "--comment",
+        f"cloudsentinel-manual:{reason}",
+        "-j",
+        "DROP",
+    ]
+
+
+async def _schedule_manual_unblock(
+    ip: str,
+    reason: str,
+    ttl: int,
+    firewall_path: str,
+) -> None:
+    await asyncio.sleep(max(0, ttl))
+    await _run_command(_manual_block_args(firewall_path, "-D", ip, reason))
+
+
+def _spawn_manual_unblock(ip: str, reason: str, ttl: int, firewall_path: str) -> None:
+    task = asyncio.create_task(_schedule_manual_unblock(ip, reason, ttl, firewall_path))
+    _MANUAL_UNBLOCK_TASKS.add(task)
+    task.add_done_callback(_MANUAL_UNBLOCK_TASKS.discard)
 
 
 def _exposure_firewall_paths(settings: Settings) -> list[str]:
@@ -1328,7 +1364,9 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     ) -> bool:
         configured_token = secret_to_str(settings.admin.token)
         if configured_token:
-            if credentials is None or credentials.credentials != configured_token:
+            if credentials is None or not hmac.compare_digest(
+                credentials.credentials.encode(), configured_token.encode()
+            ):
                 raise HTTPException(status_code=401, detail="Invalid or missing token")
             return True
 
@@ -1337,7 +1375,10 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
 
             auth = get_auth()
             if not auth.config.enabled:
-                return True
+                raise HTTPException(
+                    status_code=503,
+                    detail="Admin authentication is not configured",
+                )
             if credentials is None:
                 raise HTTPException(status_code=401, detail="Missing authorization header")
             if auth.validate_token(credentials.credentials) is None:
@@ -1643,7 +1684,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             "stream_enabled": bool(settings.stream.enabled),
         }
 
-    @app.get("/metrics", dependencies=[Depends(require_auth)])
+    @app.get("/metrics")
     async def metrics_endpoint():
         from fastapi import Response
 
@@ -1843,35 +1884,38 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
 
         started = time.time()
         firewall_path = settings.soar.firewall_path or "/sbin/iptables"
-        check = [firewall_path, "-C", "INPUT", "-s", ip, "-j", "DROP"]
-        add = [
-            firewall_path,
-            "-I",
-            "INPUT",
-            "1",
-            "-s",
-            ip,
-            "-m",
-            "comment",
-            "--comment",
-            f"cloudsentinel-manual:{reason}",
-            "-j",
-            "DROP",
-        ]
-        existing_code, _, _ = await _run_command(check)
-        if existing_code == 0:
-            action = "already_blocked"
-        else:
-            code, _, stderr = await _run_command(add)
-            if code != 0:
-                raise HTTPException(status_code=500, detail=stderr[:200] or "Firewall block failed")
-            action = "blocked"
+        check = _manual_block_args(firewall_path, "-C", ip, reason)
+        add = _manual_block_args(firewall_path, "-I", ip, reason)
 
-        if soar is not None:
-            try:
-                await soar._mark_blocked(ip)
-            except Exception:
-                pass
+        if soar is not None and getattr(soar, "_redis", None) is not None:
+            payload = json.dumps(
+                {
+                    "ip": ip,
+                    "action": "block",
+                    "ttl": ttl,
+                    "reason": reason,
+                    "risk_score": 0,
+                    "session_id": "manual",
+                }
+            )
+            await soar._redis.publish("cloudsentinel:soar:blocks", payload)
+            await soar._redis.set(f"soar:block:{ip}", "1", ex=ttl if ttl > 0 else None)
+            action = "event_published"
+        else:
+            existing_code, _, _ = await _run_command(check)
+            if existing_code == 0:
+                action = "already_blocked"
+            else:
+                code, _, stderr = await _run_command(add)
+                if code != 0:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=stderr[:200] or "Firewall block failed",
+                    )
+                action = "blocked"
+                if ttl > 0:
+                    _spawn_manual_unblock(ip, reason, ttl, firewall_path)
+
         try:
             from .metrics import get_metrics
 
@@ -2196,7 +2240,11 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             password = body.get("password", "")
             expected_user = os.getenv("CLOUDSENTINEL_ADMIN_USER", "admin")
             expected_pass = os.getenv("CLOUDSENTINEL_ADMIN_PASS", "")
-            if username != expected_user or password != expected_pass:
+            if not expected_pass:
+                raise HTTPException(status_code=503, detail="Admin login is not configured")
+            if not hmac.compare_digest(username.encode(), expected_user.encode()) or not hmac.compare_digest(
+                password.encode(), expected_pass.encode()
+            ):
                 raise HTTPException(status_code=401, detail="Invalid credentials")
             return auth.create_login_token(username)
         except HTTPException:

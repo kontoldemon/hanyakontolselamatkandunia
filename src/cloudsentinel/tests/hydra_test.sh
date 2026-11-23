@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-TARGET_IP="${1:-188.166.184.42}"
+TARGET_IP="${1:-127.0.0.1}"
 TARGET_PORT="${2:-22}"
 WORDLIST="${3:-../../wordlists/common.txt}"
 PASSWORD_LIST="$(mktemp)"

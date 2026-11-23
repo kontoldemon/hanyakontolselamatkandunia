@@ -26,14 +26,14 @@ Create `.env.local` with the values below. Do not commit it.
 
 | Variable | Purpose |
 |---|---|
-| `CLOUDSENTINEL_ADMIN_API_URL` | Admin API base URL |
-| `CLOUDSENTINEL_ADMIN_TOKEN` | Bearer token for the admin API |
+| `CLOUDSENTINEL_ADMIN_API_URL` | Admin API base URL. Required; routes return `503` when missing. |
+| `CLOUDSENTINEL_ADMIN_TOKEN` | Bearer token for the admin API. Required; routes return `503` when missing. |
 | `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL` | Socket.io stream URL |
 | `DASHBOARD_USERNAME` | Dashboard login user |
 | `DASHBOARD_PASSWORD` | Dashboard login password |
 | `DASHBOARD_AUTH_SECRET` | HMAC secret for the session cookie |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key. Required in production; the test key is only allowed in development. |
 | `RESEND_API_KEY` | Email provider key for OTP delivery |
 | `ADMIN_EMAIL` | Destination for the OTP email |
 | `OTP_SECRET` | HMAC secret for the OTP hash |

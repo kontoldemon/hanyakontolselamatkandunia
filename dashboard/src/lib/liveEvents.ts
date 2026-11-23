@@ -532,12 +532,9 @@ export function toThreatLog(event: CloudSentinelEvent): ThreatLog {
   };
 }
 
-function socketUrl() {
+function socketUrl(): string | null {
   const configured = process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL?.trim();
-  if (configured && configured !== "http://localhost:3001") {
-    return configured;
-  }
-  return "https://188.166.184.42.sslip.io";
+  return configured || null;
 }
 
 function numberOrUndefined(value: unknown): number | undefined {
@@ -752,7 +749,9 @@ export function useLiveThreatLogs(enabled = true) {
     if (!enabled) return;
 
     if (!globalSocket) {
-      initSocket(url);
+      if (url) {
+        initSocket(url);
+      }
       loadRecentEvents();
       if (!pollInterval) {
         pollInterval = window.setInterval(loadRecentEvents, 3000);

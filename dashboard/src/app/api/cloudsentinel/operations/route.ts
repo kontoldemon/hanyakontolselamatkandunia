@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { adminApiConfig, adminApiConfigError } from "@/lib/adminApi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,15 +15,24 @@ type AdminResult<T> = {
 type SourceKind = "clickhouse" | "runtime" | "memory" | "mixed";
 
 async function fetchAdmin<T>(path: string): Promise<AdminResult<T>> {
-  const envUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim();
-  const baseUrl = envUrl && envUrl !== "http://localhost:8080" ? envUrl : "https://188.166.184.42.sslip.io";
-
   const startedAt = Date.now();
+  let baseUrl: string;
+  let headers: Record<string, string>;
   try {
-    const token = process.env.CLOUDSENTINEL_ADMIN_TOKEN;
+    ({ baseUrl, headers } = adminApiConfig());
+  } catch (error) {
+    return {
+      ok: false,
+      data: null,
+      error: error instanceof Error ? error.message : "admin API is not configured",
+      latencyMs: Date.now() - startedAt,
+    };
+  }
+
+  try {
     const response = await fetch(new URL(path, baseUrl), {
       cache: "no-store",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers,
       signal: AbortSignal.timeout(8000),
     });
     const latencyMs = Date.now() - startedAt;
@@ -65,6 +75,9 @@ async function fetchAdmin<T>(path: string): Promise<AdminResult<T>> {
 }
 
 export async function GET() {
+  const configError = adminApiConfigError();
+  if (configError) return configError;
+
   const [readiness, metrics, stats, sessions, distribution, attackGraph, anomaly, llm, truthSummary] =
     await Promise.all([
       fetchAdmin<Record<string, unknown>>("/readiness"),

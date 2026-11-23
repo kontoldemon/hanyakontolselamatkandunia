@@ -7,7 +7,7 @@ CloudSentinel is an SSH honeypot and automated response platform. It records att
 - Phase 1 was deployed on a DigitalOcean droplet and validated on 2026-05-26. The droplet is now offline.
 - The dashboard runs on Vercel.
 - For a zero-cost demo, run the full stack locally with Docker. See [docs/LOCAL_DEMO.md](docs/LOCAL_DEMO.md).
-- Phase 2 is the Azure target: Azure VM sensor, Event Grid, Azure Functions with NSG blocking, self-hosted ClickHouse, and the existing Vercel dashboard. It is not deployed yet.
+- Phase 2 is the Azure target: one sensor VM, self-hosted Redis and ClickHouse, a host agent that applies iptables blocks, NSG rules for exposure, and the existing Vercel dashboard. The Bicep is in [infra/main.bicep](infra/main.bicep). It is not deployed yet.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writing the report.
 
@@ -19,9 +19,9 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writin
 | SSH honeypot | AsyncSSH on port 2222 | Same, public port 22 redirected to 2222 |
 | Fingerprinting | HASSH, JA4S-style profile, GeoIP | Same |
 | Detection and scoring | MITRE ATT&CK mapping, anomaly and risk scoring | Same |
-| SOAR | Local iptables/nftables block | Azure Event Grid custom topic -> Azure Function -> Azure NSG rule |
+| SOAR | Local iptables block | Host agent on the VM applies iptables; Azure NSG restricts exposure |
 | Event buffer | Self-hosted Redis Streams | Self-hosted Redis on the sensor VM |
-| Analytics database | Self-hosted ClickHouse | Self-hosted ClickHouse on a private Azure VM |
+| Analytics database | Self-hosted ClickHouse | Self-hosted ClickHouse on the same VM; a private ClickHouse VM is the scale-up path |
 | Backups | Local daily backup script | Azure Blob Storage target |
 | Live stream | Local Socket.io server | Same Socket.io server on the sensor VM |
 | Admin API | FastAPI on the sensor | Same FastAPI service, token/JWT protected |
@@ -39,6 +39,8 @@ The Azure plan deliberately avoids AKS, Azure Cache for Redis, Azure Data Explor
 ```
 
 This uses `src/cloudsentinel/.env.local`. It listens on `127.0.0.1` only and runs SOAR in dry-run mode.
+
+For the Docker demo, set `ADMIN_TOKEN` in `src/cloudsentinel/.env` and use the same value in `dashboard/.env.local`. The admin API refuses requests when no token is configured.
 
 The SSH honeypot port is `2222`.
 Admin API: `http://127.0.0.1:8080/healthz`
@@ -75,5 +77,7 @@ The `0.86 s` MTTB in the literature is from Chin et al. (2025). It is not a resu
 
 - Honeypot credentials are accepted on purpose. The sensor is not a production SSH server.
 - Keep Redis, ClickHouse, NATS, and the admin API on a private network or behind a firewall.
-- Do not commit `.env` files or `.vercel/` secrets. Rotate any key that was shared.
+- The admin API fails closed: it returns `503` when neither `ADMIN_TOKEN` nor JWT auth is configured. The Prometheus `/metrics` endpoint stays private.
+- The public Socket.io stream removes captured passwords before emitting events.
+- Do not commit `.env` files or `.vercel/` secrets. Rotate any key that was shared. Store runtime secrets in Azure Key Vault; `deploy/load_secrets.sh` copies them into `.env`.
 - The LLM response path is optional. Prompts are best-effort redacted and rate-limited. Set `LLM_PROVIDER=mock` if commands must not leave the host.

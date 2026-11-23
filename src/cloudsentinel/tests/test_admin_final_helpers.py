@@ -7,7 +7,6 @@ import types
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-import cloudsentinel.admin_api as admin_module
 import cloudsentinel.auth as auth_module
 from cloudsentinel.admin_api import _as_int, _trim_replay_entries, create_admin_app
 from cloudsentinel.config import load_settings
@@ -48,4 +47,4 @@ def test_require_auth_jwt_branches(monkeypatch) -> None:
     assert client.get("/stats", headers={"Authorization": "Bearer good"}).status_code == 200
 
     fake_auth.config.enabled = False
-    assert client.get("/stats").status_code == 200
+    assert client.get("/stats").status_code == 503

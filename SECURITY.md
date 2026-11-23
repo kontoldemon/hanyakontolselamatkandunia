@@ -17,7 +17,7 @@ Do not test against systems you do not own. The local demo and CI are the suppor
 
 | Check | Workflow | Scope | Current result |
 |---|---|---|---|
-| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 451 passed, 99.74% (gate 99%) |
+| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 460 passed, 99.12% (gate 99%) |
 | SQL/static lint | `.github/workflows/ci.yml` | Ruff critical rules | passing |
 | CodeQL | `.github/workflows/codeql.yml` | Python + JavaScript/TypeScript, `security-extended` | 0 open alerts (2026-11-06) |
 | Python dependency audit | `.github/workflows/security.yml` | `pip-audit -r src/cloudsentinel/requirements.txt` | 0 known vulnerabilities |
@@ -49,8 +49,10 @@ npm audit --omit=dev --audit-level=high
 - **Honeypot listeners bind to all interfaces by default.** This is intentional for the sensor profile. The local demo overrides it to `127.0.0.1`.
 - **Bandit medium findings** cover deliberate honeypot behavior: fake `/tmp` paths, permissive listener defaults, local trusted VFS pickle loading, and parameterized ClickHouse query fragments built from constants. They are reported but do not fail CI. High-severity findings do fail CI.
 - **The nested `minimatch` used by `@typescript-eslint/typescript-estree` is pinned to `11.0.5`.** This clears the last dev-only advisory while keeping lint and build passing.
-- **`CLOUDSENTINEL_AUTH_SECRET` is required when auth is enabled.** If it is missing, the manual JWT backend generates a random per-process secret; tokens do not survive a restart. Set the secret in production.
-- **Firewall actions must remain dry-run until the deployment host is verified.** Production mode requires `SOAR_FIREWALL_DRY_RUN=false` and a working firewall backend.
+- **`CLOUDSENTINEL_AUTH_SECRET` is required when auth is enabled.** `load_settings` validates this and refuses to start in production without it.
+- **The admin API fails closed.** With no `ADMIN_TOKEN` and no JWT auth, protected endpoints return `503`. Compose also refuses to start without `ADMIN_TOKEN`. The Prometheus `/metrics` endpoint stays unauthenticated and must remain private; nginx restricts it and Compose binds the API to localhost.
+- **The public stream is read-only and unauthenticated.** Captured passwords are removed before emit; other attacker commands remain visible.
+- **Firewall actions must remain dry-run until the deployment host is verified.** Production mode requires `SOAR_FIREWALL_DRY_RUN=false` and a working host agent or firewall path.
 
 ## Dependency policy
 

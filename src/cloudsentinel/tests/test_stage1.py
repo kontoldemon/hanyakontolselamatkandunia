@@ -26,7 +26,7 @@ from cloudsentinel.hassh import (
     normalize_algorithm_list,
 )
 from cloudsentinel.mitre import MITRE_TECHNIQUES, deobfuscate_bash, match_command, score_command
-from cloudsentinel.pipeline import ClickHouseForwarder, EventEnvelope, EventPipeline
+from cloudsentinel.pipeline import ClickHouseForwarder, EventEnvelope, EventPipeline, LocalWAL
 from cloudsentinel.soar import SOAREngine
 from cloudsentinel.stream import LiveStream
 from cloudsentinel.vfs import VirtualFileSystem
@@ -504,8 +504,7 @@ async def test_soar_time_decay() -> None:
         "src_ip": "1.2.3.4",
         "country_code": "RU",
     }
-    result1 = await soar.process_event("s3", event)
-    score1 = result1["cloudsentinel_risk_score"]
+    await soar.process_event("s3", event)
     # Wait for decay
     import asyncio
     await asyncio.sleep(0.2)
@@ -644,7 +643,7 @@ async def test_soar_forces_block_on_persistence_attempt() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stream_emits_sanitized_event_with_password() -> None:
+async def test_stream_redacts_password_from_public_events() -> None:
     emitted: list[dict] = []
 
     class FakeSio:
@@ -662,9 +661,9 @@ async def test_stream_emits_sanitized_event_with_password() -> None:
         "input": "id",
     })
     assert emitted[0]["username"] == "root"
-    assert emitted[0]["password"] == "secret"
+    assert "password" not in emitted[0]
     assert "log_raw" not in emitted[0]
-    assert stream._buffer[0]["password"] == "secret"
+    assert "password" not in stream._buffer[0]
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -906,16 +905,17 @@ async def test_pipeline_buffers_when_redis_unavailable() -> None:
         payload={"command": "id"},
     )
     await pipeline.emit(envelope)
-    assert len(pipeline._pending) == 1
+    assert pipeline.pending_count == 1
 
 
 @pytest.mark.asyncio
-async def test_pipeline_enriches_command_with_mitre() -> None:
+async def test_pipeline_enriches_command_with_mitre(tmp_path: Path) -> None:
     settings = load_settings(
         Path("src/cloudsentinel/configs/usas-production.yaml"),
         Path("src/cloudsentinel/.env"),
     )
     pipeline = EventPipeline(settings.redis)
+    pipeline._wal = LocalWAL(tmp_path / "wal.jsonl")
     await pipeline.emit_command(
         session_id="s2",
         src_ip="203.0.113.20",
@@ -926,8 +926,9 @@ async def test_pipeline_enriches_command_with_mitre() -> None:
         hassh="abc",
         ja4s="ja4s_ssh_test",
     )
-    assert len(pipeline._pending) == 1
-    fields = pipeline._pending[0].to_redis_fields()
+    events = await pipeline._wal.read_and_clear()
+    assert len(events) == 1
+    fields = events[0].to_redis_fields()
     payload = json.loads(json.loads(fields["payload"]))
     assert payload["risk_score"] > 0
     assert payload["session_risk_score"] > 0
@@ -936,12 +937,13 @@ async def test_pipeline_enriches_command_with_mitre() -> None:
 
 
 @pytest.mark.asyncio
-async def test_pipeline_wal_persistence() -> None:
+async def test_pipeline_wal_persistence(tmp_path: Path) -> None:
     settings = load_settings(
         Path("src/cloudsentinel/configs/usas-production.yaml"),
         Path("src/cloudsentinel/.env"),
     )
     pipeline = EventPipeline(settings.redis)
+    pipeline._wal = LocalWAL(tmp_path / "wal.jsonl")
     envelope = EventEnvelope(
         event_type="test.event",
         session_id="wal_test",
@@ -952,7 +954,8 @@ async def test_pipeline_wal_persistence() -> None:
     )
     # Should write to WAL since no Redis connection
     await pipeline.emit(envelope)
-    assert len(pipeline._pending) >= 1
+    assert pipeline.pending_count == 1
+    assert (tmp_path / "wal.jsonl").exists()
 
 
 def test_clickhouse_forwarder_flattens_redis_event() -> None:

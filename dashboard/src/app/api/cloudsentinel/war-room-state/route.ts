@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { adminApiConfig, adminApiConfigError } from "@/lib/adminApi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,8 +84,10 @@ function asNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-async function loadCompatibilityWarRoomState(baseUrl: string, token?: string): Promise<WarRoomStatePayload> {
-  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+async function loadCompatibilityWarRoomState(
+  baseUrl: string,
+  headers: Record<string, string>,
+): Promise<WarRoomStatePayload> {
   const [truthRes, eventsRes] = await Promise.all([
     fetch(new URL("/truth-summary", baseUrl), {
       cache: "no-store",
@@ -166,21 +169,21 @@ async function loadCompatibilityWarRoomState(baseUrl: string, token?: string): P
 }
 
 export async function GET() {
-  const envUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim();
-  const baseUrl = envUrl && envUrl !== "http://localhost:8080" ? envUrl : "https://188.166.184.42.sslip.io";
+  const configError = adminApiConfigError();
+  if (configError) return configError;
+  const { baseUrl, headers } = adminApiConfig();
 
   try {
-    const token = process.env.CLOUDSENTINEL_ADMIN_TOKEN;
     const response = await fetch(new URL("/war-room-state", baseUrl), {
       cache: "no-store",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers,
       signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
       if (response.status === 404 || response.status === 405) {
         try {
-          const compat = await loadCompatibilityWarRoomState(baseUrl, token);
+          const compat = await loadCompatibilityWarRoomState(baseUrl, headers);
           return NextResponse.json(compat, { status: 200 });
         } catch (compatError) {
           console.warn("[cloudsentinel/war-room-state] compatibility fallback failed", {

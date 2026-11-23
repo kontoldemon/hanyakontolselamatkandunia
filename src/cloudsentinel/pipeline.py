@@ -131,6 +131,7 @@ class EventPipeline:
         self._kafka: Any = None
         self._pending: deque[EventEnvelope] = deque(maxlen=1000)
         self._wal = LocalWAL("var/lib/cloudsentinel/wal/events.jsonl")
+        self._wal_pending = 0
         self._connected = False
         self._session_scores: dict[str, int] = {}
         self._session_techniques: dict[str, set[str]] = {}
@@ -142,7 +143,7 @@ class EventPipeline:
 
     @property
     def pending_count(self) -> int:
-        return len(self._pending)
+        return self._wal_pending
 
     @property
     def session_scores(self) -> dict[str, int]:
@@ -216,15 +217,15 @@ class EventPipeline:
 
     async def emit(self, envelope: EventEnvelope) -> None:
         if self._redis is None or not self._connected:
-            self._pending.append(envelope)
             await self._wal.write(envelope)
+            self._wal_pending += 1
             return
         try:
             await self._write(envelope)
         except Exception as exc:
             self._connected = False
-            self._pending.append(envelope)
             await self._wal.write(envelope)
+            self._wal_pending += 1
             logger.warning("Redis event write failed: %s, written to WAL.", exc)
             return
         await self._publish_optional_safe(envelope)
@@ -244,19 +245,25 @@ class EventPipeline:
         """Background task to continually attempt to flush WAL if connected."""
         while True:
             await asyncio.sleep(5.0)
-            if self._connected and self._redis is not None:
-                wal_events = await self._wal.read_and_clear()
-                if wal_events:
-                    logger.info("Flushing %d events from WAL to Redis.", len(wal_events))
-                    for env in wal_events:
-                        try:
-                            await self._write(env)
-                            await self._publish_optional_safe(env)
-                        except Exception as exc:
-                            logger.warning("Failed to flush event from WAL, returning to WAL: %s", exc)
-                            await self._wal.write(env)
-                            self._connected = False
-                            break
+            if not self._connected or self._redis is None:
+                continue
+            wal_events = await self._wal.read_and_clear()
+            self._wal_pending = 0
+            if not wal_events:
+                continue
+            logger.info("Flushing %d events from WAL to Redis.", len(wal_events))
+            for index, envelope in enumerate(wal_events):
+                try:
+                    await self._write(envelope)
+                    await self._publish_optional_safe(envelope)
+                except Exception as exc:
+                    remaining = wal_events[index:]
+                    for pending in remaining:
+                        await self._wal.write(pending)
+                    self._wal_pending = len(remaining)
+                    logger.warning("Failed to flush event from WAL, returning to WAL: %s", exc)
+                    self._connected = False
+                    break
 
     async def _write(self, envelope: EventEnvelope) -> None:
         assert self._redis is not None

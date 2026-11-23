@@ -1,14 +1,12 @@
-"""Ninth batch: metrics, nftables success, sandbox error paths, webhook branch."""
+"""Ninth batch: metrics, sandbox error paths, webhook branch."""
 
 from __future__ import annotations
 
-import asyncio
 import time
 
 import pytest
 
 from cloudsentinel.config import load_settings
-from cloudsentinel.firewall import NFTablesBackend
 from cloudsentinel.metrics import get_metrics
 from cloudsentinel.pipeline import EventEnvelope
 from cloudsentinel.sandbox import DockerSDKSandbox, GVisorSandbox
@@ -29,26 +27,6 @@ def test_metrics_methods() -> None:
     metrics.set_pipeline_status(True, 0)
     assert metrics.render()
     assert "cloudsentinel_" in metrics.content_type or "text/plain" in metrics.content_type
-
-
-@pytest.mark.asyncio
-async def test_nftables_success_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    class FakeProc:
-        returncode = 0
-
-        async def communicate(self) -> tuple[bytes, bytes]:
-            return b"", b""
-
-    async def fake_exec(*_args: str, **_kwargs: object) -> FakeProc:
-        return FakeProc()
-
-    monkeypatch.setattr("asyncio.create_subprocess_exec", fake_exec)
-    backend = NFTablesBackend(path="nft")
-    ok, _ = await backend.block("8.8.8.8")
-    assert ok is True
-    ok, _ = await backend.unblock("8.8.8.8")
-    assert ok is True
-    assert await backend.is_blocked("8.8.8.8") is True
 
 
 @pytest.mark.asyncio

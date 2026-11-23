@@ -86,7 +86,18 @@ export async function POST(request: Request) {
   }
 
   // Verify with Cloudflare
-  const secretKey = process.env.TURNSTILE_SECRET_KEY || "1x0000000000000000000000000000000AA";
+  const configuredSecret = process.env.TURNSTILE_SECRET_KEY;
+  let secretKey: string;
+  if (configuredSecret) {
+    secretKey = configuredSecret;
+  } else if (process.env.NODE_ENV !== "production") {
+    secretKey = "1x0000000000000000000000000000000AA";
+  } else {
+    return NextResponse.json(
+      { ok: false, error: "captcha is not configured" },
+      { status: 503 },
+    );
+  }
   const formData = new URLSearchParams();
   formData.append("secret", secretKey);
   formData.append("response", turnstileToken);

@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-import time
-from types import SimpleNamespace
 
 import pytest
 from pydantic import SecretStr
 
 from cloudsentinel import cli
 from cloudsentinel._secrets import InfisicalProvider, VaultProvider
-from cloudsentinel.auth import AuthConfig, PyJWTAuth, get_auth
+from cloudsentinel.auth import AuthConfig, PyJWTAuth
 from cloudsentinel.config import load_settings
-from cloudsentinel.firewall import IPTablesBackend
 from cloudsentinel.geoip import _enrich_fallback, _enrich_http
 from cloudsentinel.pipeline import EventPipeline
 from cloudsentinel.sandbox import FirecrackerSandbox, GVisorSandbox, create_sandbox
@@ -64,25 +61,6 @@ def test_geoip_fallbacks() -> None:
     assert _enrich_fallback("10.0.0.1")["country_code"] == "PV"
     assert _enrich_fallback("8.8.8.8", "lookup_failed")["country_code"] == "XX"
     assert _enrich_http("10.0.0.1") is None
-
-
-@pytest.mark.asyncio
-async def test_firewall_failure_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    class FakeProc:
-        returncode = 1
-
-        async def communicate(self) -> tuple[bytes, bytes]:
-            return b"", b"boom"
-
-    async def fake_exec(*_args: str, **_kwargs: object) -> FakeProc:
-        return FakeProc()
-
-    monkeypatch.setattr("asyncio.create_subprocess_exec", fake_exec)
-    backend = IPTablesBackend(path="iptables")
-    ok, error = await backend.block("8.8.8.8")
-    assert ok is False
-    assert "boom" in error
-    assert await backend.is_blocked("8.8.8.8") is False
 
 
 @pytest.mark.asyncio

@@ -16,7 +16,7 @@ def test_soar_optional_import_fallbacks(monkeypatch) -> None:
 
     def fake_import(name, *args, **kwargs):
         level = kwargs.get("level", args[3] if len(args) > 3 else 0)
-        if level == 1 and name in {"misp_feed", "abuseipdb", "firewall"}:
+        if level == 1 and name in {"misp_feed", "abuseipdb"}:
             raise ModuleNotFoundError(name)
         return real_import(name, *args, **kwargs)
 
@@ -31,7 +31,5 @@ def test_soar_optional_import_fallbacks(monkeypatch) -> None:
 
     assert namespace["_MISP_AVAILABLE"] is False
     assert namespace["_ABUSEIPDB_AVAILABLE"] is False
-    assert namespace["_FIREWALL_AVAILABLE"] is False
     assert namespace["_get_misp"]() is None
     assert namespace["_get_abuseipdb"]() is None
-    assert namespace["_create_firewall"]() is None

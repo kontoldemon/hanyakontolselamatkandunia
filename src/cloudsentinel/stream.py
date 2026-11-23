@@ -19,6 +19,8 @@ import structlog
 
 logger = structlog.get_logger("cloudsentinel.socketio")
 
+_SENSITIVE_KEYS = frozenset({"password"})
+
 
 class LiveStream:
     """
@@ -135,17 +137,21 @@ class LiveStream:
             self._started = False
             logger.info("Socket.io stopped")
 
+    @staticmethod
+    def _sanitize(event: dict[str, Any]) -> dict[str, Any]:
+        safe = dict(event)
+        safe.pop("system", None)
+        for key in list(safe):
+            if key.startswith("log_") or key in _SENSITIVE_KEYS:
+                del safe[key]
+        return safe
+
     def emit(self, event: dict[str, Any]) -> None:
         """Emit an event to all connected WebSocket clients."""
         if not self._started or not self._sio:
             return
 
-        # Clean raw/internal fields for dashboard
-        safe = dict(event)
-        safe.pop("system", None)
-        for k in list(safe):
-            if k.startswith("log_"):
-                del safe[k]
+        safe = self._sanitize(event)
         # Buffer only sanitized events for replay.
         self._buffer.append(safe)
 
@@ -156,10 +162,6 @@ class LiveStream:
         """Coroutine version of emit."""
         if not self._started or not self._sio:
             return
-        safe = dict(event)
-        safe.pop("system", None)
-        for k in list(safe):
-            if k.startswith("log_"):
-                del safe[k]
+        safe = self._sanitize(event)
         self._buffer.append(safe)
         await self._sio.emit("cloudsentinel:event", safe)

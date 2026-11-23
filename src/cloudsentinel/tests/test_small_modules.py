@@ -1,4 +1,4 @@
-"""Cover MISP feed, anomaly detector, and firewall backends."""
+﻿"""Cover MISP feed, anomaly detector, and firewall backends."""
 
 from __future__ import annotations
 
@@ -21,23 +21,17 @@ try:
 except ModuleNotFoundError:
     _fake_tenacity = types.ModuleType("tenacity")
     _fake_tenacity.retry = lambda *_args, **_kwargs: (lambda func: func)
+    _fake_tenacity.retry_if_exception_type = lambda *_args, **_kwargs: None
+    _fake_tenacity.retry_if_result = lambda *_args, **_kwargs: None
     _fake_tenacity.stop_after_attempt = lambda *_args, **_kwargs: None
     _fake_tenacity.wait_exponential = lambda *_args, **_kwargs: None
+    _fake_tenacity.wait_fixed = lambda *_args, **_kwargs: None
+    _fake_tenacity.before_sleep_log = lambda *_args, **_kwargs: None
     sys.modules["tenacity"] = _fake_tenacity
 
 import cloudsentinel.anomaly as anomaly
-import cloudsentinel.firewall as firewall
 import cloudsentinel.misp_feed as misp_module
 from cloudsentinel.misp_feed import MISPFeed
-
-
-class FakeProc:
-    def __init__(self, returncode: int = 0, stderr: bytes = b"") -> None:
-        self.returncode = returncode
-        self.stderr = stderr
-
-    async def communicate(self) -> tuple[bytes, bytes]:
-        return b"", self.stderr
 
 
 def test_misp_feed(monkeypatch) -> None:
@@ -143,56 +137,3 @@ async def test_anomaly_detector(tmp_path) -> None:
     broken.train()
 
 
-def test_firewall_backends(monkeypatch) -> None:
-    assert isinstance(firewall.create_firewall("iptables"), firewall.IPTablesBackend)
-    assert isinstance(firewall.create_firewall("nftables"), firewall.NFTablesBackend)
-    monkeypatch.setattr(firewall.shutil, "which", lambda name: "nft" if name == "nft" else None)
-    assert isinstance(firewall.create_firewall(), firewall.NFTablesBackend)
-    monkeypatch.setattr(firewall.shutil, "which", lambda name: "iptables" if name == "iptables" else None)
-    assert isinstance(firewall.create_firewall(), firewall.IPTablesBackend)
-    monkeypatch.setattr(firewall.shutil, "which", lambda _name: None)
-    assert isinstance(firewall.create_firewall(), firewall.IPTablesBackend)
-
-    async def success(*_args: object, **_kwargs: object) -> FakeProc:
-        return FakeProc(0)
-
-    async def failure(*_args: object, **_kwargs: object) -> FakeProc:
-        return FakeProc(1, b"denied")
-
-    async def boom(*_args: object, **_kwargs: object) -> FakeProc:
-        raise RuntimeError("exec failed")
-
-    iptables = firewall.IPTablesBackend()
-    monkeypatch.setattr(firewall.asyncio, "create_subprocess_exec", success)
-    assert asyncio.run(iptables.block("8.8.8.8")) == (True, "")
-    assert asyncio.run(iptables.unblock("8.8.8.8")) == (True, "")
-    assert asyncio.run(iptables.is_blocked("8.8.8.8")) is True
-
-    monkeypatch.setattr(firewall.asyncio, "create_subprocess_exec", failure)
-    assert asyncio.run(iptables.block("8.8.8.8"))[0] is False
-    assert asyncio.run(iptables.unblock("8.8.8.8"))[0] is False
-    assert asyncio.run(iptables.is_blocked("8.8.8.8")) is False
-
-    monkeypatch.setattr(firewall.asyncio, "create_subprocess_exec", boom)
-    assert asyncio.run(iptables.block("8.8.8.8"))[0] is False
-    assert asyncio.run(iptables.unblock("8.8.8.8"))[0] is False
-    assert asyncio.run(iptables.is_blocked("8.8.8.8")) is False
-
-    nft = firewall.NFTablesBackend()
-    monkeypatch.setattr(firewall.asyncio, "create_subprocess_exec", success)
-    assert asyncio.run(nft.block("bad-ip")) == (False, "Invalid IP address: bad-ip")
-    assert asyncio.run(nft.block("8.8.8.8")) == (True, "")
-    assert asyncio.run(nft.unblock("8.8.8.8")) == (True, "")
-    assert asyncio.run(nft.is_blocked("8.8.8.8")) is True
-
-    nft_failure = firewall.NFTablesBackend()
-    monkeypatch.setattr(firewall.asyncio, "create_subprocess_exec", failure)
-    assert asyncio.run(nft_failure.block("8.8.8.8"))[0] is False
-    assert asyncio.run(nft_failure.unblock("8.8.8.8"))[0] is False
-    assert asyncio.run(nft_failure.is_blocked("8.8.8.8")) is False
-
-    nft_boom = firewall.NFTablesBackend()
-    monkeypatch.setattr(firewall.asyncio, "create_subprocess_exec", boom)
-    assert asyncio.run(nft_boom.block("8.8.8.8"))[0] is False
-    assert asyncio.run(nft_boom.unblock("8.8.8.8"))[0] is False
-    assert asyncio.run(nft_boom.is_blocked("8.8.8.8")) is False

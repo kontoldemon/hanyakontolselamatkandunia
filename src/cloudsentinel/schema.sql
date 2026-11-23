@@ -147,7 +147,7 @@ AS SELECT
     avg(mttb_ms) as mttb_avg_ms,
     count() as total_blocks
 FROM cloudsentinel_events
-WHERE mttb_ms > 0 AND cloudsentinel_soar_action IN ('iptables_block', 'dry_run_block')
+WHERE mttb_ms > 0 AND cloudsentinel_soar_action IN ('iptables_block', 'dry_run_block', 'event_published')
 GROUP BY hour;
 
 -- Materialized view: top attacker IPs (24h rolling)

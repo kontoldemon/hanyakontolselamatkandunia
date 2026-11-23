@@ -198,7 +198,7 @@ class VaultProvider(SecretsProvider):
         if not self._client:
             return os.getenv(key, default)
         try:
-            secret_path = f"cloudsentinel/data/{key.lower()}"
+            secret_path = f"cloudsentinel/{key.lower()}"
             resp = await self._client.secrets.kv.v2.read_secret_version(
                 path=secret_path, mount_point="secret",
             )

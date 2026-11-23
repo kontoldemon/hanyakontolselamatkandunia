@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last reviewed: 2026-11-06.
+Last reviewed: 2026-11-22.
 
 ## Authoritative documents
 

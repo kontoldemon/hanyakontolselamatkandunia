@@ -20,8 +20,14 @@ MGMT_SSH_PORT=22222
 ADMIN_IP="${ADMIN_IP:-$(printf '%s' "${SSH_CONNECTION:-}" | awk '{print $1}')}"
 SOAR_ALLOWLIST="${SOAR_ALLOWLIST:-${ADMIN_IP:+${ADMIN_IP},}127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
 VERCEL_DASHBOARD_ORIGIN="${VERCEL_DASHBOARD_ORIGIN:-https://cloudsentinel.zis3c.dev}"
-PUBLIC_TLS_HOST="${PUBLIC_TLS_HOST:-188.166.184.42.sslip.io}"
+PUBLIC_IP="${PUBLIC_IP:-$(curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)}"
+PUBLIC_TLS_HOST="${PUBLIC_TLS_HOST:-${PUBLIC_IP:+${PUBLIC_IP}.sslip.io}}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
+
+if [ -z "${PUBLIC_TLS_HOST}" ]; then
+    echo "Set PUBLIC_TLS_HOST to a DNS name or PUBLIC_IP to the sensor public IP."
+    exit 1
+fi
 CLICKHOUSE_VERSION="24.12"
 PYTHON_VERSION="3.12"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -135,6 +141,21 @@ echo "[4/7] Copying CloudSentinel package..."
 if [ "$(realpath "${SOURCE_DIR}")" != "$(realpath "${SENSOR_HOME}" 2>/dev/null || echo "")" ]; then
     cp -a "${SOURCE_DIR}/." "${SENSOR_HOME}/"
 fi
+
+HOST_AGENT_SRC="${SOURCE_DIR}/../host_agent"
+if [ -d "${HOST_AGENT_SRC}" ]; then
+    mkdir -p "${SENSOR_HOME}/host_agent"
+    cp -a "${HOST_AGENT_SRC}/." "${SENSOR_HOME}/host_agent/"
+fi
+
+REPO_ROOT="$(cd "${SOURCE_DIR}/../.." 2>/dev/null && pwd || true)"
+if [ -n "${REPO_ROOT}" ] && [ -f "${REPO_ROOT}/deploy/backup.sh" ]; then
+    install -m 0755 "${REPO_ROOT}/deploy/backup.sh" "${SENSOR_HOME}/backup.sh"
+fi
+if [ -n "${REPO_ROOT}" ] && [ -f "${REPO_ROOT}/deploy/load_secrets.sh" ]; then
+    install -m 0755 "${REPO_ROOT}/deploy/load_secrets.sh" "${SENSOR_HOME}/load_secrets.sh"
+fi
+
 chown -R ${SENSOR_USER}:${SENSOR_USER} ${SENSOR_HOME}
 
 # Python Virtual Environment
@@ -171,7 +192,11 @@ install -d -m 0755 /etc/ssh/sshd_config.d
 cat > /etc/ssh/sshd_config.d/99-cloudsentinel-management.conf << SSHD
 Port ${MGMT_SSH_PORT}
 SSHD
-ufw allow ${MGMT_SSH_PORT}/tcp comment "Management SSH"
+if [ -n "${ADMIN_IP}" ]; then
+    ufw allow from ${ADMIN_IP} to any port ${MGMT_SSH_PORT} proto tcp comment "Management SSH"
+else
+    echo "WARNING: ADMIN_IP is empty; management SSH is not opened in UFW."
+fi
 
 # Public :22 becomes honeypot traffic redirected to internal :2222.
 iptables -t nat -C PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT} 2>/dev/null \
@@ -190,6 +215,14 @@ iptables -C INPUT -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -m state --state NEW \
     --hashlimit-burst 10 --hashlimit-mode srcip -j DROP 2>/dev/null || \
     iptables -A INPUT -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -m state --state NEW \
     -m hashlimit --hashlimit-name cloudsentinel_conn --hashlimit-above 60/minute \
+    --hashlimit-burst 10 --hashlimit-mode srcip -j DROP
+
+# The internal sensor port is also reachable directly through UFW.
+iptables -C INPUT -p tcp --dport ${SSH_PORT} -m state --state NEW \
+    -m hashlimit --hashlimit-name cloudsentinel_conn_2222 --hashlimit-above 60/minute \
+    --hashlimit-burst 10 --hashlimit-mode srcip -j DROP 2>/dev/null || \
+    iptables -A INPUT -p tcp --dport ${SSH_PORT} -m state --state NEW \
+    -m hashlimit --hashlimit-name cloudsentinel_conn_2222 --hashlimit-above 60/minute \
     --hashlimit-burst 10 --hashlimit-mode srcip -j DROP
 
 # Whitelist established connections at the top
@@ -211,6 +244,12 @@ iptables -C INPUT -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -m state --state NEW \
     --hashlimit-burst 10 --hashlimit-mode srcip -j DROP 2>/dev/null || \
     iptables -A INPUT -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -m state --state NEW \
     -m hashlimit --hashlimit-name cloudsentinel_conn --hashlimit-above 60/minute \
+    --hashlimit-burst 10 --hashlimit-mode srcip -j DROP
+iptables -C INPUT -p tcp --dport ${SSH_PORT} -m state --state NEW \
+    -m hashlimit --hashlimit-name cloudsentinel_conn_2222 --hashlimit-above 60/minute \
+    --hashlimit-burst 10 --hashlimit-mode srcip -j DROP 2>/dev/null || \
+    iptables -A INPUT -p tcp --dport ${SSH_PORT} -m state --state NEW \
+    -m hashlimit --hashlimit-name cloudsentinel_conn_2222 --hashlimit-above 60/minute \
     --hashlimit-burst 10 --hashlimit-mode srcip -j DROP
 iptables -C INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
     iptables -I INPUT 1 -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -331,6 +370,49 @@ SystemCallArchitectures=native
 WantedBy=multi-user.target
 SERVICE
 
+# Host agent: applies SOAR block events at the VM perimeter.
+if [ -f "${SENSOR_HOME}/host_agent/iptables_worker.py" ]; then
+    cat > /etc/systemd/system/cloudsentinel-host-agent.service << AGENT
+[Unit]
+Description=CloudSentinel host firewall agent
+After=network-online.target redis-server.service
+Wants=network-online.target redis-server.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=${SENSOR_HOME}
+ExecStart=${SENSOR_HOME}/venv/bin/python ${SENSOR_HOME}/host_agent/iptables_worker.py --redis redis://127.0.0.1:6379/0 --firewall-path /sbin/iptables
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
+AGENT
+    systemctl daemon-reload
+    systemctl enable cloudsentinel-host-agent
+    systemctl restart cloudsentinel-host-agent
+else
+    echo "WARNING: host_agent/iptables_worker.py not found; automatic blocks will not reach the firewall."
+fi
+
+if [ -x "${SENSOR_HOME}/backup.sh" ]; then
+    cat > /etc/cron.d/cloudsentinel-backup << CRON
+0 3 * * * root ${SENSOR_HOME}/backup.sh backup >> /var/log/cloudsentinel-backup.log 2>&1
+CRON
+    touch /var/log/cloudsentinel-backup.log
+    chmod 0600 /var/log/cloudsentinel-backup.log
+fi
+
 install -m 0600 /dev/null /root/cloudsentinel-admin-token
 printf '%s\n' "${ADMIN_TOKEN}" > /root/cloudsentinel-admin-token
 
@@ -360,9 +442,11 @@ echo "   clickhouse-client --query 'SELECT count() FROM cloudsentinel_events'"
 echo ""
 echo " Honeypot SSH port: ${SSH_PORT}"
 echo " Public honeypot SSH: ${HONEYPOT_PUBLIC_PORT} -> ${SSH_PORT}"
-echo " Management SSH: ssh -p ${MGMT_SSH_PORT} root@188.166.184.42"
+echo " Management SSH: ssh -p ${MGMT_SSH_PORT} root@<sensor-ip>"
 echo " WebSocket stream:  port 3001"
 echo " HTTPS proxy: https://${PUBLIC_TLS_HOST}"
 echo " SOAR allowlist: ${SOAR_ALLOWLIST}"
+echo " Host agent: cloudsentinel-host-agent.service"
+echo " Backup cron: /etc/cron.d/cloudsentinel-backup"
 echo " Admin token saved at: /root/cloudsentinel-admin-token"
 echo "============================================================"

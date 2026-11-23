@@ -10,7 +10,9 @@
 set -euo pipefail
 
 HONEYPOT_PORT="${HONEYPOT_PORT:-22}"
+SENSOR_PORT="${SENSOR_PORT:-2222}"
 MGMT_PORT="${MGMT_PORT:-22222}"
+ADMIN_IP="${ADMIN_IP:-}"
 
 # hashlimit: 60 new connections per minute per source IP, burst 10
 # This is kernel-level, so it handles 10,000+ IPs without touching Python.
@@ -19,6 +21,16 @@ HASHLIMIT_RULE=(
     -m state --state NEW
     -m hashlimit
     --hashlimit-name cloudsentinel_conn
+    --hashlimit-above 60/minute
+    --hashlimit-burst 10
+    --hashlimit-mode srcip
+    -j DROP
+)
+HASHLIMIT_SENSOR_RULE=(
+    -p tcp --dport "${SENSOR_PORT}"
+    -m state --state NEW
+    -m hashlimit
+    --hashlimit-name cloudsentinel_conn_2222
     --hashlimit-above 60/minute
     --hashlimit-burst 10
     --hashlimit-mode srcip
@@ -36,9 +48,19 @@ apply() {
         echo "    Rule added: max 60 conn/min per IP, burst 10"
     fi
 
-    # Whitelist management port explicitly
-    iptables -C INPUT -p tcp --dport "${MGMT_PORT}" -j ACCEPT 2>/dev/null || \
-        iptables -I INPUT 1 -p tcp --dport "${MGMT_PORT}" -j ACCEPT
+    if iptables -C INPUT "${HASHLIMIT_SENSOR_RULE[@]}" 2>/dev/null; then
+        echo "    Sensor-port rule already exists, skipping."
+    else
+        iptables -A INPUT "${HASHLIMIT_SENSOR_RULE[@]}"
+        echo "    Sensor-port rule added: max 60 conn/min per IP, burst 10"
+    fi
+
+    if [ -n "${ADMIN_IP}" ]; then
+        iptables -C INPUT -p tcp -s "${ADMIN_IP}" --dport "${MGMT_PORT}" -j ACCEPT 2>/dev/null || \
+            iptables -I INPUT 1 -p tcp -s "${ADMIN_IP}" --dport "${MGMT_PORT}" -j ACCEPT
+    else
+        echo "    ADMIN_IP is empty; management port is not opened."
+    fi
 
     # Whitelist established connections
     iptables -C INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
@@ -57,6 +79,7 @@ apply() {
 remove() {
     echo "[-] Removing kernel-level hashlimit..."
     iptables -D INPUT "${HASHLIMIT_RULE[@]}" 2>/dev/null || echo "    Rule not found."
+    iptables -D INPUT "${HASHLIMIT_SENSOR_RULE[@]}" 2>/dev/null || echo "    Sensor-port rule not found."
 }
 
 status() {

@@ -54,7 +54,7 @@ jobs:
           cache-dependency-path: src/cloudsentinel/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r src/cloudsentinel/requirements.txt
+        run: pip install -r src/cloudsentinel/requirements.txt -r src/cloudsentinel/requirements-dev.txt
 
       - name: Run unit tests
         run: pytest src/cloudsentinel/tests -v --cov=cloudsentinel --cov-report=term-missing --cov-report=xml --cov-fail-under=99 --timeout=120 -o addopts=""

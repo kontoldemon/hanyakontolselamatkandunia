@@ -1,10 +1,10 @@
 param(
-  [string]$DashboardBaseUrl = "https://cloudsentinel.zis3c.dev",
-  [string]$SensorBaseUrl = "https://188.166.184.42.sslip.io",
+  [string]$DashboardBaseUrl = "http://localhost:3000",
+  [string]$SensorBaseUrl = "http://127.0.0.1:8080",
   [string]$OutDir = "artifacts",
   [string]$AuthCookie = "",
   [string]$AuthBearer = "",
-  [string]$SshHost = "188.166.184.42",
+  [string]$SshHost = "127.0.0.1",
   [int]$SshPort = 22222,
   [string]$SshUser = "root",
   [string]$AdminTokenPath = "/root/cloudsentinel-admin-token",

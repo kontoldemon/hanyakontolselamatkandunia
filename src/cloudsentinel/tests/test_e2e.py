@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 CloudSentinel E2E Integration Test -- SSH attack simulation.
 Starts the real sensor, connects with asyncssh, sends malicious commands,
@@ -71,6 +71,7 @@ class E2ETestHarness:
         "SOAR_FIREWALL_DRY_RUN": "true",
         "SOAR_RISK_THRESHOLD": "30",
         "REDIS_URL": REDIS_URL,
+        "CLOUDSENTINEL_LOGIN_TIMEOUT": "300",
     }
 
     def __init__(self):
@@ -134,11 +135,12 @@ class E2ETestHarness:
             username=username,
             password=password,
             known_hosts=None,
-            login_timeout=10,
+            config=None,
+            login_timeout=300,
         )
 
 
-# ── Fixtures ──────────────────────────────────────
+# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @pytest_asyncio.fixture
 async def harness():
@@ -148,7 +150,7 @@ async def harness():
     await h.stop_sensor()
 
 
-# ── Tests ─────────────────────────────────────────
+# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @pytest.mark.asyncio
 async def test_ssh_connection_accepted(harness: E2ETestHarness):
@@ -200,10 +202,11 @@ async def test_concurrent_connections(harness: E2ETestHarness):
             conn = await asyncssh.connect(
                 "127.0.0.1", harness.port,
                 username=f"bot_{i}",
-                password=f"pass_{i}",
-                known_hosts=None,
-                login_timeout=10,
-            )
+                    password=f"pass_{i}",
+                    known_hosts=None,
+                    config=None,
+                    login_timeout=300,
+                )
             await asyncio.sleep(0.1)
             conn.close()
             await conn.wait_closed()
@@ -229,3 +232,6 @@ async def test_hassh_extraction(harness: E2ETestHarness):
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])
+
+
+

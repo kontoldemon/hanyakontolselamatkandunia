@@ -2,7 +2,7 @@
 
 This file is the single source of truth for the system architecture. If a report, slide, or README disagrees with this file, this file wins.
 
-Last reviewed: 2026-11-06.
+Last reviewed: 2026-11-22.
 
 ## 1. Purpose
 
@@ -18,7 +18,7 @@ CloudSentinel is a cloud-hosted SSH honeypot with automated containment. It does
 | Phase | Status | Host |
 |---|---|---|
 | Phase 1 | Deployed and validated 2026-05-26; currently offline | DigitalOcean droplet, Vercel dashboard |
-| Phase 2 | Target, not deployed | Azure VM sensor, Event Grid, Azure Functions + NSG, self-hosted ClickHouse, Vercel dashboard |
+| Phase 2 | Target, not deployed | Azure VM sensor, host firewall agent, NSG exposure rules, self-hosted ClickHouse, Vercel dashboard |
 
 The detection logic is the same in both phases. Only the cloud adapters change.
 
@@ -76,34 +76,37 @@ If Redis is down, events go to the local WAL and memory queue. The WAL is flushe
 ```text
 Internet
   -> Azure VM sensor (Standard_B2ats_v2, public IP + NSG)
+       NSG: 22 public, 22222 admin CIDR, 80/443 for the dashboard
   -> HASSH + GeoIP + MITRE + risk score
   -> SOAR decision
-       -> Azure Event Grid custom topic
-            -> Azure Function (managed identity)
-                 -> Azure NSG rule
+       -> Redis channel cloudsentinel:soar:blocks
+            -> host agent on the VM
+                 -> iptables block with TTL
        -> self-hosted Redis Stream
-            -> ClickHouse VM (Standard_B2s, private subnet)
+            -> ClickHouse on the same VM
             -> Socket.io stream on the sensor VM
                  -> Vercel dashboard
 ```
 
-Phase 2 is a migration plan. Do not describe it as deployed.
+Phase 2 is a migration plan. Do not describe it as deployed. The minimal path
+keeps Redis and ClickHouse on the sensor VM, which matches `deploy.sh`. A
+private ClickHouse VM is a scale-up option, not part of the minimal Bicep.
 
 ### Azure service choices
 
 | Job | Azure choice | Reason |
 |---|---|---|
 | Sensor host | `Standard_B2ats_v2` VM, Ubuntu 24.04 | Low-cost, enough for AsyncSSH and the local pipeline |
-| ClickHouse | `Standard_B2s` VM, 4 GB RAM, private subnet | Self-hosted keeps cost predictable; no Azure Data Explorer |
-| Event routing | Event Grid custom topic | Native event delivery to a Function without a broker cluster |
-| Automated block | Azure Function (Consumption) with system-assigned managed identity | Writes an NSG rule through Azure Resource Manager |
-| Firewall | Azure NSG | Native, auditable, removable with a TTL |
+| ClickHouse | Self-hosted on the sensor VM; private `Standard_B2s` VM is optional | Matches `deploy.sh`; no Azure Data Explorer |
+| Event routing | Local Redis channel | One mechanism for the host agent; no Event Grid dependency |
+| Automated block | Host agent `deploy/cloudsentinel-host-agent.service` | Applies iptables on the VM and auto-unblocks after the TTL |
+| Firewall | Local iptables for dynamic blocks; Azure NSG for exposure | NSG is static and auditable; iptables handles per-IP blocks |
 | Backups | Azure Blob Storage | Off-VM copy of ClickHouse and Redis backups |
-| Secrets | Azure Key Vault | Managed identity access; no secrets in VM images |
+| Secrets | Azure Key Vault + managed identity | `deploy/load_secrets.sh` copies secrets into `.env` |
 | Monitoring | Azure Monitor + Log Analytics | Free-tier friendly; optional |
 | Dashboard | Vercel | Existing Next.js deployment; Azure Static Web Apps is optional later |
 
-Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, managed Kafka/Event Hubs, managed ClickHouse, Azure SQL, and Azure Front Door. They add cost without being needed for this project.
+Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, Event Grid, Azure Functions, managed Kafka/Event Hubs, managed ClickHouse, Azure SQL, and Azure Front Door. They add cost and code without being needed for this project.
 
 ## 5. Component map
 
@@ -114,7 +117,7 @@ Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, manage
 | SSH session and VFS | `vfs.py`, `vfs_agent.py`, `commands/` |
 | Fingerprinting | `hassh.py`, `geoip.py` |
 | Detection and scoring | `mitre.py`, `anomaly.py`, `attack_graph.py` |
-| Response | `soar.py`, `firewall.py`, `webhook.py` |
+| Response | `soar.py`, `webhook.py`; host firewall agent in `../host_agent/iptables_worker.py` |
 | Data pipeline | `pipeline.py`, `event_codec.py` |
 | Admin API | `admin_api.py`, `auth.py` |
 | Live stream | `stream.py` |
@@ -143,9 +146,11 @@ Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, manage
 - Password attempts are capped at 20 per session.
 - Fuzz detection rejects oversized packets and null floods.
 - SOAR blocks only public IPs and skips the configured allowlist.
-- Admin API supports a static bearer token or JWT. JWT auth is disabled unless configured.
-- The dashboard uses an HMAC-signed session cookie, a password step, a six-digit OTP sent by email, and Cloudflare Turnstile.
-- Secrets can come from environment variables, HashiCorp Vault, or Infisical. The Azure target adds Azure Key Vault through managed identity.
+- Admin API supports a static bearer token or JWT. It fails closed with `503` when neither is configured. The Prometheus text endpoint stays private.
+- The dashboard uses an HMAC-signed session cookie, a password step, a six-digit OTP sent by email, and Cloudflare Turnstile. OTP verification is capped at five attempts.
+- The public Socket.io stream removes captured passwords. Full event replay remains behind the dashboard session.
+- The host agent applies SOAR blocks on the VM and auto-unblocks after the configured TTL. `deploy.sh` installs it as `cloudsentinel-host-agent.service`.
+- Secrets can come from environment variables, HashiCorp Vault, or Infisical. On Azure, `deploy/load_secrets.sh` copies Key Vault secrets into the sensor `.env` through the VM managed identity.
 - The AI response path is optional. Secrets are redacted before the prompt, and calls are limited per session (20) and globally (200 per hour). If the budget is exhausted or no API key is set, the agent falls back to deterministic output.
 - Optional integrations: Webhook alerts, AbuseIPDB, MISP, AI threat summaries.
 
@@ -170,7 +175,7 @@ The phase 1 validation artifact reports `21` MITRE techniques mapped. The covera
 | Redis Stream | `maxlen: 200000` | Buffer for the forwarder. Oldest entries trim only after 200k events. |
 | ClickHouse forwarder | Spill file | If ClickHouse is down, raw events go to `var/lib/cloudsentinel/clickhouse_spill.jsonl` and replay when it returns. |
 | Dashboard totals | `CLOUDSENTINEL_TRUTH_WINDOW_HOURS=0` | All-time by default. Set `24` for a rolling 24-hour view. |
-| Backup | `deploy/backup.sh` | Daily cron backs up Redis, ClickHouse, TTY logs, and buffer files. |
+| Backup | `deploy/backup.sh` | Daily cron backs up Redis, ClickHouse, TTY logs, and buffer files; uploads to Azure Blob when configured. |
 
 The spill file protects against ClickHouse outages, but it uses disk. If the disk fills, events can still be lost. Monitor disk space.
 
@@ -180,16 +185,15 @@ These are real gaps, not completed features.
 
 1. MTTB is measured in dry-run mode. A live end-to-end run with real firewall changes is still needed.
 2. The sample config leaves Redis, ClickHouse, and NATS without authentication. They must stay on a private network.
-3. The dashboard OTP verification step has no attempt limit. The login failure counter is stored in a cookie, so a client can drop it.
-4. `TURNSTILE_SECRET_KEY` falls back to a Cloudflare test secret if the environment variable is missing. Set the real key in production.
-5. A manual block accepts a TTL, but the iptables rule has no expiry. The TTL is returned in the response only.
-6. The nftables backend validates the IP in `block()` but not in `unblock()` or `is_blocked()`. Keep those calls behind the admin IP validator.
-7. When Redis reconnects, the memory queue and WAL can both flush the same event. Duplicate rows are possible after an outage.
-8. Session score maps grow for the life of the process. A long-running sensor needs a cleanup job.
-9. Phase 2 Azure is not deployed.
-10. No uptime percentage has been measured. Do not claim 99.9% or 99.5%.
-11. The Phase 1 droplet is offline. No public sensor is live at the moment. Use the local demo for a working system.
-12. LLM redaction is pattern-based and best-effort. Use `LLM_PROVIDER=mock` or a local model if commands may contain sensitive data.
+3. The public live stream is read-only but unauthenticated. Passwords are removed, but other attacker commands are visible.
+4. Session score maps grow for the life of the process. A long-running sensor needs a cleanup job.
+5. Phase 2 Azure is not deployed.
+6. No uptime percentage has been measured. Do not claim 99.9% or 99.5%.
+7. The Phase 1 droplet is offline. No public sensor is live at the moment. Use the local demo for a working system.
+8. LLM redaction is pattern-based and best-effort. Use `LLM_PROVIDER=mock` or a local model if commands may contain sensitive data.
+9. The Azure Bicep is a single-VM deployment. A private ClickHouse VM and Event Grid are not part of the minimal path.
+10. The host agent must be running for automatic blocks. `deploy.sh` installs it; the Docker stack runs it only with the `prod` profile.
+11. A manual block with a TTL is enforced by a background task in the API process. A restart before the TTL expires leaves the rule in place.
 
 ## 10. Configuration rule
 

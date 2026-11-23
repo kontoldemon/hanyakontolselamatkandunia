@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "https://188.166.184.42.sslip.io",
+  [string]$BaseUrl = "http://127.0.0.1:8080",
   [string]$BearerToken = "",
   [string]$OutDir = "artifacts"
 )

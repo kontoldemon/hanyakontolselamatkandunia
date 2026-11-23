@@ -58,9 +58,9 @@ Output JSON artifact is written into `artifacts/`.
 Direct sensor audit (when dashboard cookie auth blocks terminal checks):
 
 ```powershell
-$token = ssh -p 22222 root@188.166.184.42 "cat /root/cloudsentinel-admin-token"
+$token = ssh -p 22222 root@<sensor-ip> "cat /root/cloudsentinel-admin-token"
 powershell -ExecutionPolicy Bypass -File .\dashboard\qa\truth_audit_sensor.ps1 `
-  -BaseUrl "https://188.166.184.42.sslip.io" `
+  -BaseUrl "https://<sensor-host>" `
   -BearerToken $token
 ```
 

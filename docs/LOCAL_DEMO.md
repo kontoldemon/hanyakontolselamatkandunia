@@ -44,10 +44,11 @@ SOAR_FIREWALL_ENABLED=true
 SOAR_FIREWALL_DRY_RUN=true
 SOAR_ACTIVE_PROFILE=local
 ADMIN_ENABLED=true
+ADMIN_TOKEN=local-demo-admin-token
 STREAM_ENABLED=true
 ```
 
-`SOAR_FIREWALL_DRY_RUN=true` is important. It stops the local sensor from changing your Windows or WSL firewall.
+`SOAR_FIREWALL_DRY_RUN=true` is important. It stops the local sensor from changing your Windows or WSL firewall. `ADMIN_TOKEN` is required; Compose stops with a clear error when it is empty. Use the same token in `dashboard/.env.local`.
 
 ### 3. Start the stack
 

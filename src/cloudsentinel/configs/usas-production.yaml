@@ -83,7 +83,6 @@ soar:
   firewall_enabled: true
   firewall_dry_run: false
   firewall_path: /sbin/iptables
-  firewall_backend: nftables
   block_ttl: 86400
   decay_rate: 1.0
   allowlist:

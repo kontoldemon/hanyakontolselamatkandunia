@@ -149,14 +149,14 @@ services:
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-cloudsentinel_ch_pass}
       CLOUDSENTINEL_LISTEN_HOST: 0.0.0.0
       CLOUDSENTINEL_SSH_PORT: 2222
-      CLOUDSENTINEL_FIREWALL_BACKEND: nftables
       CLOUDSENTINEL_SANDBOX_RUNTIME: gvisor
       STREAM_ENABLED: "true"
       ADMIN_ENABLED: "true"
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN must be set in src/cloudsentinel/.env}
     ports:
-      - "2222:2222"
-      - "8080:8080"
-      - "3001:3001"
+      - "127.0.0.1:2222:2222"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:3001:3001"
     security_opt:
       - no-new-privileges:true
     cap_drop:

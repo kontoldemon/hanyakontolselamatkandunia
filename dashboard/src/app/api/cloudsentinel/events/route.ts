@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { adminApiConfig, adminApiConfigError } from "@/lib/adminApi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,16 +13,16 @@ function resolveLimit(raw: string | null): number {
 }
 
 export async function GET(request: Request) {
-  const envUrl = process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim();
-  const baseUrl = envUrl && envUrl !== "http://localhost:8080" ? envUrl : "https://188.166.184.42.sslip.io";
+  const configError = adminApiConfigError();
+  if (configError) return configError;
+  const { baseUrl, headers } = adminApiConfig();
   const { searchParams } = new URL(request.url);
   const limit = resolveLimit(searchParams.get("limit"));
 
   try {
-    const token = process.env.CLOUDSENTINEL_ADMIN_TOKEN;
     const response = await fetch(new URL(`/events?limit=${limit}`, baseUrl), {
       cache: "no-store",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers,
       signal: AbortSignal.timeout(8000),
     });
 
