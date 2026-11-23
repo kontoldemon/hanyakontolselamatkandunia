@@ -451,6 +451,17 @@ def test_clickhouse_insert_uses_dedup_token() -> None:
     assert forwarder._client.kwargs["settings"]["insert_deduplication_token"] == "token-1"
 
 
+def test_anomaly_auto_trains_after_window() -> None:
+    pytest.importorskip("sklearn")
+    from cloudsentinel.anomaly import CommandAnomalyDetector
+
+    detector = CommandAnomalyDetector()
+    for index in range(12):
+        detector.score(f"echo {index}")
+    assert detector.stats["total_commands_analyzed"] == 12
+    assert detector.stats["model_ready"] is True
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

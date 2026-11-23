@@ -74,6 +74,9 @@ class CommandAnomalyDetector:
         """Score a command for anomalousness. Returns risk dict."""
         self._total_commands += 1
         self._recent_commands.append(command)
+        if self._model is not None and len(self._recent_commands) >= 10:
+            if not self._model_ready or self._total_commands % 50 == 0:
+                self.train()
 
         features = extract_features(command)
         feature_vector = [features.get(k, 0.0) for k in self._feature_names]

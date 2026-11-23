@@ -813,6 +813,18 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
         except Exception:
             pass
 
+        if self._anomaly_detector is not None:
+            try:
+                anomaly = self._anomaly_detector.score(command)
+                if anomaly["anomaly_score"] > 70:
+                    logger.warning(
+                        "Anomaly detected: score=%.1f cmd=%r",
+                        anomaly["anomaly_score"],
+                        command[:80],
+                    )
+            except Exception as exc:
+                logger.debug("Anomaly scoring failed: %s", exc)
+
         # 1. Try command registry (163+ fake Linux commands)
         try:
             import shlex
@@ -883,11 +895,6 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                 "risk_score": mitre_annotation.get("risk_score", 0),
                 "mitre_techniques": mitre_annotation.get("mitre_techniques", []),
             }))
-            # Anomaly scoring
-            if self._anomaly_detector is not None:
-                anomaly = self._anomaly_detector.score(command)
-                if anomaly["anomaly_score"] > 70:
-                    logger.warning("Anomaly detected: score=%.1f cmd=%r", anomaly["anomaly_score"], command[:80])
 
             return output
         except Exception as exc:
