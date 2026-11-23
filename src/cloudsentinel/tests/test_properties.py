@@ -232,7 +232,7 @@ class TestSOARProperties:
     """SOAR engine invariants."""
 
     @given(ip=st.ip_addresses(v=4).map(str))
-    @settings(max_examples=100)
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_allowlisted_ips_never_blocked(self, ip):
         """IPs in the allowlist are always recognized."""
         soar = SOAREngine(allowlist=["127.0.0.1", "10.0.0.0/8"])

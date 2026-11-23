@@ -428,6 +428,11 @@ def test_backup_prunes_old_offsite_blobs() -> None:
     assert "az storage blob delete" in source
 
 
+def test_deploy_detects_public_ip_after_curl_install() -> None:
+    source = Path("src/cloudsentinel/deploy.sh").read_text(encoding="utf-8")
+    assert source.index("apt-get install -y -qq") < source.index("PUBLIC_IP=")
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

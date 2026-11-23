@@ -20,14 +20,7 @@ MGMT_SSH_PORT=22222
 ADMIN_IP="${ADMIN_IP:-$(printf '%s' "${SSH_CONNECTION:-}" | awk '{print $1}')}"
 SOAR_ALLOWLIST="${SOAR_ALLOWLIST:-${ADMIN_IP:+${ADMIN_IP},}127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
 VERCEL_DASHBOARD_ORIGIN="${VERCEL_DASHBOARD_ORIGIN:-https://cloudsentinel.zis3c.dev}"
-PUBLIC_IP="${PUBLIC_IP:-$(curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)}"
-PUBLIC_TLS_HOST="${PUBLIC_TLS_HOST:-${PUBLIC_IP:+${PUBLIC_IP}.sslip.io}}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
-
-if [ -z "${PUBLIC_TLS_HOST}" ]; then
-    echo "Set PUBLIC_TLS_HOST to a DNS name or PUBLIC_IP to the sensor public IP."
-    exit 1
-fi
 CLICKHOUSE_VERSION="24.12"
 CLICKHOUSE_HOST="${CLICKHOUSE_HOST:-127.0.0.1}"
 CLICKHOUSE_INSTALL="${CLICKHOUSE_INSTALL:-true}"
@@ -92,6 +85,13 @@ apt-get install -y -qq \
     build-essential libssl-dev libffi-dev openssl \
     iptables curl wget unzip \
     git ca-certificates gnupg redis-server openssh-server ufw caddy
+
+PUBLIC_IP="${PUBLIC_IP:-$(curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)}"
+PUBLIC_TLS_HOST="${PUBLIC_TLS_HOST:-${PUBLIC_IP:+${PUBLIC_IP}.sslip.io}}"
+if [ -z "${PUBLIC_TLS_HOST}" ]; then
+    echo "Set PUBLIC_TLS_HOST to a DNS name or PUBLIC_IP to the sensor public IP."
+    exit 1
+fi
 
 if [ -z "${ADMIN_TOKEN}" ]; then
     ADMIN_TOKEN="$(openssl rand -hex 32)"

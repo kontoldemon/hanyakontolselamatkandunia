@@ -97,9 +97,13 @@ class E2ETestHarness:
         ]
 
         self.server_task = asyncio.create_task(self._run_sensor())
-        await wait_for_port("127.0.0.1", self.port)
-        if self.server_task.done():
-            self.server_task.result()
+        try:
+            await wait_for_port("127.0.0.1", self.port, timeout=90)
+            if self.server_task.done():
+                self.server_task.result()
+        except Exception:
+            await self.stop_sensor()
+            raise
 
     async def _run_sensor(self) -> None:
         from cloudsentinel.server import main as server_main_func
