@@ -421,6 +421,13 @@ def test_backup_offsite_uses_managed_identity() -> None:
     assert "az storage blob upload" in source
 
 
+def test_backup_prunes_old_offsite_blobs() -> None:
+    source = Path("deploy/backup.sh").read_text(encoding="utf-8")
+    assert "AZURE_RETENTION_DAYS" in source
+    assert "az storage blob list" in source
+    assert "az storage blob delete" in source
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

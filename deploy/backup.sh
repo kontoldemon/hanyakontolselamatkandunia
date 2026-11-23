@@ -5,7 +5,8 @@
 #
 # BACKUP_MODE=auto|docker|native. Auto uses Docker when a Redis container is
 # running, otherwise the native Redis/ClickHouse services installed by deploy.sh.
-# The optional Azure Blob upload refreshes the VM managed identity first.
+# The optional Azure Blob upload refreshes the VM managed identity first and
+# prunes old Blob copies using AZURE_RETENTION_DAYS (default: RETENTION_DAYS).
 
 set -euo pipefail
 
@@ -30,6 +31,7 @@ CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-}"
 
 AZURE_STORAGE_ACCOUNT="${AZURE_STORAGE_ACCOUNT:-}"
 AZURE_STORAGE_CONTAINER="${AZURE_STORAGE_CONTAINER:-cloudsentinel-backups}"
+AZURE_RETENTION_DAYS="${AZURE_RETENTION_DAYS:-${RETENTION_DAYS}}"
 
 if [ -f "${ENV_FILE}" ]; then
     set -a
@@ -147,6 +149,30 @@ backup() {
                 --auth-mode login \
                 --overwrite \
                 --only-show-errors
+
+            CUTOFF="$(date -d "-${AZURE_RETENTION_DAYS} days" +%Y%m%d_%H%M%S)"
+            az storage blob list \
+                --account-name "${AZURE_STORAGE_ACCOUNT}" \
+                --container-name "${AZURE_STORAGE_CONTAINER}" \
+                --auth-mode login \
+                --query "[].name" \
+                -o tsv | while IFS= read -r blob; do
+                case "${blob}" in
+                    cloudsentinel_*.tar.gz)
+                        stamp="${blob#cloudsentinel_}"
+                        stamp="${stamp%.tar.gz}"
+                        if [[ "${stamp}" < "${CUTOFF}" ]]; then
+                            az storage blob delete \
+                                --account-name "${AZURE_STORAGE_ACCOUNT}" \
+                                --container-name "${AZURE_STORAGE_CONTAINER}" \
+                                --name "${blob}" \
+                                --auth-mode login \
+                                --only-show-errors \
+                                || echo "Failed to delete old blob ${blob}" >&2
+                        fi
+                        ;;
+                esac
+            done
         fi
     else
         echo "Offsite upload skipped (set AZURE_STORAGE_ACCOUNT and install az)."
