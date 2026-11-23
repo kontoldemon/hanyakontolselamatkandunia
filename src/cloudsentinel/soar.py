@@ -248,6 +248,19 @@ class SOAREngine:
                     self._mem_last_activity,
                 ):
                     store.pop(session_id, None)
+                for sessions in self._mem_ip_sessions.values():
+                    sessions.discard(session_id)
+        for sessions in self._mem_ip_sessions.values():
+            if len(sessions) <= self._MAX_MEM_ENTRIES:
+                continue
+            keep = set(
+                sorted(
+                    sessions,
+                    key=lambda session_id: self._mem_last_activity.get(session_id, 0.0),
+                    reverse=True,
+                )[: self._MAX_MEM_ENTRIES]
+            )
+            sessions.intersection_update(keep)
 
     def get_ip_profile(self, ip: str) -> dict[str, Any]:
         """Return in-memory profile used by dashboard and tests."""
@@ -367,6 +380,9 @@ class SOAREngine:
                 self._mem_session_failed_auth.pop(session_id,None)
                 self._mem_session_techniques.pop(session_id,None)
                 self._mem_last_activity.pop(session_id,None)
+            sessions = self._mem_ip_sessions.get(ip)
+            if sessions is not None:
+                sessions.discard(session_id)
 
         return event
 

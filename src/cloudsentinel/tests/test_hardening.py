@@ -372,6 +372,43 @@ def test_connection_limiter_ip_map_is_bounded() -> None:
     assert "8.8.8.4" in limiter._ips
 
 
+def test_soar_ip_session_set_is_bounded() -> None:
+    from cloudsentinel.soar import SOAREngine
+
+    engine = SOAREngine(risk_threshold=30, firewall_enabled=False)
+    engine._MAX_MEM_ENTRIES = 3
+    for index in range(5):
+        engine._update_ip_profile("8.8.8.8", f"s{index}", 10, {"T1"}, float(index))
+        engine._mem_last_activity[f"s{index}"] = float(index)
+    engine._prune_memory()
+    assert engine._mem_ip_sessions["8.8.8.8"] == {"s2", "s3", "s4"}
+
+
+@pytest.mark.asyncio
+async def test_soar_session_close_removes_ip_session() -> None:
+    from cloudsentinel.soar import SOAREngine
+
+    engine = SOAREngine(risk_threshold=30, firewall_enabled=False)
+    await engine.process_event(
+        "s1",
+        {
+            "eventid": "cloudsentinel.session.connect",
+            "src_ip": "8.8.8.8",
+            "session": "s1",
+        },
+    )
+    assert "s1" in engine._mem_ip_sessions["8.8.8.8"]
+    await engine.process_event(
+        "s1",
+        {
+            "eventid": "cloudsentinel.session.closed",
+            "src_ip": "8.8.8.8",
+            "session": "s1",
+        },
+    )
+    assert "s1" not in engine._mem_ip_sessions["8.8.8.8"]
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 
