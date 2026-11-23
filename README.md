@@ -26,7 +26,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writin
 | Live stream | Local Socket.io server | Same Socket.io server on the sensor VM |
 | Admin API | FastAPI on the sensor | Same FastAPI service, token/JWT protected |
 | Dashboard | Next.js 16 on Vercel | Existing Vercel deployment; Azure Static Web Apps is optional later |
-| Secrets | `.env`, Vault, or Infisical | Azure Key Vault with managed identity |
+| Secrets | `.env`, Vault, or Infisical | Azure Key Vault with private endpoint and managed identity |
 | Infrastructure as code | Manual droplet setup | Bicep |
 | Observability | Prometheus metrics, structured logs | Azure Monitor and Log Analytics (optional) |
 
@@ -82,5 +82,5 @@ The `0.86 s` MTTB in the literature is from Chin et al. (2025). It is not a resu
 - The admin API fails closed: it returns `503` when neither `ADMIN_TOKEN` nor JWT auth is configured. The Prometheus `/metrics` endpoint stays private.
 - The public Socket.io stream removes captured passwords before emitting events.
 - The Event Grid Function accepts only public, non-allowlisted IPs; it creates an NSG deny rule and queues its deletion after the TTL. A five-minute timer trigger cleans up expired rules if a queue message is lost. Manual dashboard blocks use the same path.
-- Do not commit `.env` files or `.vercel/` secrets. Rotate any key that was shared. Store runtime secrets in Azure Key Vault; `deploy/load_secrets.sh` copies them into `.env`.
+- Do not commit `.env` files or `.vercel/` secrets. Rotate any key that was shared. Store runtime secrets in Azure Key Vault; `deploy/load_secrets.sh` copies them into `.env` through the private endpoint.
 - The LLM response path is optional. Prompts are best-effort redacted and rate-limited. Set `LLM_PROVIDER=mock` if commands must not leave the host.

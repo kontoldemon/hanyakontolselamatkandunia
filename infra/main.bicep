@@ -24,14 +24,21 @@ param sensorDataDiskSizeGB int = 64
 @description('ClickHouse data disk size in GB.')
 param clickHouseDataDiskSizeGB int = 64
 
+@secure()
+@description('Optional LLM provider key. Stored in Key Vault when supplied.')
+param llmApiKey string = ''
+
 var prefix = 'cloudsentinel'
 var vnetName = '${prefix}-vnet'
 var sensorSubnetName = 'sensor'
 var dataSubnetName = 'data'
+var privateEndpointSubnetName = 'privateEndpoints'
 var sensorSubnetCidr = '10.20.1.0/24'
 var dataSubnetCidr = '10.20.2.0/24'
+var privateEndpointSubnetCidr = '10.20.3.0/24'
 var sensorSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, sensorSubnetName)
 var dataSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, dataSubnetName)
+var privateEndpointSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, privateEndpointSubnetName)
 var sensorNsgName = '${prefix}-sensor-nsg'
 var dataNsgName = '${prefix}-data-nsg'
 var sensorPublicIpName = '${prefix}-sensor-pip'
@@ -210,6 +217,12 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
           }
         }
       }
+      {
+        name: privateEndpointSubnetName
+        properties: {
+          addressPrefix: privateEndpointSubnetCidr
+        }
+      }
     ]
   }
 }
@@ -303,6 +316,7 @@ resource sensorVm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
           ]
         }
       }
+      customData: base64(loadTextContent('sensor-cloud-init.sh'))
     }
     storageProfile: {
       imageReference: {
@@ -541,9 +555,9 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     networkAcls: {
-      defaultAction: 'Allow'
+      defaultAction: 'Deny'
       bypass: 'AzureServices'
     }
   }
@@ -562,6 +576,67 @@ resource eventGridKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   name: 'eventgrid-topic-key'
   properties: {
     value: listKeys(eventGridTopic.id, '2022-06-15').key1
+  }
+}
+
+resource llmKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (llmApiKey != '') {
+  parent: keyVault
+  name: 'llm-api-key'
+  properties: {
+    value: llmApiKey
+  }
+}
+
+resource vaultPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.vaultcore.azure.net'
+  location: 'global'
+}
+
+resource vaultPrivateDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: vaultPrivateDnsZone
+  name: '${vnetName}-link'
+  location: 'global'
+  properties: {
+    virtualNetwork: {
+      id: vnet.id
+    }
+    registrationEnabled: false
+  }
+}
+
+resource vaultPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = {
+  name: '${keyVaultName}-pe'
+  location: location
+  properties: {
+    subnet: {
+      id: privateEndpointSubnetId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'vault'
+        properties: {
+          privateLinkServiceId: keyVault.id
+          groupIds: [
+            'vault'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource vaultPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = {
+  parent: vaultPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'vault'
+        properties: {
+          privateDnsZoneId: vaultPrivateDnsZone.id
+        }
+      }
+    ]
   }
 }
 
