@@ -17,7 +17,7 @@ Do not test against systems you do not own. The local demo and CI are the suppor
 
 | Check | Workflow | Scope | Current result |
 |---|---|---|---|
-| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 486 passed, 99.29% (gate 99%) |
+| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 487 passed, 99.27% (gate 99%) |
 | SQL/static lint | `.github/workflows/ci.yml` | Ruff critical rules | passing |
 | CodeQL | `.github/workflows/codeql.yml` | Python + JavaScript/TypeScript, `security-extended` | 0 open alerts (2026-11-06) |
 | Python dependency audit | `.github/workflows/security.yml` | `pip-audit -r src/cloudsentinel/requirements.txt` | 0 known vulnerabilities |
@@ -52,6 +52,7 @@ npm audit --omit=dev --audit-level=high
 - **`CLOUDSENTINEL_AUTH_SECRET` is required when auth is enabled.** `load_settings` validates this and refuses to start in production without it.
 - **The admin API fails closed.** With no `ADMIN_TOKEN` and no JWT auth, protected endpoints return `503`. Compose also refuses to start without `ADMIN_TOKEN`. The Prometheus `/metrics` endpoint stays unauthenticated and must remain private; nginx restricts it and Compose binds the API to localhost.
 - **The public stream is read-only and unauthenticated.** Captured passwords are removed before emit; other attacker commands remain visible.
+- **Dashboard OTP delivery fails closed in production.** A missing `RESEND_API_KEY`/`ADMIN_EMAIL` or a failed email send returns `503`. The OTP is logged only in development.
 - **Firewall actions must remain dry-run until the deployment host is verified.** Production mode requires `SOAR_FIREWALL_DRY_RUN=false` and a working Event Grid/Function path or host agent.
 - **The Azure Function has a custom NSG rule operator role scoped to one NSG.** It validates public, non-allowlisted IPs and creates rules with a TTL; the storage queue deletes the rule, and a five-minute timer cleanup handles lost queue messages. The Event Grid topic key is stored in Key Vault and copied to the sensor through `load_secrets.sh`.
 - **Key Vault public access is disabled.** The sensor reads secrets through a private endpoint and the `privatelink.vaultcore.azure.net` DNS zone linked to the VNet.

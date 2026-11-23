@@ -409,6 +409,12 @@ async def test_soar_session_close_removes_ip_session() -> None:
     assert "s1" not in engine._mem_ip_sessions["8.8.8.8"]
 
 
+def test_login_fails_closed_without_email_delivery() -> None:
+    source = Path("dashboard/src/app/api/auth/login/route.ts").read_text(encoding="utf-8")
+    assert "verification email could not be sent" in source
+    assert "OTP delivery is not configured" in source
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 

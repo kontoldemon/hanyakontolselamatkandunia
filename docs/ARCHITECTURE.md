@@ -149,7 +149,7 @@ Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, manage
 - Fuzz detection rejects oversized packets and null floods.
 - SOAR blocks only public IPs and skips the configured allowlist.
 - Admin API supports a static bearer token or JWT. It fails closed with `503` when neither is configured. The Prometheus text endpoint stays private.
-- The dashboard uses an HMAC-signed session cookie, a password step, a six-digit OTP sent by email, and Cloudflare Turnstile. OTP verification is capped at five attempts.
+- The dashboard uses an HMAC-signed session cookie, a password step, a six-digit OTP sent by email, and Cloudflare Turnstile. OTP verification is capped at five attempts, and OTP delivery fails closed in production.
 - The public Socket.io stream removes captured passwords. Full event replay remains behind the dashboard session.
 - The host agent applies SOAR blocks on the VM and auto-unblocks after the configured TTL. `deploy.sh` installs it as `cloudsentinel-host-agent.service` for non-Azure installs.
 - On Azure, `eventgrid.py` publishes a CloudEvent to the block topic. The Function validates public/non-allowlisted IPs, creates an NSG deny rule, and queues its deletion after the TTL. A five-minute timer trigger deletes expired `cs-block-*` rules if a queue message is lost.

@@ -34,8 +34,8 @@ Create `.env.local` with the values below. Do not commit it.
 | `DASHBOARD_AUTH_SECRET` | HMAC secret for the session cookie |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key. Required in production; the test key is only allowed in development. |
-| `RESEND_API_KEY` | Email provider key for OTP delivery |
-| `ADMIN_EMAIL` | Destination for the OTP email |
+| `RESEND_API_KEY` | Email provider key for OTP delivery. Required in production. |
+| `ADMIN_EMAIL` | Destination for the OTP email. Required in production. |
 | `OTP_SECRET` | HMAC secret for the OTP hash |
 | `CLOUDSENTINEL_EXPOSURE_PROVIDER` | Exposure provider, for example `digitalocean` |
 | `DIGITALOCEAN_TOKEN` | DigitalOcean API token for the exposure toggle |
