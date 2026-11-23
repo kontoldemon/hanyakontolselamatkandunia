@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { adminApiConfig, adminApiConfigError } from "@/lib/adminApi";
+import {
+  adminApiConfig,
+  adminApiConfigError,
+  toSafeNumber,
+  type SourceKind,
+} from "@/lib/adminApi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type SourceKind = "clickhouse" | "runtime" | "memory" | "mixed";
 
 type Summary = {
   ok: boolean;
@@ -84,11 +87,6 @@ const offline: Summary = {
   },
 };
 
-function toNumber(value: unknown, fallbackValue = 0): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallbackValue;
-}
-
 export async function GET() {
   const configError = adminApiConfigError();
   if (configError) return configError;
@@ -109,7 +107,7 @@ export async function GET() {
     ]);
 
     const metricsPayload = metricsResponse.ok ? await metricsResponse.json() as Record<string, unknown> : {};
-    const uptimeSeconds = toNumber(metricsPayload.uptime_seconds);
+    const uptimeSeconds = toSafeNumber(metricsPayload.uptime_seconds);
 
     if (!truthResponse.ok) {
       return NextResponse.json(
@@ -162,19 +160,19 @@ export async function GET() {
         uptimeSeconds: "runtime",
       },
       metrics: {
-        totalEvents: toNumber(truthMetrics.total_events),
-        uniqueIps: toNumber(truthMetrics.unique_ips),
-        uniqueCountries: toNumber(truthMetrics.unique_countries),
-        uniqueCommands: toNumber(truthMetrics.unique_commands),
-        avgRisk: toNumber(truthMetrics.avg_risk),
-        blockRate: toNumber(truthMetrics.block_rate),
-        activeSessions: toNumber(truthMetrics.active_sessions),
-        mttbMs: toNumber(truthMetrics.mttb_ms),
-        totalConnections: toNumber(truthMetrics.total_connections),
-        totalAuthFailures: toNumber(truthMetrics.total_auth_failures),
-        totalCommands: toNumber(truthMetrics.total_commands),
-        totalBlocks: toNumber(truthMetrics.total_blocks),
-        blockedIpsCurrent: toNumber(truthMetrics.blocked_ips_current),
+        totalEvents: toSafeNumber(truthMetrics.total_events),
+        uniqueIps: toSafeNumber(truthMetrics.unique_ips),
+        uniqueCountries: toSafeNumber(truthMetrics.unique_countries),
+        uniqueCommands: toSafeNumber(truthMetrics.unique_commands),
+        avgRisk: toSafeNumber(truthMetrics.avg_risk),
+        blockRate: toSafeNumber(truthMetrics.block_rate),
+        activeSessions: toSafeNumber(truthMetrics.active_sessions),
+        mttbMs: toSafeNumber(truthMetrics.mttb_ms),
+        totalConnections: toSafeNumber(truthMetrics.total_connections),
+        totalAuthFailures: toSafeNumber(truthMetrics.total_auth_failures),
+        totalCommands: toSafeNumber(truthMetrics.total_commands),
+        totalBlocks: toSafeNumber(truthMetrics.total_blocks),
+        blockedIpsCurrent: toSafeNumber(truthMetrics.blocked_ips_current),
         uptimeSeconds,
       },
     };

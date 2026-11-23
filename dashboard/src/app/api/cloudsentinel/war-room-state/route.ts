@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { adminApiConfig, adminApiConfigError } from "@/lib/adminApi";
+import {
+  adminApiConfig,
+  adminApiConfigError,
+  toSafeNumber,
+  type SourceKind,
+} from "@/lib/adminApi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SourceKind = "clickhouse" | "runtime" | "memory" | "mixed";
 type WarRoomStateKind = "offline" | "live" | "under_attack";
 
 type WarRoomStatePayload = {
@@ -79,11 +83,6 @@ function isAttackEventId(eventid: string): boolean {
   );
 }
 
-function asNumber(value: unknown, fallback = 0): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 async function loadCompatibilityWarRoomState(
   baseUrl: string,
   headers: Record<string, string>,
@@ -119,7 +118,7 @@ async function loadCompatibilityWarRoomState(
   let lastOnlineAt = 0;
   let lastAttackAt = 0;
   for (const evt of events) {
-    const ts = asNumber(evt.timestamp, 0) * 1000;
+    const ts = toSafeNumber(evt.timestamp, 0) * 1000;
     if (ts > lastOnlineAt) {
       lastOnlineAt = ts;
     }

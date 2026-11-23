@@ -1,11 +1,13 @@
-import StatusPage from "@/components/StatusPage";
+import StatusPage from "@/components/ui/StatusPage";
 
 export default function NotFound() {
   return (
     <StatusPage
       code="404"
       title="Page not found"
-      message="Requested dashboard route does not exist or was moved."
+      message="The requested route does not exist or has been moved."
+      primaryHref="/dashboard"
+      primaryLabel="Dashboard"
       secondaryAction="back"
     />
   );

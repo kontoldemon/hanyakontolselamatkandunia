@@ -6,23 +6,18 @@ import {
   sessionCookieName,
   sessionMaxAge,
 } from "@/lib/auth";
-import crypto from "crypto";
+import {
+  computeOtpHash,
+  OTP_HASH_COOKIE,
+  parseCookieFailures,
+} from "@/lib/otpAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const OTP_HASH_COOKIE = "cloudsentinel_otp_hash";
 const FAILURE_COOKIE = "cloudsentinel_otp_failures";
 const MAX_FAILURES = 5;
 const FAILURE_WINDOW_SECONDS = 5 * 60;
-
-function parseFailures(value?: string) {
-  if (!value) {
-    return 0;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
-}
 
 function clearOtp(response: NextResponse) {
   response.cookies.set({
@@ -57,7 +52,7 @@ export async function POST(request: Request) {
   }
 
   const cookieHeader = request.headers.get("cookie");
-  const failures = parseFailures(
+  const failures = parseCookieFailures(
     cookieHeader?.match(new RegExp(`${FAILURE_COOKIE}=(\\d+)`))?.[1],
   );
 
@@ -80,8 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "OTP expired or missing" }, { status: 401 });
   }
 
-  const otpSecret = process.env.OTP_SECRET || process.env.DASHBOARD_PASSWORD || "default-secret";
-  const incomingOtpHash = crypto.createHmac("sha256", otpSecret).update(otp).digest("hex");
+  const incomingOtpHash = computeOtpHash(otp);
 
   if (
     !constantTimeEqual(username, process.env.DASHBOARD_USERNAME || "") ||

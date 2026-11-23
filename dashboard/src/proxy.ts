@@ -8,14 +8,10 @@ const publicPaths = [
   "/api/auth/verify",
   "/api/auth/logout",
   "/api/cloudsentinel/summary",
+  "/404",
   "/505",
   "/favicon.ico",
   "/logo.svg",
-  "/file.svg",
-  "/globe.svg",
-  "/next.svg",
-  "/vercel.svg",
-  "/window.svg",
   "/world-atlas.json",
   "/sw.js",
 ];
@@ -31,7 +27,6 @@ function securityHeaders(response: NextResponse) {
 }
 
 function isPublicPath(pathname: string) {
-  if (pathname === "/") return true;
   return (
     publicPaths.includes(pathname) ||
     pathname.startsWith("/_next/") ||

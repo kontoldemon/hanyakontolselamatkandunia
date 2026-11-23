@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { FormEvent, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, ShieldCheck, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, Lock } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 
 function safeNextPath(value: string | null) {
@@ -29,7 +31,7 @@ export default function SignInPage() {
   async function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!turnstileToken) {
-      setError("Please complete the captcha.");
+      setError("Please complete the verification check.");
       return;
     }
 
@@ -52,10 +54,8 @@ export default function SignInPage() {
 
     if (data.requireOtp) {
       setStep("otp");
-      // Focus first OTP input
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } else {
-      // Fallback if no OTP required
       finishLogin();
     }
   }
@@ -86,7 +86,7 @@ export default function SignInPage() {
     }
 
     setStep("success");
-    setTimeout(finishLogin, 1500);
+    setTimeout(finishLogin, 1200);
   }
 
   function finishLogin() {
@@ -103,7 +103,6 @@ export default function SignInPage() {
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-advance
     if (value && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
@@ -130,144 +129,181 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-8 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-all duration-500 relative overflow-hidden">
-        
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/20">
-            <ShieldCheck size={28} />
-          </div>
-          <div>
-            <h1 className="font-extrabold text-2xl tracking-tight">CloudSentinel</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-              {step === "login" ? "Secure Dashboard Access" : step === "otp" ? "Two-Factor Authentication" : "Access Granted"}
-            </p>
-          </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 py-8 text-slate-900 antialiased dark:bg-[#050505] dark:text-slate-100">
+      {/* Ambient Radial Lighting & Subtle Grid Background */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
+        <div className="absolute top-1/2 left-1/2 h-[580px] w-[580px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/20 blur-[130px] dark:bg-blue-500/25" />
+        <div className="absolute top-1/3 left-1/2 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/15 blur-[110px] dark:bg-indigo-500/20" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_65%_55%_at_50%_50%,#000_60%,transparent_100%)]" />
+      </div>
+
+      <div className="relative w-full max-w-[370px]">
+        {/* Back Link */}
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/70 px-3 py-1 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-md transition hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-[#0a0a0c]/70 dark:text-slate-400 dark:hover:border-white/20 dark:hover:text-white"
+          >
+            <ArrowLeft size={13} />
+            <span>Back to Home</span>
+          </Link>
         </div>
 
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500 animate-in fade-in slide-in-from-top-2">
-            {error}
+        {/* Compact Glass Card */}
+        <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 p-6 shadow-xl backdrop-blur-xl transition-all duration-300 sm:p-7 dark:border-white/10 dark:bg-[#0a0a0c]/85 dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+          {/* Header with Tab Logo */}
+          <div className="mb-5 flex flex-col items-center text-center">
+            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 shadow-sm">
+              <Image
+                src="/logo.svg"
+                alt="CloudSentinel"
+                width={18}
+                height={18}
+                className="h-4.5 w-4.5"
+              />
+            </div>
+            <h1 className="font-display text-base font-bold tracking-tight text-slate-900 sm:text-lg dark:text-white">
+              Cloud<span className="text-blue-600 dark:text-blue-400">Sentinel</span>
+            </h1>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              {step === "login"
+                ? "Sign in to access the War Room"
+                : step === "otp"
+                  ? "Enter two-factor security code"
+                  : "Access Granted"}
+            </p>
           </div>
-        )}
 
-        {/* LOGIN STEP */}
-        {step === "login" && (
-          <form onSubmit={handleLoginSubmit} className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="space-y-4">
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-500">
+              {error}
+            </div>
+          )}
+
+          {/* LOGIN FORM */}
+          {step === "login" && (
+            <form onSubmit={handleLoginSubmit} className="space-y-3">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Username</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Username
+                </label>
                 <input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   autoComplete="username"
-                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  placeholder="Username"
+                  className="input-minimal mt-1 h-9.5 w-full rounded-xl bg-slate-50/80 px-3 text-xs text-slate-900 transition placeholder:font-normal placeholder:text-slate-400 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Password</label>
-                <div className="relative">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Password
+                </label>
+                <div className="relative mt-1">
                   <input
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     autoComplete="current-password"
                     type={showPassword ? "text" : "password"}
-                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-4 py-3 pr-12 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Password"
+                    className="input-minimal h-9.5 w-full rounded-xl bg-slate-50/80 px-3 pr-9 text-xs text-slate-900 transition placeholder:font-normal placeholder:text-slate-400 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
+                    className="absolute top-1/2 right-2.5 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
               </div>
 
-              <div className="pt-3 w-full">
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 font-medium">Let us know you&apos;re human</p>
-                <div className="w-fit origin-left scale-[0.85] sm:scale-100 transform transition-transform">
-                  <Turnstile
-                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
-                    onSuccess={(token) => setTurnstileToken(token)}
-                    options={{ theme: 'auto' }}
+              {/* Turnstile Security Check */}
+              <div className="pt-1.5 flex justify-center">
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  options={{ theme: "auto", size: "normal" }}
+                />
+              </div>
+
+              <button
+                disabled={loading || !turnstileToken}
+                className="mt-3 inline-flex h-9.5 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Lock size={12} />
+                <span>{loading ? "Authenticating..." : "Sign In"}</span>
+              </button>
+            </form>
+          )}
+
+          {/* OTP STEP */}
+          {step === "otp" && (
+            <form onSubmit={handleOtpSubmit} className="space-y-4">
+              <div className="text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Enter the 6-digit code sent to your registered authentication method.
+                </p>
+              </div>
+
+              <div className="flex justify-center gap-2">
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => {
+                      otpRefs.current[index] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    onPaste={handlePaste}
+                    className="h-11 w-10 rounded-xl border border-slate-200 bg-slate-50 text-center font-mono text-base font-bold text-slate-900 transition outline-none focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500 dark:focus:bg-white/[0.08] dark:focus:ring-blue-500/30"
+                    maxLength={1}
                   />
-                </div>
+                ))}
               </div>
-            </div>
 
-            <button
-              disabled={loading || !turnstileToken}
-              className="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-500 hover:shadow-blue-500/40 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-blue-600 transition-all"
-            >
-              <Lock size={18} />
-              {loading ? "Authenticating..." : "Continue"}
-            </button>
-          </form>
-        )}
+              <button
+                disabled={loading || otp.join("").length !== 6}
+                className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "Verifying..." : "Verify Code"}
+              </button>
 
-        {/* OTP STEP */}
-        {step === "otp" && (
-          <form onSubmit={handleOtpSubmit} className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="mb-8 text-center">
-              <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-                <ShieldCheck size={32} className="text-blue-500" />
+              <button
+                type="button"
+                onClick={() => setStep("login")}
+                className="w-full text-center text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+              >
+                Back to sign in
+              </button>
+            </form>
+          )}
+
+          {/* SUCCESS STEP */}
+          {step === "success" && (
+            <div className="flex flex-col items-center justify-center py-4 text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                <CheckCircle2 size={24} />
               </div>
-              <h2 className="text-xl font-bold mb-2">Check your email</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                We&apos;ve sent a 6-digit verification code to your registered email address.
+              <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
+                Access Granted
+              </h2>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Opening War Room dashboard...
               </p>
             </div>
-
-            <div className="flex gap-2 sm:gap-3 justify-center mb-8">
-              {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => { otpRefs.current[index] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  value={digit}
-                  onChange={(e) => handleOtpChange(index, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                  onPaste={handlePaste}
-                  className="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus:bg-white dark:focus:bg-white/10 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  maxLength={1}
-                />
-              ))}
-            </div>
-
-            <button
-              disabled={loading || otp.join("").length !== 6}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-500 hover:shadow-blue-500/40 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:bg-blue-600 transition-all"
-            >
-              {loading ? "Verifying..." : "Verify & Access"}
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => setStep("login")}
-              className="mt-4 w-full text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium transition-colors"
-            >
-              Back to login
-            </button>
-          </form>
-        )}
-
-        {/* SUCCESS STEP */}
-        {step === "success" && (
-          <div className="py-8 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 border border-emerald-500/20 relative">
-              <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
-              <CheckCircle2 size={40} className="text-emerald-500 relative z-10" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Access Granted</h2>
-            <p className="text-slate-500 dark:text-slate-400">Redirecting to War Room...</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </main>
   );

@@ -1,4 +1,4 @@
-import StatusPage from "@/components/StatusPage";
+import StatusPage from "@/components/ui/StatusPage";
 
 export default function HttpVersionPage() {
   return (

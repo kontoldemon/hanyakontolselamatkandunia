@@ -1,17 +1,31 @@
-
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { ThemeProvider } from "@/components/ui/ThemeProvider";
+import ServiceWorkerRegister from "@/components/ui/ServiceWorkerRegister";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "CloudSentinel",
-  description: "Enterprise SSH Threat Detection System",
+  description: "SSH Honeypot Telemetry and Automated Response Platform",
   icons: {
     icon: "/logo.svg",
   },
@@ -23,13 +37,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`dark ${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+    >
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
-          disableTransitionOnChange
         >
           <ServiceWorkerRegister />
           {children}
