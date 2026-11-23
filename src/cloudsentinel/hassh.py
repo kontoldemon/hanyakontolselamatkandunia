@@ -338,9 +338,10 @@ class HASSHDNA:
     },
     }
 
-    def __init__(self) -> None:
+    def __init__(self, max_seen: int = 10000) -> None:
         self._db: dict[str, dict[str, str]] = dict(self._KNOWN)
         self._seen: dict[str, dict[str, float | int]] = {}
+        self.max_seen = max(1, max_seen)
 
     def lookup(self, hassh: str) -> dict[str, str]:
         if hassh in self._db:
@@ -358,6 +359,14 @@ class HASSHDNA:
         else:
             self._seen[hassh]["last_seen"] = now
             self._seen[hassh]["count"] = int(self._seen[hassh]["count"]) + 1
+        if len(self._seen) > self.max_seen:
+            overflow = len(self._seen) - self.max_seen
+            oldest = sorted(
+                self._seen,
+                key=lambda key: float(self._seen[key]["last_seen"]),
+            )[:overflow]
+            for key in oldest:
+                self._seen.pop(key, None)
 
     def get_stats(self, hassh: str) -> dict[str, float | int]:
         return dict(self._seen.get(hassh, {}))

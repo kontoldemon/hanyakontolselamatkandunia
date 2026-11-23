@@ -17,7 +17,9 @@ import cloudsentinel._secrets as secrets
 import cloudsentinel.admin_api as admin_api
 from cloudsentinel.admin_api import create_admin_app
 from cloudsentinel.config import RedisSettings, load_settings
+from cloudsentinel.hassh import HASSHDNA
 from cloudsentinel.pipeline import EventEnvelope, EventPipeline
+from cloudsentinel.server import ConnectionLimiter
 from cloudsentinel.stream import LiveStream
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -346,6 +348,28 @@ def test_soar_memory_is_bounded() -> None:
     engine._prune_memory()
     assert set(engine._mem_ip_first_seen) == {"8.8.8.2", "8.8.8.3", "8.8.8.4"}
     assert set(engine._mem_session_scores) == {"s2", "s3", "s4"}
+
+
+def test_hassh_seen_map_is_bounded() -> None:
+    dna = HASSHDNA(max_seen=3)
+    for index in range(5):
+        dna.record_sighting(f"hash{index}", "8.8.8.8")
+    assert len(dna._seen) == 3
+    assert "hash0" not in dna._seen
+    assert "hash4" in dna._seen
+
+
+def test_connection_limiter_ip_map_is_bounded() -> None:
+    limiter = ConnectionLimiter(
+        max_per_ip=10,
+        max_total=100,
+        window=60,
+        max_entries=3,
+    )
+    for index in range(5):
+        assert limiter.acquire_nowait(f"8.8.8.{index}") is True
+    assert len(limiter._ips) == 3
+    assert "8.8.8.4" in limiter._ips
 
 
 def test_validate_settings_requires_eventgrid_credentials() -> None:

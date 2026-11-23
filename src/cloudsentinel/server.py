@@ -53,10 +53,17 @@ DEFAULT_STAGE1_ENV = str(PACKAGE_ROOT / ".env")
 class ConnectionLimiter:
     """Sliding-window rate limiter: per-IP and global caps."""
 
-    def __init__(self, max_per_ip: int = 30, max_total: int = 500, window: float = 60.0) -> None:
+    def __init__(
+        self,
+        max_per_ip: int = 30,
+        max_total: int = 500,
+        window: float = 60.0,
+        max_entries: int = 10000,
+    ) -> None:
         self.max_per_ip = max_per_ip
         self.max_total = max_total
         self.window = window
+        self.max_entries = max(1, max_entries)
         self._ips: defaultdict[str, list[float]] = defaultdict(list)
         self._total = 0
         self._lock = asyncio.Lock()
@@ -68,6 +75,13 @@ class ConnectionLimiter:
             return False
         self._ips[ip].append(now)
         self._total += 1
+        if len(self._ips) > self.max_entries:
+            keep = sorted(
+                self._ips.items(),
+                key=lambda item: item[1][-1] if item[1] else 0.0,
+                reverse=True,
+            )[: self.max_entries]
+            self._ips = defaultdict(list, keep)
         return True
 
     async def acquire(self, ip: str) -> bool:
