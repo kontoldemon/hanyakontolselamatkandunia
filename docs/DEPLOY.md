@@ -161,7 +161,7 @@ Internet
 - A `Standard_B2ats_v2` Ubuntu 24.04 sensor VM with a public IP and a 64 GB data disk.
 - A `Standard_B2s` ClickHouse VM with no public IP and a 64 GB data disk.
 - An Event Grid custom topic that accepts CloudEvents v1.0.
-- A Python 3.12 Function App (Consumption) with a system-assigned managed identity and `Network Contributor` on the sensor NSG.
+- A Python 3.12 Function App (Consumption) with a system-assigned managed identity and a custom NSG rule operator role scoped to the sensor NSG.
 - A Storage account with a private `backups` container and a `cloudsentinel-unblock` queue.
 - A Key Vault with the Event Grid endpoint/key and `Key Vault Secrets User` for the sensor VM.
 - `Storage Blob Data Contributor` for the sensor VM.
@@ -257,7 +257,7 @@ private, loopback, link-local, multicast, and allowlisted IPs.
 2. Verify SSH port 22 redirects to the honeypot on 2222, and management SSH is restricted to the operator IP.
 3. Trigger a high-risk event and confirm Event Grid delivers it to the `block_ip` Function.
 4. Confirm the Function creates a `cs-block-*` NSG deny rule and that it is deleted after the TTL.
-5. Confirm the Function identity has `Network Contributor` on the sensor NSG.
+5. Confirm the Function identity has the custom NSG rule operator role on the sensor NSG.
 6. Confirm Redis, ClickHouse, and the admin API are not publicly reachable.
 7. Confirm ClickHouse rows and dashboard totals match the truth window.
 8. Run the MTTB benchmark and record the result. Note that this is the sensor-side publish time, not the full NSG write time.
@@ -284,7 +284,7 @@ curl http://localhost:8080/healthz
 | ClickHouse connection refused | Check `CLICKHOUSE_HOST`, the data NSG, and `systemctl status clickhouse-server` on the data VM |
 | Automatic blocks do nothing | Check `EVENTGRID_ENABLED`, the Event Grid subscription, Function logs, and the NSG role assignment. For non-Azure installs check `cloudsentinel-host-agent` |
 | MTTB > 100ms | The recorded value is sensor-side. Check Event Grid delivery and Function NSG-write logs; for local installs check iptables |
-| Function returns 403 from Azure | Confirm the Function identity has `Network Contributor` on the sensor NSG and that `NSG_NAME`/`NSG_RESOURCE_GROUP` are set |
+| Function returns 403 from Azure | Confirm the Function identity has the custom NSG rule operator role on the sensor NSG and that `NSG_NAME`/`NSG_RESOURCE_GROUP` are set |
 | No attacks showing | Verify port 22 is exposed to internet: `curl ifconfig.me` |
 | Dashboard totals look small | Check `CLOUDSENTINEL_TRUTH_WINDOW_HOURS` (0 means all time) and the `clickhouse_ok` field in `/readiness`. |
 | Data missing after a ClickHouse outage | Check `var/lib/cloudsentinel/clickhouse_spill.jsonl`. The forwarder replays it when ClickHouse returns. |

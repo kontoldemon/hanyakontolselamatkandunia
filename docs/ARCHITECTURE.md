@@ -137,7 +137,7 @@ Not in the Azure target: AKS, Azure Cache for Redis, Azure Data Explorer, manage
 | Dashboard to admin API | Admin commands and queries | Bearer token or JWT; TLS when enabled |
 | Admin API to firewall | Block and unblock commands | IP validation, allowlist, public-IP check |
 | Sensor to LLM provider | Attacker commands and session context | Optional feature; disable if data cannot leave the host |
-| Sensor to Azure control plane | Block request (IP, TTL, reason) | Event Grid key from Key Vault; Function managed identity with Network Contributor on the sensor NSG; allowlist and public-IP validation |
+| Sensor to Azure control plane | Block request (IP, TTL, reason) | Event Grid key from Key Vault; Function managed identity with a custom NSG rule operator role on the sensor NSG; allowlist and public-IP validation |
 | Sensor to sandbox | Untrusted payload execution | gVisor or Docker isolation, no network, memory and CPU limits |
 | Operator to server | Management SSH | Separate port, key-based access |
 
