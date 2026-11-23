@@ -72,7 +72,14 @@ services:
 
   nats:
     image: nats:2-alpine
-    command: ["-js", "-m", "8222"]
+    command:
+      - "-js"
+      - "-m"
+      - "8222"
+      - "--user"
+      - ${NATS_USER:-cloudsentinel}
+      - "--pass"
+      - ${NATS_PASSWORD:-cloudsentinel_nats}
     restart: unless-stopped
 
   elasticsearch:
@@ -142,7 +149,7 @@ services:
       - .env
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD:-cloudsentinel_redis}@redis-plain:6379/0
-      NATS_URL: nats://nats:4222
+      NATS_URL: nats://${NATS_USER:-cloudsentinel}:${NATS_PASSWORD:-cloudsentinel_nats}@nats:4222
       CLICKHOUSE_ENABLED: "true"
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_USERNAME: ${CLICKHOUSE_USER:-cloudsentinel}

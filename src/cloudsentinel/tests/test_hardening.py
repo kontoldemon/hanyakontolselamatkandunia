@@ -327,6 +327,13 @@ def test_manual_block_survives_host_agent_publish_failure(monkeypatch) -> None:
     assert response.json()["action"] == "eventgrid_published"
 
 
+def test_docker_nats_requires_auth() -> None:
+    source = Path("src/cloudsentinel/docker-compose.yml").read_text(encoding="utf-8")
+    assert "--user" in source
+    assert "--pass" in source
+    assert "NATS_URL: nats://${NATS_USER" in source
+
+
 def test_validate_settings_requires_eventgrid_credentials() -> None:
     from cloudsentinel.config import validate_settings
 
