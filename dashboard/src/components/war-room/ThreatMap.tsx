@@ -40,6 +40,7 @@ type TooltipState = {
 
 const WIDTH = 800;
 const HEIGHT = 400;
+const TARGET_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='1.5'%3E%3Ccircle cx='12' cy='12' r='7.5' stroke-dasharray='3 2'/%3E%3Cline x1='12' y1='2' x2='12' y2='6'/%3E%3Cline x1='12' y1='18' x2='12' y2='22'/%3E%3Cline x1='2' y1='12' x2='6' y2='12'/%3E%3Cline x1='18' y1='12' x2='22' y2='12'/%3E%3Ccircle cx='12' cy='12' r='1.2' fill='%2338bdf8'/%3E%3C/svg%3E\") 12 12, crosshair";
 
 type CountryFeature = {
     type: "Feature";
@@ -70,7 +71,7 @@ function attackColorForType(type: string, fallback: string): string {
 function tooltipForSource(source: Source, isActive: boolean, event: MouseEvent<SVGElement>): TooltipState {
     const hasshLabel = source.topHassh && source.topHassh.length > 4 ? source.topHassh.slice(0, 12) : "Scanning...";
     const velocityLabel = isActive
-        ? `${Math.max(1, source.recentCount)} evt/min`
+        ? `${Math.max(1, source.recentCount)} ATK/min`
         : "Idle";
     return {
         title: source.name,
@@ -79,7 +80,7 @@ function tooltipForSource(source: Source, isActive: boolean, event: MouseEvent<S
         accent: isActive ? (source.latestType === "COMMAND_EXEC" ? "warning" : "danger") : "neutral",
         details: [
             { label: "Top IP", value: source.topIp },
-            { label: "Events", value: `${source.count.toLocaleString()} (${velocityLabel})` },
+            { label: "Attacks", value: `${source.count.toLocaleString()} (${velocityLabel})` },
             { label: "Dom. TTP", value: source.dominantTtp },
             { label: "HASSH", value: hasshLabel },
         ],
@@ -137,16 +138,28 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     }, []);
 
     const projection = useMemo(
-        () =>
-            geoEqualEarth()
+        () => {
+            if (isExpanded) {
+                // In fullscreen, fit world map cleanly with top/bottom margin so northern and southern countries are never cut off
+                return geoEqualEarth()
+                    .fitExtent(
+                        [
+                            [2, 8],
+                            [WIDTH - 2, HEIGHT - 8],
+                        ],
+                        { type: "Sphere" },
+                    );
+            }
+            return geoEqualEarth()
                 .fitExtent(
                     [
                         [12, 18],
                         [WIDTH - 12, HEIGHT - 18],
                     ],
                     { type: "Sphere" },
-                ),
-        [],
+                );
+        },
+        [isExpanded],
     );
     const path = useMemo(() => geoPath(projection), [projection]);
     const graticule = useMemo(() => geoGraticule().step([30, 30])(), []);
@@ -367,7 +380,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                 <div className="fixed inset-0 z-[199] bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsExpanded(false)} />
             )}
             <div className={isExpanded
-                ? "fixed inset-0 m-auto w-[95vw] h-[90vh] z-[200] origin-center bg-slate-50 dark:bg-[#050505] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-center animate-in zoom-in-95 fade-in duration-200"
+                ? "fixed inset-1 md:inset-3 z-[200] origin-center bg-slate-50 dark:bg-[#050505] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-center animate-in zoom-in-95 fade-in duration-200"
                 : "relative w-full h-full flex flex-col bg-slate-50 dark:bg-[#050505] overflow-hidden group"}>
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
@@ -377,7 +390,13 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                 </button>
 
-                <div className={`relative flex-1 w-full flex overflow-hidden ${isExpanded ? "items-center justify-center p-2 md:p-12 mb-12 md:mb-0" : ""}`}>
+                <style>{`
+                    .threat-map-canvas, .threat-map-canvas * {
+                        cursor: ${TARGET_CURSOR} !important;
+                    }
+                `}</style>
+
+                <div className={`relative flex-1 w-full flex overflow-hidden threat-map-canvas ${isExpanded ? "items-center justify-center p-1 md:p-2" : ""}`}>
                     <div
                         className="absolute inset-0 opacity-20 pointer-events-none"
                         style={{
@@ -483,7 +502,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
 
                     {/* Minimalist Compact Global DEFCON Pill */}
                     <div
-                        className={`absolute left-3 z-[60] pointer-events-none inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/65 px-2.5 py-1 backdrop-blur-md shadow-sm ${isExpanded ? "top-6 md:top-10 md:left-10" : "top-3"}`}
+                        className={`absolute left-3 z-[60] pointer-events-none inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/65 px-2.5 py-1 backdrop-blur-md shadow-sm ${isExpanded ? "top-4 left-4" : "top-3"}`}
                     >
                         <span className="relative flex h-1.5 w-1.5">
                             {underAttack && (

@@ -274,7 +274,7 @@ export default function SignInPage() {
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                     onPaste={handlePaste}
-                    className="h-11 w-10 rounded-xl border border-slate-200 bg-slate-50 text-center font-mono text-base font-bold text-slate-900 transition outline-none focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500 dark:focus:bg-white/[0.08] dark:focus:ring-blue-500/30"
+                    className="h-11 w-10 rounded-xl border border-slate-200 bg-slate-50 text-center font-mono text-base font-bold text-slate-900 transition outline-none focus:border-blue-500 focus:bg-white focus:outline-none focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500 dark:focus:bg-white/[0.08]"
                     maxLength={1}
                   />
                 ))}

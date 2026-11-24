@@ -115,8 +115,8 @@ export default function IntelligencePage() {
     }, [downloadIntelligenceReport]);
 
     return (
-        <div className="h-full flex flex-col gap-4 overflow-hidden">
-            <div className="flex justify-end items-center gap-2 shrink-0">
+        <div className="h-full flex flex-col gap-4 overflow-hidden pt-1">
+            <div className="flex justify-end items-center gap-2 shrink-0 px-1 pt-0.5">
                 <CustomDropdown
                     options={TIMELINE_OPTIONS}
                     value={timeline}

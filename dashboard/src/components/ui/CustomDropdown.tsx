@@ -9,9 +9,10 @@ interface CustomDropdownProps {
     value: string;
     onChange: (value: string) => void;
     className?: string;
+    buttonClassName?: string;
 }
 
-export default function CustomDropdown({ options, value, onChange, className = "" }: CustomDropdownProps) {
+export default function CustomDropdown({ options, value, onChange, className = "", buttonClassName }: CustomDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const selectedLabel = options.find((o) => o.value === value)?.label || value;
@@ -31,8 +32,11 @@ export default function CustomDropdown({ options, value, onChange, className = "
             <button
                 type="button"
                 className={cn(
-                    "w-full h-8 bg-white dark:bg-[#0a0a0a] hover:bg-slate-50 dark:hover:bg-white/[0.04] border rounded-lg outline-none focus:outline-none focus:ring-0 focus-visible:outline-none flex justify-between items-center text-xs shadow-sm transition-all text-slate-700 dark:text-slate-300 font-medium px-2.5 py-1.5",
-                    isOpen ? "border-slate-400 dark:border-white/20" : "border-slate-200 dark:border-white/10"
+                    "w-full h-8 bg-slate-50/80 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.07] rounded-lg transition-all text-xs text-slate-700 dark:text-slate-300 font-medium px-2.5 py-1 flex justify-between items-center shadow-sm cursor-pointer",
+                    "border border-slate-200 dark:border-white/10 outline-none focus:outline-none focus-visible:outline-none",
+                    "focus:ring-1 focus:ring-blue-500",
+                    isOpen && "ring-1 ring-blue-500",
+                    buttonClassName
                 )}
                 onClick={() => setIsOpen(!isOpen)}
             >

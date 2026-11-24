@@ -268,7 +268,7 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="p-4 space-y-4">
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Deception Level</label>
+                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Deception Level</label>
                                             <CustomDropdown
                                                 options={[
                                                     { label: "High (Full VFS)", value: "High (Full VFS)" },
@@ -303,7 +303,7 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="p-4 space-y-4">
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Malicious HASSH Action</label>
+                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Malicious HASSH Action</label>
                                             <CustomDropdown
                                                 options={[
                                                     { label: "Immediate Drop", value: "Immediate Drop" },
@@ -316,7 +316,7 @@ export default function SettingsPage() {
                                         </div>
                                         <div>
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Confidence Threshold</label>
+                                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">Confidence Threshold</label>
                                                 <span className="text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300">{hasshThreshold}%</span>
                                             </div>
                                             <input
@@ -382,7 +382,7 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-visible">
                                     <div>
-                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Trigger Condition</label>
+                                        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Trigger Condition</label>
                                         <CustomDropdown
                                             options={[
                                                 { label: "MITRE Match (>1)", value: "MITRE Match (>1)" },
@@ -394,7 +394,7 @@ export default function SettingsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Execution Path</label>
+                                        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Execution Path</label>
                                         <CustomDropdown
                                             options={[
                                                 { label: "Lambda (Warm)", value: "Lambda (Warm)" },
@@ -406,9 +406,9 @@ export default function SettingsPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Action Applied</label>
-                                        <div className="border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0f0f0f] rounded-lg px-3 py-2 flex items-center gap-2">
-                                            <Shield size={14} className="text-slate-400 shrink-0" />
+                                        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Action Applied</label>
+                                        <div className="h-8 border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0f0f0f] rounded-lg px-2.5 flex items-center gap-2">
+                                            <Shield size={13} className="text-slate-400 shrink-0" />
                                             <span className="text-xs font-mono text-slate-700 dark:text-slate-300 truncate">Revoke IP (NSG &amp; Netfilter)</span>
                                         </div>
                                     </div>
@@ -447,7 +447,7 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="p-4 space-y-4">
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                                 AI Provider
                                             </label>
                                             <CustomDropdown
@@ -464,7 +464,7 @@ export default function SettingsPage() {
                                         </div>
 
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                                 Primary Model
                                             </label>
                                             <CustomDropdown
@@ -481,7 +481,7 @@ export default function SettingsPage() {
 
                                         <div>
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                                                     API Key
                                                 </label>
                                                 <button
@@ -499,11 +499,11 @@ export default function SettingsPage() {
                                                     value={copilotApiKey}
                                                     onChange={(e) => setCopilotApiKey(e.target.value)}
                                                     placeholder={hasCopilotKey ? "Leave blank to keep current key" : "AIzaSy... / gsk_... / sk-..."}
-                                                    className="w-full h-9 rounded-lg bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                                                    className="w-full h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                                                 />
                                             </div>
                                             <span className="text-[10px] text-slate-400 mt-1 block">
-                                                Powers real-time natural language threat explanations and SOAR command execution.
+                                                Powers Copilot threat analysis and SOAR.
                                             </span>
                                         </div>
                                     </div>
@@ -521,7 +521,7 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="p-4 space-y-4">
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                                 Terminal Emulation Mode
                                             </label>
                                             <CustomDropdown
@@ -535,7 +535,7 @@ export default function SettingsPage() {
                                         </div>
 
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                                 Engine Provider
                                             </label>
                                             <CustomDropdown
@@ -571,7 +571,7 @@ export default function SettingsPage() {
                                                             value={honeypotApiKey}
                                                             onChange={(e) => setHoneypotApiKey(e.target.value)}
                                                             placeholder="Dedicated Honeypot Engine Key"
-                                                            className="w-full h-9 rounded-lg bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                                                            className="w-full h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                                                         />
                                                     </div>
                                                 </div>
@@ -579,17 +579,17 @@ export default function SettingsPage() {
                                         </div>
 
                                         <div>
-                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                                                 Fallback Model Chain (CSV)
                                             </label>
                                             <input
                                                 type="text"
                                                 value={fallbackChain}
                                                 onChange={(e) => setFallbackChain(e.target.value)}
-                                                className="w-full h-9 rounded-lg bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                                                className="w-full h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                                             />
                                             <span className="text-[10px] text-slate-400 mt-1 block">
-                                                Automated fallback when rate limits occur (e.g. Groq → OpenAI).
+                                                Auto-fallback when rate-limited.
                                             </span>
                                         </div>
                                     </div>
@@ -619,20 +619,20 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="flex flex-col gap-2 mt-2">
                                         <div className="rounded-lg border border-slate-200 dark:border-white/10 p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
-                                            <div className="text-slate-500 uppercase text-[10px] font-semibold mb-0.5">Primary Storage</div>
-                                            <div className="font-mono text-xs font-bold text-slate-900 dark:text-white uppercase flex items-center gap-2">
+                                            <div className="text-slate-500 text-[10.5px] font-medium mb-0.5">Primary Storage</div>
+                                            <div className="font-mono text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                                 {operations?.telemetrySource ?? "mixed"} (ClickHouse &amp; Redis)
                                             </div>
                                         </div>
                                         <div className="rounded-lg border border-slate-200 dark:border-white/10 p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
-                                            <div className="text-slate-500 uppercase text-[10px] font-semibold mb-0.5">Ingress Pipeline</div>
+                                            <div className="text-slate-500 text-[10.5px] font-medium mb-0.5">Ingress Pipeline</div>
                                             <div className="font-mono text-xs font-medium text-slate-800 dark:text-slate-200">
                                                 NATS JetStream Bus &amp; WebSocket Gateway
                                             </div>
                                         </div>
                                         <div className="rounded-lg border border-slate-200 dark:border-white/10 p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
-                                            <div className="text-slate-500 uppercase text-[10px] font-semibold mb-0.5">Deduplication Cache</div>
+                                            <div className="text-slate-500 text-[10.5px] font-medium mb-0.5">Deduplication Cache</div>
                                             <div className="font-mono text-xs font-medium text-slate-800 dark:text-slate-200">
                                                 Active (24-Hour Sliding Window)
                                             </div>
