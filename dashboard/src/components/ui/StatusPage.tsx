@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, Home, RefreshCw } from "lucide-react";
 
 type StatusPageProps = {
-  code: string;
+  code?: string;
+  icon?: React.ReactNode;
   title: string;
   message: string;
   primaryHref?: string;
@@ -16,6 +17,7 @@ type StatusPageProps = {
 
 export default function StatusPage({
   code,
+  icon,
   title,
   message,
   primaryHref = "/",
@@ -50,10 +52,15 @@ export default function StatusPage({
         <div className="overflow-hidden rounded-3xl border border-border-line/15 bg-surface-card/80 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
           {/* Header */}
           <div className="mb-6 flex flex-col items-center text-center">
-            {/* Typographic Status Code */}
-            <div className={`font-mono font-bold tracking-tight text-text-primary ${code.length > 3 ? "text-3xl sm:text-4xl" : "text-5xl sm:text-6xl"}`}>
-              {code}
-            </div>
+            {icon ? (
+              <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-500/25 bg-rose-500/10 text-rose-500 shadow-lg shadow-rose-500/10">
+                {icon}
+              </div>
+            ) : code ? (
+              <div className={`font-mono font-bold tracking-tight text-text-primary ${code.length > 3 ? "text-3xl sm:text-4xl" : "text-5xl sm:text-6xl"}`}>
+                {code}
+              </div>
+            ) : null}
 
             <h1 className="mt-3 font-display text-base font-semibold tracking-tight text-text-primary sm:text-lg">
               {title}

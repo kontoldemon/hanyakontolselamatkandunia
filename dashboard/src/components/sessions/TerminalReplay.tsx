@@ -276,6 +276,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                     visible={showScrollBottom}
                     onScrollDown={scrollToBottom}
                     label="Latest commands"
+                    className="pb-5"
                 />
             </div>
         </div>
