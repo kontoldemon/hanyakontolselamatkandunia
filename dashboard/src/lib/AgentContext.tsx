@@ -6,8 +6,6 @@ import { useRouter, usePathname } from "next/navigation";
 import type { AgentAction } from "@/lib/agentActions";
 import { UI_TARGETS } from "@/lib/agentActions";
 
-// ─── Context Shape ──────────────────────────────────────────────────────────
-
 interface AgentContextValue {
   isExecuting: boolean;
   currentAction: AgentAction | null;
@@ -30,8 +28,6 @@ export function useAgent() {
   return useContext(AgentContext);
 }
 
-// ─── Hook for components to register command handlers ────────────────────────
-
 export function useAgentCommand(target: string, handler: (value: string) => void) {
   const { registerCommand, unregisterCommand } = useAgent();
   const handlerRef = useRef(handler);
@@ -47,8 +43,6 @@ export function useAgentCommand(target: string, handler: (value: string) => void
   }, [target, registerCommand, unregisterCommand]);
 }
 
-// ─── Provider ───────────────────────────────────────────────────────────────
-
 export function AgentProvider({ children }: { children: ReactNode }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentAction, setCurrentAction] = useState<AgentAction | null>(null);
@@ -61,7 +55,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     pathnameRef.current = pathname;
   }, [pathname]);
 
-  // Command handler registry
   const commandHandlers = useRef<Map<string, (value: string) => void>>(new Map());
 
   const registerCommand = useCallback((target: string, handler: (value: string) => void) => {
@@ -101,7 +94,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       setCurrentAction(action);
       setIsExecuting(true);
 
-      // Dramatic entrance
       await wait(800);
       if (abortRef.current) {
         setIsExecuting(false);
@@ -113,7 +105,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
       try {
         switch (action.type) {
-          // ── Navigation Actions ──
           case "navigate_session": {
             const ip = action.params.value;
             if (pathnameRef.current !== "/sessions") {
@@ -152,7 +143,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             break;
           }
 
-          // ── API Actions ──
           case "block_ip": {
             const ip = action.params.value;
             try {
@@ -182,7 +172,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           }
 
           case "toggle_exposure": {
-            // Navigate to settings first if not there
             if (pathnameRef.current !== "/settings") {
               router.push("/settings");
               await wait(1200);
@@ -191,7 +180,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
               const res = await fetch("/api/cloudsentinel/exposure", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ enabled: true }), // toggle — backend decides
+                body: JSON.stringify({ enabled: true }), // toggle (backend decides)
               });
               const data = await res.json();
               result = data.ok
@@ -203,22 +192,19 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             break;
           }
 
-          // ── Generic UI Command ──
           case "ui_command": {
             const target = action.params.target ?? "";
             const value = action.params.value ?? "toggle";
 
-            // Determine target page and navigate if needed
             const meta = UI_TARGETS[target];
             const targetPage = meta?.page ?? "/";
 
-            // "*" means the component is globally mounted (e.g. sidebar) — no navigation needed
+            // Globally mounted components like sidebar do not require route navigation
             if (targetPage !== "*" && pathnameRef.current !== targetPage) {
               router.push(targetPage);
               await wait(1500); // wait for page mount and handler registration
             }
 
-            // Dispatch to the registered handler
             const dispatched = await dispatchWithRetry(target, value);
             await wait(400);
 

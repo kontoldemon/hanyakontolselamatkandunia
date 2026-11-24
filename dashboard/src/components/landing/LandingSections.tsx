@@ -107,16 +107,12 @@ export function HowItWorksSection() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-4xl">
-        <div className="mx-auto max-w-2xl text-center mb-8 sm:mb-10">
-          <h2 className="font-display text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
-            How It Works
-          </h2>
-          <p className="mt-1.5 text-xs leading-relaxed text-text-muted sm:text-sm">
-            From intrusion to containment in three simple steps.
-          </p>
-        </div>
+        <SectionHeader
+          title="How It Works"
+          sub="From intrusion to containment in three simple steps."
+        />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4">
+        <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4">
           {STEPS.map((s, idx) => {
             const Icon = s.icon;
             const style = stepStyles[idx % stepStyles.length];
@@ -173,7 +169,7 @@ export function FaqSection({
           sub="Learn more about how the honeypot, dashboard, and AI copilot work together."
         />
 
-        <div className="mt-7 flex flex-col gap-2">
+        <div className="mt-6 sm:mt-8 flex flex-col gap-2">
           {FAQS.map((item, idx) => {
             const isOpen = openFaqIndex === idx;
             return (

@@ -121,9 +121,7 @@ class HASSHDNA:
     """In-memory HASSH fingerprint database with real cryptographic hashes."""
 
     _KNOWN: ClassVar[dict[str, dict[str, str]]] = {
-        # ═══════════════════════════════════════════════════════════════
-        # CRITICAL — Botnets / Malware (real MD5 hashes from known variant KEX)
-        # ═══════════════════════════════════════════════════════════════
+        # Critical: botnets and malware (known variant KEX)
         # Mirai variants (Dropbear-based, diffie-hellman-group14-sha1 + group1-sha1)
         "8ba2faa57b1f0332fa12cc96bdf3e1be": {
             "client_software": "Dropbear SSH (Mirai variant)",
@@ -155,9 +153,7 @@ class HASSHDNA:
             "threat_level": "critical",
         },
 
-        # ═══════════════════════════════════════════════════════════════
-        # HIGH — Scanners / Reconnaissance tools
-        # ═══════════════════════════════════════════════════════════════
+        # High: scanners and reconnaissance tools
         # Nmap 7.94 SSH script (legacy ciphers: 3des-cbc, blowfish, arcfour)
         "4f64a4357af47c4470ed9ff478988b77": {
             "client_software": "Nmap 7.94 SSH script",
@@ -183,9 +179,7 @@ class HASSHDNA:
             "threat_level": "high",
         },
 
-        # ═══════════════════════════════════════════════════════════════
-        # MEDIUM — Scripting / Automation / CI tools (often abused)
-        # ═══════════════════════════════════════════════════════════════
+        # Medium: scripting and CI tools
         # Paramiko 3.4 Python library (broad KEX including weak group14-sha1)
         "fdce9652aa91f2ca3b6d62416284e7ec": {
             "client_software": "Paramiko 3.4 (Python)",
@@ -205,9 +199,7 @@ class HASSHDNA:
             "threat_level": "medium",
         },
 
-        # ═══════════════════════════════════════════════════════════════
-        # LOW — Legitimate clients (baseline for anomaly detection)
-        # ═══════════════════════════════════════════════════════════════
+        # Low: legitimate clients (baseline for anomaly detection)
         # OpenSSH 8.9p1 Ubuntu 22.04 (also GitHub Actions host)
         "699519fdcc30cbcd093d5cd01e4b1d56": {
             "client_software": "OpenSSH 8.9p1 (Ubuntu 22.04)",
@@ -257,9 +249,7 @@ class HASSHDNA:
             "threat_level": "low",
     
 
-        # ═══════════════════════════════════════════════════════════════
-        # CRITICAL — Additional botnet variants (real MD5 hashes)
-        # ═══════════════════════════════════════════════════════════════
+        # Critical: additional botnet variants
         "98d6137982cb17ddabecfff564aa0dd9": {
             "client_software": "Mirai Sora/Iz1H variant",
             "botnet_family": "Mirai",

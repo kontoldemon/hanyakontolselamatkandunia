@@ -69,7 +69,6 @@ class AbuseIPDBClient:
         if not self._client:
             return {"abuse_confidence_score": 0, "total_reports": 0, "country_code": ""}
 
-        # Check cache
         cached = self._cache.get(ip)
         if cached and (time.time() - cached[0]) < self._cache_ttl:
             return cached[1]
@@ -110,7 +109,6 @@ class AbuseIPDBClient:
         return {"cache_size": len(self._cache)}
 
 
-# Singleton
 _abuseipdb: AbuseIPDBClient | None = None
 
 

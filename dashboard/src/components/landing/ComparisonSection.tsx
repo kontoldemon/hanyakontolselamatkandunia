@@ -10,7 +10,7 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { Reveal } from "./LandingPrimitives";
+import { Reveal, SectionHeader } from "./LandingPrimitives";
 import { cn } from "@/lib/utils";
 
 const COMPARISON_ROWS = [
@@ -102,21 +102,13 @@ export default function ComparisonSection() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-4xl">
-        {/* Compact Header */}
-        <Reveal className="mx-auto max-w-2xl text-center mb-4 sm:mb-6">
-          <p className="font-mono text-[10px] sm:text-[10.5px] font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
-            Technical Architecture
-          </p>
-          <h2 className="mt-1 font-display text-lg sm:text-2xl font-bold tracking-tight text-text-primary">
-            CloudSentinel vs. Traditional Cowrie
-          </h2>
-          <p className="mt-1 text-[11px] sm:text-xs text-text-muted px-2">
-            Factual technical comparison based on Cowrie honeypot documentation and CloudSentinel architecture.
-          </p>
-        </Reveal>
+        <SectionHeader
+          title="CloudSentinel vs. Traditional Cowrie"
+          sub="Factual technical comparison based on Cowrie honeypot documentation and CloudSentinel architecture."
+        />
 
         {/* Minimalist Unified Comparison Matrix */}
-        <Reveal delay={40}>
+        <Reveal delay={40} className="mt-6 sm:mt-8">
           <div className="rounded-xl border border-border-line/[0.14] bg-surface-card/90 backdrop-blur-md shadow-xs overflow-hidden">
             {/* Table Column Headers */}
             <div className="grid grid-cols-12 px-3 sm:px-4 py-2 sm:py-2.5 bg-surface-panel/40 border-b border-border-line/[0.12] text-xs font-mono items-center gap-2">

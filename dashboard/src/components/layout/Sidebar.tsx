@@ -7,7 +7,6 @@ import { LayoutDashboard, Terminal, BrainCircuit, Settings, LogOut, ChevronLeft,
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "next-themes";
-import { useSensorOperations, useWarRoomState } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 
 const SIDEBAR_COLLAPSED_KEY = "cloudsentinel.sidebar.collapsed";
@@ -20,20 +19,6 @@ export default function Sidebar() {
     const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
-    const operations = useSensorOperations();
-    const warRoom = useWarRoomState();
-    const exposurePaused = warRoom.exposure?.effectiveEnabled === false;
-    const exposureSyncing = warRoom.exposure?.syncing === true;
-    const statusPending = !exposurePaused && warRoom.updatedAt <= 0 && warRoom.ok === false;
-    const sensorLive =
-        (statusPending || !exposurePaused) &&
-        (
-            warRoom.state === "live" ||
-            warRoom.state === "under_attack" ||
-            statusPending ||
-            operations?.source === "live" ||
-            operations?.sensor.readiness.ok === true
-        );
 
     useAgentCommand("sidebar.toggle", useCallback((v: string) => {
         if (v === "collapse") setIsCollapsed(true);
@@ -49,15 +34,6 @@ export default function Sidebar() {
         if (typeof window === "undefined") return;
         window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? "1" : "0");
     }, [isCollapsed]);
-
-    useEffect(() => {
-        if (!showSignOutConfirm) return;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") setShowSignOutConfirm(false);
-        };
-        window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
-    }, [showSignOutConfirm]);
 
     const links = [
         { name: "War Room", href: "/dashboard", icon: LayoutDashboard },
@@ -76,10 +52,10 @@ export default function Sidebar() {
             <aside
                 className={clsx(
                     "hidden md:flex flex-col bg-white/50 dark:bg-[#050505] border-r border-slate-200 dark:border-white/10 transition-[width] duration-200 ease-in-out backdrop-blur-md h-screen sticky top-0",
-                    isCollapsed ? "w-20" : "w-56"
+                    isCollapsed ? "w-16" : "w-44"
                 )}
             >
-                <div className="h-14 px-3.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+                <div className="h-14 px-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
                     <div className={clsx("flex items-center gap-2 overflow-hidden transition-all", isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
                         <Link href="/dashboard" className="group flex items-center gap-2 text-left focus-visible:outline-none">
                             <Image
@@ -89,7 +65,7 @@ export default function Sidebar() {
                                 height={16}
                                 className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-105"
                             />
-                            <span className="font-display text-sm font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
+                            <span className="font-display text-xs font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
                                 Cloud<span className="text-blue-600 dark:text-blue-400">Sentinel</span>
                             </span>
                         </Link>
@@ -97,7 +73,7 @@ export default function Sidebar() {
 
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="group/expand relative flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors mx-auto"
+                        className="group/expand relative flex h-7 w-7 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors mx-auto"
                         title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                         aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                     >
@@ -148,32 +124,7 @@ export default function Sidebar() {
                     })}
                 </nav>
 
-                <div className="px-2.5 pb-2">
-                    <div className={clsx(
-                        "bg-slate-50/70 dark:bg-[#0a0a0a] rounded-lg border border-slate-200 dark:border-white/5 transition-all duration-300 overflow-hidden",
-                        isCollapsed ? "p-0 border-0 bg-transparent h-0 opacity-0 mb-0" : "p-2.5"
-                    )}>
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Deception Node</span>
-                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold">FYP</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="relative flex h-2 w-2 shrink-0">
-                                <span className={clsx("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", exposureSyncing ? "bg-blue-400" : (sensorLive ? "bg-emerald-400" : "bg-amber-400"))}></span>
-                                <span className={clsx("relative inline-flex rounded-full h-2 w-2", exposureSyncing ? "bg-blue-500" : (sensorLive ? "bg-emerald-500" : "bg-amber-500"))}></span>
-                            </span>
-                            <p className="text-[10.5px] font-medium text-slate-600 dark:text-slate-400 truncate">
-                                {exposureSyncing
-                                    ? "Exposure Syncing..."
-                                    : statusPending
-                                        ? "Checking Status..."
-                                        : (sensorLive ? "Sensor Online" : "Sensor Offline")}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-2.5 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2">
+                <div className="p-2 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2">
                     <div className={clsx("flex items-center transition-all", isCollapsed ? "justify-center flex-col gap-3" : "justify-between gap-1.5")}>
                         <button onClick={() => setShowSignOutConfirm(true)} className={clsx(
                             "flex items-center text-slate-500 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-md transition-colors text-xs font-medium",
@@ -219,9 +170,6 @@ export default function Sidebar() {
                     className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200"
                 >
                     <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="signout-title"
                         onClick={(e) => e.stopPropagation()}
                         className="relative max-w-[340px] w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-6 text-center shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-[#0c0c0e] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-200"
                     >
@@ -241,7 +189,7 @@ export default function Sidebar() {
                         </div>
 
                         {/* Title & Description */}
-                        <h3 id="signout-title" className="font-display text-base font-bold tracking-tight text-slate-900 sm:text-lg dark:text-white">
+                        <h3 className="font-display text-base font-bold tracking-tight text-slate-900 sm:text-lg dark:text-white">
                             Sign Out
                         </h3>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -252,7 +200,6 @@ export default function Sidebar() {
                         <div className="mt-6 flex items-center gap-2.5">
                             <button
                                 type="button"
-                                autoFocus
                                 onClick={() => setShowSignOutConfirm(false)}
                                 className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >

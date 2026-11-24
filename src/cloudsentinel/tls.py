@@ -46,10 +46,8 @@ def generate_self_signed_cert(
         logger.info("TLS cert already exists: %s", cert_path)
         return str(cert_path), str(key_path)
 
-    # Generate RSA key
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
-    # Build certificate
     subject = issuer = x509.Name([
         x509.NameAttribute(NameOID.COUNTRY_NAME, country),
         x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, state),
@@ -74,7 +72,6 @@ def generate_self_signed_cert(
         .sign(key, hashes.SHA256())
     )
 
-    # Write key
     key_path.write_bytes(
         key.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -84,7 +81,6 @@ def generate_self_signed_cert(
     )
     key_path.chmod(0o600)
 
-    # Write cert
     cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
 
     logger.info("Generated self-signed TLS cert: CN=%s, O=%s", hostname, org)

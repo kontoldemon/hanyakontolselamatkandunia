@@ -16,8 +16,6 @@ def register(path: str):
         return cls
     return _d
 
-# ── Identity ───────────────────────────────────────────────────────
-
 @register("/usr/bin/whoami")
 class Whoami(Command):
     def call(self): self.write(f"{self.protocol.username}\n")
@@ -40,8 +38,6 @@ class W(Command):
         up = getattr(self.protocol, "uptime", lambda: "0 min")()
         self.write(f" {time.strftime('%H:%M:%S')} up {up},  1 user,  load average: 0.00, 0.00, 0.00\nUSER     TTY      FROM              LOGIN@   IDLE   JCPU   PCPU WHAT\n{u:8s} pts/0    {ip[:17].ljust(17)} {time.strftime('%H:%M', time.localtime(t))}    0.00s  0.00s  0.00s w\n")
 
-# ── Output ─────────────────────────────────────────────────────────
-
 @register("/bin/echo")
 class Echo(Command):
     def call(self):
@@ -54,8 +50,6 @@ class Echo(Command):
 class Printf(Command):
     def call(self):
         if self.args: self.write(self.args[0].replace(r"\n", "\n").replace(r"\t", "\t") + "\n")
-
-# ── System info ────────────────────────────────────────────────────
 
 @register("/usr/bin/uname")
 class Uname(Command):
@@ -97,16 +91,12 @@ class Hostname(Command):
 class Hostnamectl(Command):
     def call(self): self.write("   Static hostname: usas-prod-srv-01\n   Operating System: Ubuntu 22.04.5 LTS\n   Kernel: Linux 5.15.0-97-generic\n   Architecture: x86-64\n")
 
-# ── Process info ───────────────────────────────────────────────────
-
 @register("/usr/bin/ps")
 class Ps(Command):
     def call(self): self.write("  PID TTY          TIME CMD\n    1 ?        00:00:01 systemd\n  423 pts/0    00:00:00 bash\n  512 pts/0    00:00:00 ps\n")
 @register("/usr/bin/top")
 class Top(Command):
     def call(self): self.write("top - " + time.strftime("%H:%M:%S") + " up 7 days,  1 user,  load average: 0.00, 0.00, 0.00\nTasks:  89 total,   1 running,  88 sleeping\n%Cpu(s):  0.3 us,  0.1 sy,  0.0 ni, 99.6 id\nMiB Mem :   3932.0 total,   2701.2 free,    511.0 used,    719.8 buff/cache\nMiB Swap:   1024.0 total,   1024.0 free\n    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND\n      1 root      20   0  102948  12044   8376 S   0.0   0.3   0:01.23 systemd\n    423 root      20   0   15012   4892   3476 S   0.0   0.1   0:00.00 bash\n    512 root      20   0   43524   3812   2880 R   0.3   0.1   0:00.00 top\n")
-
-# ── File ops ───────────────────────────────────────────────────────
 
 @register("/bin/cat")
 class Cat(Command):
@@ -622,8 +612,6 @@ class Awk(Command):
             return expression[1:-1]
         return expression
 
-# ── Network ────────────────────────────────────────────────────────
-
 @register("/usr/bin/wget")
 class Wget(Command):
     def call(self):
@@ -665,7 +653,6 @@ class Dig(Command):
 class Nslookup(Command):
     def call(self): self.write("Server:\t\t127.0.0.53\nAddress:\t127.0.0.53#53\nNon-authoritative answer:\nName:\tgoogle.com\nAddress: 142.250.80.46\n")
 
-# ── Shell exec (critical for bot commands) ─────────────────────────
 
 @register("/bin/sh")
 @register("/bin/bash")
@@ -715,8 +702,6 @@ class PhpExec(Command):
                 return
         self.write("")
 
-# ── Misc ───────────────────────────────────────────────────────────
-
 @register("/usr/bin/clear")
 class Clear(Command):
     def call(self): self.write("\x1b[H\x1b[2J")
@@ -757,8 +742,6 @@ class Sleep(Command):
 class Finger(Command):
     def call(self): self.write("Login: root           Name: root\nDirectory: /root       Shell: /bin/bash\nLogged in since Thu Jan 15 12:00 (UTC) on pts/0 from 10.0.0.1\nNo mail.\nNo Plan.\n")
 
-# ── Service / persistence ──────────────────────────────────────────
-
 @register("/usr/sbin/service")
 @register("/usr/bin/systemctl")
 class Systemctl(Command):
@@ -790,16 +773,12 @@ class Apt(Command):
 class Yum(Command):
     def call(self): self.write("Loaded plugins: fastestmirror\nNo packages marked for update\n")
 
-# ── MOTD / issue ───────────────────────────────────────────────────
-
 @register("/etc/issue")
 @register("/etc/issue.net")
 class IssueNet(Command):
     def call(self):
         try: self.writeBytes(self.fs.file_contents("/etc/issue.net"))
         except (KeyError, IsADirectoryError): self.write("USAS Production Server v01\n")
-
-# ── Help ───────────────────────────────────────────────────────────
 
 @register("/usr/bin/help")
 class Help(Command):
@@ -813,8 +792,6 @@ class Base64(Command):
         txt = " ".join(self.args).encode()
         import base64
         self.write(base64.b64encode(txt).decode() + "\n")
-
-# ── 99% gap: lateral movement + dev tools ─────────────────────────
 
 @register("/usr/bin/ssh")
 class SshCmd(Command):
@@ -851,8 +828,7 @@ class LocateCmd(Command):
     def call(self):
         if self.args: self.write(f"/usr/share/doc/{self.args[0]}\n")
 
-# ── Phase 1.5: Critical Deception Commands ──────────────────────────
-# Added 2026-05-26 — 8 high-impact commands attackers expect in a real system
+# High-impact commands commonly inspected by attackers during reconnaissance
 
 @register("/usr/bin/lsblk")
 class LsblkCmd(Command):

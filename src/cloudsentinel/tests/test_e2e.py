@@ -144,7 +144,6 @@ class E2ETestHarness:
         )
 
 
-# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @pytest_asyncio.fixture
 async def harness():
@@ -154,7 +153,6 @@ async def harness():
     await h.stop_sensor()
 
 
-# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @pytest.mark.asyncio
 async def test_ssh_connection_accepted(harness: E2ETestHarness):

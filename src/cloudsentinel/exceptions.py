@@ -10,8 +10,6 @@ class CloudSentinelError(Exception):
         super().__init__(f"[{code}] {message}")
 
 
-# -- Sensor Errors --
-
 class SensorError(CloudSentinelError):
     """Base for sensor-level errors."""
 
@@ -52,8 +50,6 @@ class ProtocolViolationError(SensorError):
         super().__init__(f"Protocol violation from {ip}: {detail}", code="CS406")
 
 
-# -- SOAR Errors --
-
 class SOARError(CloudSentinelError):
     """Base for SOAR pipeline errors."""
 
@@ -81,8 +77,6 @@ class AllowlistBlockError(SOARError):
     def __init__(self, ip: str) -> None:
         super().__init__(f"Cannot block allowlisted IP: {ip}", code="CS504")
 
-
-# -- Pipeline Errors --
 
 class PipelineError(CloudSentinelError):
     """Base for event pipeline errors."""
@@ -112,8 +106,6 @@ class NATSPublishError(PipelineError):
         super().__init__(f"NATS publish to {subject} failed: {detail}", code="CS604")
 
 
-# -- Config Errors --
-
 class ConfigError(CloudSentinelError):
     """Configuration validation error."""
     def __init__(self, field: str, detail: str = "") -> None:
@@ -126,8 +118,6 @@ class MissingSecretError(ConfigError):
         super().__init__(key, f"Required secret '{key}' is not set", )
 
 
-# -- HASSH Errors --
-
 class HASSHError(CloudSentinelError):
     """HASSH fingerprinting error."""
 
@@ -137,8 +127,6 @@ class HASSHParseError(HASSHError):
     def __init__(self, detail: str = "") -> None:
         super().__init__(f"HASSH parse error: {detail}", code="CS801")
 
-
-# -- Sandbox Errors --
 
 class SandboxError(CloudSentinelError):
     """Sandbox execution error."""

@@ -138,7 +138,6 @@ class MISPFeed:
         }
 
 
-# Singleton
 _misp_feed: MISPFeed | None = None
 
 

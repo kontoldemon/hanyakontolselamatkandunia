@@ -28,6 +28,7 @@ export default function AIChatAgent() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
     const messagesRef = useRef<AgentMessage[]>(messages);
     const pathname = usePathname();
     const { executeAction, isExecuting } = useAgent();
@@ -105,7 +106,19 @@ export default function AIChatAgent() {
     useEffect(() => {
         if (isOpen) {
             setHasUnread(false);
+            const timer = setTimeout(() => inputRef.current?.focus(), 150);
+            return () => clearTimeout(timer);
         }
+    }, [isOpen]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && isOpen) {
+                setIsOpen(false);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen]);
 
     useEffect(() => {
@@ -221,12 +234,18 @@ export default function AIChatAgent() {
         }
     }
 
-    if (!isOpen) {
-        return (
+    return (
+        <>
+            {/* Floating Launcher Button with Smooth Scale & Fade */}
             <button
                 onClick={() => setIsOpen(true)}
                 aria-label="Open CloudSentinel Copilot"
-                className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white transition-all duration-200 hover:scale-105 active:scale-95 hover:border-blue-400/60 group overflow-hidden"
+                className={cn(
+                    "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white group overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    isOpen
+                        ? "opacity-0 scale-75 translate-y-2 pointer-events-none"
+                        : "opacity-100 scale-100 translate-y-0 pointer-events-auto hover:scale-105 active:scale-95 hover:border-blue-400/60"
+                )}
                 style={{ backdropFilter: "blur(0.8px)", WebkitBackdropFilter: "blur(0.8px)" }}
             >
                 {/* Clear curved glass specular shine on top half */}
@@ -236,14 +255,17 @@ export default function AIChatAgent() {
                     <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-blue-500 rounded-full ring-2 ring-white/80 dark:ring-[#0a0a0a]/80 animate-pulse" />
                 )}
             </button>
-        );
-    }
 
-    return (
-        <div
-            className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] border border-slate-900/15 dark:border-white/20 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.2)] rounded-2xl flex flex-col overflow-hidden transition-all duration-300 w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"
-            style={{ backdropFilter: "blur(1.5px)", WebkitBackdropFilter: "blur(1.5px)" }}
-        >
+            {/* Chat Panel Window with Distinct Slide-Up from Below */}
+            <div
+                className={cn(
+                    "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] border border-slate-900/15 dark:border-white/20 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.2)] rounded-2xl flex flex-col overflow-hidden origin-bottom transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]",
+                    isOpen
+                        ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+                        : "opacity-0 scale-95 translate-y-14 pointer-events-none"
+                )}
+                style={{ backdropFilter: "blur(1.5px)", WebkitBackdropFilter: "blur(1.5px)" }}
+            >
             {/* Subtle light specular shine on top rim */}
             <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white/12 dark:from-white/8 to-transparent pointer-events-none rounded-t-2xl" />
 
@@ -290,6 +312,7 @@ export default function AIChatAgent() {
                     <div className="relative p-2.5 bg-white/[0.06] dark:bg-black/[0.15] border-t border-white/30 dark:border-white/15 shrink-0">
                         <div className="relative flex items-center">
                             <textarea
+                                ref={inputRef}
                                 rows={1}
                                 value={input}
                                 onChange={(e) => {
@@ -319,5 +342,6 @@ export default function AIChatAgent() {
                         </div>
                     </div>
         </div>
+        </>
     );
 }

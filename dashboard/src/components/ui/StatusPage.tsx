@@ -51,7 +51,7 @@ export default function StatusPage({
           {/* Header */}
           <div className="mb-6 flex flex-col items-center text-center">
             {/* Typographic Status Code */}
-            <div className="font-mono text-5xl font-bold tracking-tight text-text-primary sm:text-6xl">
+            <div className={`font-mono font-bold tracking-tight text-text-primary ${code.length > 3 ? "text-3xl sm:text-4xl" : "text-5xl sm:text-6xl"}`}>
               {code}
             </div>
 

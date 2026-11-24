@@ -19,7 +19,7 @@ import time
 
 from locust import HttpUser, between, events, task
 
-# ── Realistic botnet SSH command sequences ──
+# Botnet SSH command sequences
 BOTNET_COMMANDS = [
     # Mirai-style scanner
     ["enable", "system", "shell", "sh", "cat /proc/mounts; /bin/busybox MIRAI"],
@@ -92,7 +92,7 @@ class SSHUser(HttpUser):
         self.client.get("/", headers={"X-Forwarded-For": self.ip})
 
 
-# ── Custom event hooks ──
+# Custom event hooks
 @events.init.add_listener
 def on_locust_init(environment, **kwargs):
     """Print test configuration."""

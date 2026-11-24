@@ -88,7 +88,7 @@ def sample_session_event():
     }
 
 
-# ── Benchmark marker ────────────────────────────────────
+# Benchmark marker
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",

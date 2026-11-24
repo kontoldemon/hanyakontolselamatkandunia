@@ -234,8 +234,6 @@ class VaultProvider(SecretsProvider):
             await self._client.close()
 
 
-# ── Singleton ────────────────────────────────────────────────────────
-
 _provider: SecretsProvider | None = None
 
 

@@ -182,7 +182,6 @@ class JWTAuth:
         return {"access_token": access, "refresh_token": refresh, "token_type": "bearer"}
 
 
-# Singleton
 _auth: JWTAuth | None = None
 
 
@@ -193,7 +192,6 @@ def get_auth() -> JWTAuth:
         _pyjwt = PyJWTAuth()
         if _pyjwt.config.secret:
             logger.debug("Using PyJWT (RFC 7519) for auth")
-            # Return wrapper that delegates to PyJWT
             return _pyjwt  # type: ignore[return-value]
     except ImportError:
         pass

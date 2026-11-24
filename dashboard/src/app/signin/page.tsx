@@ -24,7 +24,6 @@ export default function SignInPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // OTP State
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 

@@ -130,7 +130,6 @@ class VirtualFileSystem:
         except ImportError:
             _HAS_FAKER = False
 
-        # ── /etc directory ──
         vfs.mkdir("/etc")
         vfs.mkdir("/etc/ssh")
 
@@ -152,7 +151,6 @@ class VirtualFileSystem:
             vfs.mkfile("/etc/passwd", b"root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\nadmin:x:1000:1000:Administrator,,,:/home/admin:/bin/bash\n")
             vfs.mkfile("/etc/shadow", b"root:*:19000:0:99999:7:::\ndaemon:*:19000:0:99999:7:::\nadmin:$6$rounds=5000$saltsalt$hashedpasswordhashhere:19000:0:99999:7:::\n")
 
-        # ── /root (home directory with honeytokens) ──
         vfs.mkdir("/root")
         vfs.mkdir("/root/.ssh")
 
@@ -168,7 +166,6 @@ class VirtualFileSystem:
             vfs.mkfile("/root/.ssh/authorized_keys", b"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC admin@internal\n")
             vfs.mkfile("/root/.aws/credentials", b"[default]\naws_access_key_id = AKIAIOSFODNN7EXAMPLE\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\n")
 
-        # ── /var/log (realistic logs) ──
         vfs.mkdir("/var/log")
 
         if _HAS_FAKER:
@@ -184,7 +181,6 @@ class VirtualFileSystem:
         else:
             vfs.mkfile("/var/log/auth.log", b"Jan 15 12:00:00 usas-prod-srv-01 sshd[423]: Accepted publickey for root from 10.0.0.1 port 54321 ssh2\n")
 
-        # ── /home ──
         vfs.mkdir("/home")
         if _HAS_FAKER:
             for _ in range(3):
@@ -197,7 +193,7 @@ class VirtualFileSystem:
 
     @classmethod
     def build_default(cls, data_dir: str | None = None, os_profile_name: str = "ubuntu-22.04") -> VirtualFileSystem:
-        # 1. Try CloudSentinel pickle.
+        # Try CloudSentinel pickle file
         for candidate in [
             Path(__file__).parent / "cloudsentinel-main" / "var" / "lib" / "cloudsentinel" / "fs.pickle",
             Path("/var/lib/cloudsentinel/fs.pickle"),
@@ -207,7 +203,7 @@ class VirtualFileSystem:
                 vfs._add_proc_stubs()
                 return vfs
 
-        # 2. Try honeyfs directory
+        # Try honeyfs directory
         for candidate in [
             Path(__file__).parent / "cloudsentinel-main" / "honeyfs",
         ]:
@@ -216,7 +212,7 @@ class VirtualFileSystem:
                 vfs._add_proc_stubs()
                 return vfs
 
-        # 3. Built-in minimal
+        # Built-in minimal fallback
         return cls._build_minimal(os_profile_name)
 
     def _add_proc_stubs(self) -> None:
@@ -227,20 +223,16 @@ class VirtualFileSystem:
         self.mkfile("/proc/loadavg", b"0.08 0.12 0.09 1/156 18423\n")
         self.mkfile("/proc/uptime", b"604800.00 602400.00\n")
         self.mkfile("/dev/null", b""); self.mkfile("/dev/urandom", b""); self.mkfile("/dev/zero", b"")
-        # Network /proc stubs
         self.mkfile("/proc/net/tcp", b"  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n   0: 00000000:08AE 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 12345 1 0000000000000000 100 0 0 10 0\n")
         self.mkfile("/proc/net/arp", b"IP address       HW type     Flags       HW address            Mask     Device\n10.0.0.1         0x1         0x2         00:00:00:00:00:01     *        eth0\n")
-        # Dotfiles
         self.mkdir("/root"); self.mkdir("/root/.ssh")
         self.mkfile("/root/.bash_history", b"ls -la\ncd /var/tmp\nuname -a\ncat /etc/passwd\nwhoami\nps aux\nexit\n")
         self.mkfile("/root/.ssh/authorized_keys", b"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC admin@usas-internal\n")
-        # Fake log files
         self.mkdir("/var/log")
         self.mkfile("/var/log/auth.log", b"Jan 15 12:00:00 usas-prod-srv-01 sshd[423]: Accepted publickey for root from 10.0.0.1 port 54321 ssh2: RSA SHA256:abcdef\nJan 15 12:05:00 usas-prod-srv-01 sshd[512]: Accepted password for admin from 192.168.1.100 port 12345 ssh2\n")
-        # Fake crontab
         self.mkdir("/etc"); self.mkfile("/etc/crontab", b"# /etc/crontab: system-wide crontab\nSHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n17 *    * * *   root    cd / && run-parts --report /etc/cron.hourly\n25 6    * * *   root    test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.daily; }\n47 6    * * 7   root    test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.weekly; }\n52 6    1 * *   root    test -x /usr/sbin/anacron || { cd / && run-parts --report /etc/cron.monthly; }\n0 2 * * * root /usr/bin/backup.sh >> /var/log/backup.log 2>&1\n")
 
-        # ── Rich deception files (honeytokens, credentials, internal topology) ──
+        # Deception files: internal hostnames and resolver
         self.mkfile("/etc/hosts", b"127.0.0.1 localhost\n10.0.0.4 usas-prod-srv-01 usas-prod-srv-01.internal\n10.0.0.5 usas-db-01.internal\n10.0.0.6 usas-app-02.internal\n10.12.4.18 backup-nas.internal\n")
         self.mkfile("/etc/resolv.conf", b"nameserver 10.0.0.2\nsearch internal.usas.edu.my\n")
         self.mkdir("/etc/ssh")

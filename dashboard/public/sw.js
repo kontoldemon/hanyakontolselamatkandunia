@@ -1,4 +1,4 @@
-const CACHE_NAME = "cloudsentinel-offline-v1";
+const CACHE_NAME = "cloudsentinel-offline-v2";
 
 const OFFLINE_HTML = `<!doctype html>
 <html lang="en">
@@ -6,90 +6,199 @@ const OFFLINE_HTML = `<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#050505" />
-  <title>CloudSentinel Offline</title>
+  <title>CloudSentinel &bull; Offline</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' fill='%2394a3b8' fill-opacity='0.25'/%3E%3C/svg%3E" />
   <style>
     :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: 24px;
       background: #050505;
       color: #f8fafc;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      position: relative;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
-    main {
-      width: min(440px, 100%);
+    .brand {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      z-index: 20;
+      opacity: 0.9;
+    }
+    .brand span {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #f8fafc;
+    }
+    .bg-glow-1 {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 520px;
+      height: 520px;
+      transform: translate(-50%, -50%);
+      border-radius: 9999px;
+      background: rgba(59, 130, 246, 0.12);
+      filter: blur(130px);
+      pointer-events: none;
+    }
+    .bg-glow-2 {
+      position: absolute;
+      top: 33%;
+      left: 50%;
+      width: 320px;
+      height: 320px;
+      transform: translate(-50%, -50%);
+      border-radius: 9999px;
+      background: rgba(99, 102, 241, 0.10);
+      filter: blur(110px);
+      pointer-events: none;
+    }
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(128,128,128,0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(128,128,128,0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      mask-image: radial-gradient(ellipse 65% 55% at 50% 50%, #000 60%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 50%, #000 60%, transparent 100%);
+      pointer-events: none;
+    }
+    .card {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 380px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(10, 10, 12, 0.82);
+      padding: 32px 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       text-align: center;
     }
-    .mark {
-      width: 58px;
-      height: 58px;
-      margin: 0 auto 22px;
-      display: grid;
-      place-items: center;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 14px;
-      background: #0a0a0a;
-      color: #60a5fa;
-      box-shadow: 0 16px 45px rgba(0,0,0,.35);
-    }
-    .mark svg { width: 30px; height: 30px; }
     .code {
-      margin: 0 0 10px;
-      color: #94a3b8;
-      font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      letter-spacing: .34em;
-      text-transform: uppercase;
-    }
-    h1 {
-      margin: 0;
-      font-size: clamp(26px, 7vw, 36px);
-      line-height: 1.05;
-      letter-spacing: 0;
-    }
-    p {
-      margin: 16px auto 0;
-      max-width: 360px;
-      color: #94a3b8;
-      font-size: 14px;
-      line-height: 1.65;
-    }
-    button {
-      margin-top: 28px;
-      height: 42px;
-      border: 0;
-      border-radius: 10px;
-      padding: 0 18px;
-      background: #2563eb;
-      color: white;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: clamp(38px, 10vw, 48px);
       font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
+      letter-spacing: -0.02em;
+      color: #f8fafc;
+      line-height: 1;
     }
-    button:hover { background: #3b82f6; }
-    .hint {
-      margin-top: 18px;
-      color: #64748b;
+    .title {
+      margin-top: 12px;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #f8fafc;
+    }
+    .message {
+      margin: 8px auto 0;
       font-size: 12px;
+      line-height: 1.6;
+      color: #94a3b8;
+      max-width: 300px;
     }
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 8px;
+      flex-direction: column;
+    }
+    @media (min-width: 480px) {
+      .actions { flex-direction: row; }
+      .brand { top: 24px; left: 32px; }
+      .brand span { font-size: 14px; }
+      .card { padding: 36px 32px; }
+    }
+    .btn-primary {
+      height: 38px;
+      border-radius: 9999px;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      flex: 1;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { background: #3b82f6; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-secondary {
+      height: 38px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      color: #f8fafc;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      flex: 1;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-secondary:active { transform: scale(0.97); }
   </style>
 </head>
 <body>
-  <main>
-    <div class="mark" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-        <path d="m9 12 2 2 4-4" />
-      </svg>
+  <div class="brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#94a3b8" fill-opacity="0.25"/>
+    </svg>
+    <span>Cloud<span style="color:#60a5fa">Sentinel</span></span>
+  </div>
+
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+  <div class="bg-grid"></div>
+
+  <main class="card">
+    <div class="code">OFFLINE</div>
+    <h1 class="title">No connection</h1>
+    <p class="message">You appear to be offline. Reconnect to internet or VPN and retry.</p>
+    <div class="actions">
+      <button type="button" class="btn-primary" onclick="window.location.reload()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+          <path d="M8 16H3v5"/>
+        </svg>
+        <span>Retry</span>
+      </button>
+      <a href="/" class="btn-secondary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
     </div>
-    <p class="code">offline mode</p>
-    <h1>CloudSentinel link lost</h1>
-    <p>No network connection right now. Dashboard shell is protected, and this local fallback is served from your browser cache.</p>
-    <button type="button" onclick="location.reload()">Retry connection</button>
-    <div class="hint">Reconnect internet or VPN, then retry.</div>
   </main>
 </body>
 </html>`;

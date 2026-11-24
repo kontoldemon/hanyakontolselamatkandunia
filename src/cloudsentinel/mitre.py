@@ -9,7 +9,7 @@ import re
 import unicodedata
 from typing import ClassVar
 
-# ── Unicode Homoglyph Defense ─────────────────────────────────────
+# Unicode Homoglyph Defense
 # Maps visually-similar Unicode characters to ASCII equivalents.
 # Prevents attackers from evading regex detection via Cyrillic/Greek homoglyphs.
 # NFKC alone does NOT normalize these (they're semantically distinct code points).
@@ -169,7 +169,7 @@ def score_auth_event(username: str, attempt_count: int, password: str = "") -> d
     risk_score = 0
     names: dict[str, str] = {}
 
-    # T1110: Brute Force — high attempt count signals credential stuffing
+    # T1110: Brute Force: high attempt count signals credential stuffing
     if attempt_count >= 5:
         techniques.append("T1110")
         risk_score += min(attempt_count * 3, 30)

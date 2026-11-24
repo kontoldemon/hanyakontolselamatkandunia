@@ -40,7 +40,8 @@ type TooltipState = {
 
 const WIDTH = 800;
 const HEIGHT = 400;
-const CROSSHAIR_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21'%3E%3Cline x1='10.5' y1='1' x2='10.5' y2='20' stroke='%23000000' stroke-width='3.2' stroke-linecap='square'/%3E%3Cline x1='1' y1='10.5' x2='20' y2='10.5' stroke='%23000000' stroke-width='3.2' stroke-linecap='square'/%3E%3Cline x1='10.5' y1='2' x2='10.5' y2='19' stroke='%23ffffff' stroke-width='1.4' stroke-linecap='square'/%3E%3Cline x1='2' y1='10.5' x2='19' y2='10.5' stroke='%23ffffff' stroke-width='1.4' stroke-linecap='square'/%3E%3C/svg%3E\") 10 10, crosshair";
+const CROSSHAIR_DARK = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21' fill='none' stroke='%23ffffff' stroke-width='1.5'%3E%3Cline x1='10.5' y1='2' x2='10.5' y2='19'/%3E%3Cline x1='2' y1='10.5' x2='19' y2='10.5'/%3E%3C/svg%3E\") 10 10, crosshair";
+const CROSSHAIR_LIGHT = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21' fill='none' stroke='%23000000' stroke-width='1.5'%3E%3Cline x1='10.5' y1='2' x2='10.5' y2='19'/%3E%3Cline x1='2' y1='10.5' x2='19' y2='10.5'/%3E%3C/svg%3E\") 10 10, crosshair";
 
 type CountryFeature = {
     type: "Feature";
@@ -396,7 +397,13 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
 
                 <style>{`
                     .threat-map-canvas, .threat-map-canvas * {
-                        cursor: ${CROSSHAIR_CURSOR} !important;
+                        cursor: ${theme === "dark" ? CROSSHAIR_DARK : CROSSHAIR_LIGHT} !important;
+                    }
+                    html.dark .threat-map-canvas, html.dark .threat-map-canvas * {
+                        cursor: ${CROSSHAIR_DARK} !important;
+                    }
+                    html:not(.dark) .threat-map-canvas, html:not(.dark) .threat-map-canvas * {
+                        cursor: ${CROSSHAIR_LIGHT} !important;
                     }
                 `}</style>
 

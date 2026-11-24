@@ -156,7 +156,7 @@ class Metrics:
         self.start_time = time.time()
         self.blocked_ips: set[str] = set()
 
-    # ── Property accessors for admin API /metrics/json ──
+    # Property accessors for admin API metrics JSON payload
     @property
     def active_sessions(self) -> float:
         return active_sessions._value.get()

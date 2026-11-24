@@ -121,10 +121,10 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                     <div className="flex items-center gap-2 shrink-0">
                         {log.blocked && (
                             <span
-                                className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-rose-600 dark:text-rose-400"
+                                className="inline-flex items-center gap-1 text-[10px] font-mono font-medium leading-none text-rose-600 dark:text-rose-400"
                                 title={log.lastMttb ? `Blocked in ${log.lastMttb}` : "Blocked"}
                             >
-                                <Shield size={10} className="shrink-0 -translate-y-[1px]" />
+                                <Shield size={9} className="shrink-0 -translate-y-[0.5px]" />
                                 <span>{log.lastMttb || "Blocked"}</span>
                             </span>
                         )}

@@ -57,13 +57,15 @@ export function SectionHeader({
   eyebrow,
   title,
   sub,
+  className = "",
 }: {
   eyebrow?: string;
   title: string;
   sub?: string;
+  className?: string;
 }) {
   return (
-    <Reveal className="mx-auto max-w-2xl text-center">
+    <Reveal className={`mx-auto max-w-2xl text-center ${className}`.trim()}>
       {eyebrow && (
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
           {eyebrow}

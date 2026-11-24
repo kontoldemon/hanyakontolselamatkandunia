@@ -50,12 +50,11 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 def _header():
     if console:
         console.print(Panel.fit(
-            "[bold blue]CloudSentinel[/] [dim]v2.1[/] — Event-Driven SSH Honeypot & SOAR",
+            "[bold blue]CloudSentinel[/] [dim]v2.1[/]: Event-Driven SSH Honeypot & SOAR",
             border_style="blue",
         ))
 
 
-# ── serve ─────────────────────────────────────────────────
 if _HAS_CLI:
     @app.command()
     def serve(
@@ -98,7 +97,6 @@ if _HAS_CLI:
         asyncio.run(_run())
 
 
-# ── benchmark ─────────────────────────────────────────────
 if _HAS_CLI:
     @app.command()
     def benchmark(
@@ -165,7 +163,6 @@ if _HAS_CLI:
         asyncio.run(_bench())
 
 
-# ── status ────────────────────────────────────────────────
 if _HAS_CLI:
     @app.command()
     def status(
@@ -193,7 +190,6 @@ if _HAS_CLI:
             console.print(f"[red]Failed to reach admin API: {exc}")
 
 
-# ── validate ──────────────────────────────────────────────
 if _HAS_CLI:
     @app.command()
     def validate(
@@ -213,7 +209,6 @@ if _HAS_CLI:
                 console.print(f"[red]Validation failed: {exc}")
 
 
-# ── main ──────────────────────────────────────────────────
 def main():
     if not _HAS_CLI:
         print("typer + rich not installed. Install with: pip install typer rich")

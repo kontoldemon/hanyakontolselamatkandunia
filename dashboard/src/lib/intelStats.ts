@@ -41,7 +41,6 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
       return Number.isFinite(ts) && ts >= cutoff;
     });
 
-    // Country stats
     const countryMap = new Map<string, { code: string; name: string; count: number }>();
     const addCountry = (code: string, name?: string, n = 1) => {
       if (!code || code === "XX") return;
@@ -53,7 +52,6 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
     for (const s of sessions24h) addCountry(s.countryCode || s.country, s.countryName, s.sessionCount ?? 1);
     const countries = [...countryMap.values()].sort((a, b) => b.count - a.count);
 
-    // Timing heatmap: 7 days x 24 hours
     const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
     const addTs = (val: number | string | undefined) => {
       if (!val) return;
@@ -70,12 +68,10 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
     for (const s of sessions24h) addTs(s.startedAtEpochMs || s.firstSeenEpochMs || s.startTime);
     const heatmapMax = Math.max(1, ...grid.flat());
 
-    // Peak hour
     const hourTotals = Array(24).fill(0);
     for (const row of grid) row.forEach((v, h) => { hourTotals[h] += v; });
     const peakHour = hourTotals.indexOf(Math.max(...hourTotals));
 
-    // ISP / Org stats
     const ispMap = new Map<string, number>();
     const addIsp = (val?: string, n = 1) => {
       const k = (val ?? "").trim();
@@ -86,7 +82,6 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
     for (const s of sessions24h) { addIsp(s.org, s.sessionCount ?? 1); addIsp(s.isp, s.sessionCount ?? 1); }
     const isps = [...ispMap.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10);
 
-    // Risk score distribution
     const riskBuckets = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
     let riskTotal = 0, riskCount = 0;
     for (const s of sessions24h) {
@@ -97,7 +92,6 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
     }
     const avgRisk = clampPercent(riskCount > 0 ? riskTotal / riskCount : 0);
 
-    // SOAR breakdown
     const soarMap = new Map<string, number>();
     let blockedCount = 0;
     for (const s of sessions24h) {
@@ -108,7 +102,6 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
     const soarData = [...soarMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     const blockRate = sessions24h.length > 0 ? clampPercent(Math.round((blockedCount / sessions24h.length) * 100)) : 0;
 
-    // Unique IPs
     const uniqueIps = new Set<string>();
     for (const l of logs24h) uniqueIps.add(l.ip);
     for (const s of sessions24h) uniqueIps.add(s.ip);

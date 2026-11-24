@@ -11,7 +11,7 @@ Covers:
 
 from __future__ import annotations
 
-# ── HASSH Properties ────────────────────────────────────────
+# HASSH properties
 from cloudsentinel.hassh import calculate_hassh, calculate_hassh_sha256, normalize_algorithm_list
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
@@ -98,7 +98,7 @@ class TestHASSHProperties:
         assert h1 != h2
 
 
-# ── VFS Properties ─────────────────────────────────────────
+# VFS properties
 
 from cloudsentinel.vfs import VirtualFileSystem
 
@@ -139,7 +139,7 @@ class TestVFSProperties:
         assert vfs.file_contents(path) == content
 
 
-# ── MITRE Properties ──────────────────────────────────────
+# MITRE properties
 
 from cloudsentinel.mitre import deobfuscate_bash, score_command
 
@@ -187,7 +187,7 @@ class TestMITREProperties:
         assert result["risk_score"] >= 20
 
 
-# ── EventCodec Properties ─────────────────────────────────
+# EventCodec properties
 
 from cloudsentinel.event_codec import dumps_text, loads_text
 
@@ -223,7 +223,7 @@ class TestCodecProperties:
         assert isinstance(result, str)
 
 
-# ── SOAR Properties ───────────────────────────────────────
+# SOAR properties
 
 from cloudsentinel.soar import SOAREngine
 
