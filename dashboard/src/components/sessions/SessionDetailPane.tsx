@@ -232,11 +232,11 @@ export default function SessionDetailPane({
                                     {activeTab === "forensics" && (
                                         <div className="flex flex-col gap-2.5">
                                             {/* Threat Risk Assessment Bar */}
-                                            <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                <div className="flex items-center justify-between mb-1.5">
-                                                    <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">Threat Assessment</span>
+                                            <div className="bg-white dark:bg-[#0c0d10] py-1.5 px-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-200">Threat Assessment</span>
                                                     <span className={cn(
-                                                        "text-[10px] font-mono px-1.5 py-0.2 rounded font-bold border",
+                                                        "text-[9.5px] font-mono px-1.5 py-0.5 rounded font-bold border",
                                                         riskScore >= 80
                                                             ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
                                                             : riskScore >= 50
@@ -246,7 +246,7 @@ export default function SessionDetailPane({
                                                         Risk {riskScore}/100
                                                     </span>
                                                 </div>
-                                                <div className="w-full h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                                <div className="w-full h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                                                     <div
                                                         className={cn(
                                                             "h-full rounded-full transition-all",
