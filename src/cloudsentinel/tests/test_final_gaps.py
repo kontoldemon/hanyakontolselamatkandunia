@@ -104,6 +104,10 @@ async def test_session_pipe_filters_output() -> None:
     assert output.strip() == "bar"
     output = await session._execute("echo a:b | tr ':' ' '")
     assert output.strip() == "a b"
+    output = await session._execute("cat /etc/passwd | head -n 1")
+    assert output.strip()
+    output = await session._execute("cat /etc/passwd | tail -n 1")
+    assert output.strip()
 
 
 @pytest.mark.asyncio
@@ -112,6 +116,54 @@ async def test_session_pipe_cut_fields() -> None:
     output = await session._execute("cat /etc/passwd | cut -d: -f1")
     assert "root" in output
     assert ":" not in output
+
+
+def test_head_tail_pipe_lines() -> None:
+    from cloudsentinel.commands.base import HeadCmd, TailCmd
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    head_cases = [
+        (["-n", "2"], "a\nb\nc\n", "a\nb\n"),
+        (["-n1"], "a\nb\nc\n", "a\n"),
+        (["--lines=2"], "a\nb\nc\n", "a\nb\n"),
+        ([], "a\nb\n", "a\nb\n"),
+        (["-n", "0"], "a\nb\n", ""),
+        (["-n", "x"], "a\nb\n", "a\nb\n"),
+    ]
+    for args, stdin, expected in head_cases:
+        proto = Fake(stdin)
+        HeadCmd(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    tail_cases = [
+        (["-n", "2"], "a\nb\nc\n", "b\nc\n"),
+        (["-n1"], "a\nb\nc\n", "c\n"),
+        (["--lines=1"], "a\nb\nc\n", "c\n"),
+        (["-n", "+2"], "a\nb\nc\n", "b\nc\n"),
+        (["-n", "-2"], "a\nb\nc\n", "b\nc\n"),
+        ([], "a\nb\n", "a\nb\n"),
+        (["-n", "0"], "a\nb\n", ""),
+        (["-n", "x"], "a\nb\n", "a\nb\n"),
+    ]
+    for args, stdin, expected in tail_cases:
+        proto = Fake(stdin)
+        TailCmd(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    head_error = Fake("")
+    HeadCmd(head_error, "-n", "1").start()
+    assert "cannot open" in "".join(head_error.out)
+
+    tail_error = Fake("")
+    TailCmd(tail_error, "-n", "1").start()
+    assert "cannot open" in "".join(tail_error.out)
 
 
 def test_tr_pipe_translation_and_delete() -> None:

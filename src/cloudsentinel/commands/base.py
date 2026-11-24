@@ -839,14 +839,73 @@ class DmesgCmd(Command):
 @register("/usr/bin/head")
 class HeadCmd(Command):
     def call(self):
-        if not self.args: return
-        self.write("head: cannot open for reading: No such file or directory\n")
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            if self.args:
+                self.write("head: cannot open for reading: No such file or directory\n")
+            return
+        count = 10
+        args = list(self.args)
+        index = 0
+        while index < len(args):
+            arg = args[index]
+            if arg in ("-n", "--lines") and index + 1 < len(args):
+                value = args[index + 1]
+                index += 2
+            elif arg.startswith("-n") and len(arg) > 2:
+                value = arg[2:]
+                index += 1
+            elif arg.startswith("--lines="):
+                value = arg.split("=", 1)[1]
+                index += 1
+            else:
+                index += 1
+                continue
+            try:
+                count = max(0, int(value))
+            except ValueError:
+                pass
+        self.write("\n".join(stdin.splitlines()[:count]) + ("\n" if count else ""))
 
 @register("/usr/bin/tail")
 class TailCmd(Command):
     def call(self):
-        if not self.args: return
-        self.write("tail: cannot open for reading: No such file or directory\n")
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            if self.args:
+                self.write("tail: cannot open for reading: No such file or directory\n")
+            return
+        count = 10
+        start = 0
+        args = list(self.args)
+        index = 0
+        while index < len(args):
+            arg = args[index]
+            if arg in ("-n", "--lines") and index + 1 < len(args):
+                value = args[index + 1]
+                index += 2
+            elif arg.startswith("-n") and len(arg) > 2:
+                value = arg[2:]
+                index += 1
+            elif arg.startswith("--lines="):
+                value = arg.split("=", 1)[1]
+                index += 1
+            else:
+                index += 1
+                continue
+            try:
+                if value.startswith("+"):
+                    start = max(1, int(value[1:]))
+                    count = 0
+                else:
+                    number = int(value)
+                    count = max(0, abs(number)) if number < 0 else number
+                    start = 0
+            except ValueError:
+                pass
+        lines = stdin.splitlines()
+        selected = lines[start - 1:] if start else (lines[-count:] if count else [])
+        self.write("\n".join(selected) + ("\n" if selected else ""))
 
 @register("/bin/cp")
 class CpCmd(Command):
