@@ -247,21 +247,43 @@ html {
 
 body::-webkit-scrollbar,
 .terminal-scrollbar::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
-body::-webkit-scrollbar-track {
+body::-webkit-scrollbar-track,
+.terminal-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+body::-webkit-scrollbar-thumb,
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
   border-radius: 999px;
 }
 
-.dark body::-webkit-scrollbar-thumb {
-  background: #334155;
+body::-webkit-scrollbar-thumb:hover,
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+.dark body::-webkit-scrollbar-thumb,
+.dark .terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark body::-webkit-scrollbar-thumb:hover,
+.dark .terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.terminal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.dark .terminal-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 /* Threat Map FortiGuard-inspired attack beam & impact animations */

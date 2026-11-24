@@ -95,15 +95,17 @@ export type SessionRowData = {
     nowMs: number;
     searchQuery: string;
     onSelect: (session: CapturedSession) => void;
+    viewedSessionIds?: Set<string>;
 };
 
 export const SESSION_ROW_HEIGHT = 116;
 export const SESSION_ROW_GAP = 8;
 
-export function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs, searchQuery, onSelect }: RowComponentProps<SessionRowData>) {
+export function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs, searchQuery, onSelect, viewedSessionIds }: RowComponentProps<SessionRowData>) {
     const session = sessions[index];
     const isSelected = selectedSessionId === session.id;
     const isFocused = !!focusIp && session.ip === focusIp;
+    const isNew = viewedSessionIds ? !viewedSessionIds.has(session.id) : false;
     const attackCount = session.input?.length ?? 0;
 
     return (
@@ -118,12 +120,20 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
             >
                 <div>
                     <div className="flex justify-between items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-slate-900 dark:text-white font-mono text-xs truncate">
-                            <HighlightText text={session.ip} highlight={searchQuery} />
-                        </h3>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <h3 className="font-semibold text-slate-900 dark:text-white font-mono text-xs truncate">
+                                <HighlightText text={session.ip} highlight={searchQuery} />
+                            </h3>
+                            {isNew && (
+                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center gap-1 shrink-0">
+                                    <span className="w-1 h-1 rounded-full bg-blue-500 animate-ping" />
+                                    NEW
+                                </span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-[9.5px] leading-none px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 font-mono font-medium">
-                                {attackCount} {attackCount === 1 ? "attack" : "attacks"}
+                                {attackCount} atk
                             </span>
                             {(session.status || "").toLowerCase() === "active" && (
                                 <span className="text-[9.5px] leading-none px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 animate-pulse border border-emerald-500/20 font-semibold">

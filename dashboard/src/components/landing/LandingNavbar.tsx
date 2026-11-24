@@ -31,7 +31,7 @@ export default function LandingNavbar({
           : "border-b border-border-line/[0.04] bg-surface-bg/25 backdrop-blur-md"
           }`}
       >
-        <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="relative mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6">
           {/* Left: Logo & Brand */}
           <div className="flex items-center gap-2.5">
             <button
@@ -52,8 +52,8 @@ export default function LandingNavbar({
             </button>
           </div>
 
-          {/* Center: Navigation Links */}
-          <div className="hidden items-center gap-1 md:flex">
+          {/* Center: Navigation Links - Absolutely Centered */}
+          <div className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-1 md:flex">
             {NAV_LINKS.map((item) => (
               <button
                 key={item.id}

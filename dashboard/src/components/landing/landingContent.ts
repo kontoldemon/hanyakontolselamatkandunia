@@ -2,6 +2,7 @@ import { Box, Scan, ShieldBan } from "lucide-react";
 
 export const NAV_LINKS = [
   { id: "capabilities", label: "Capabilities" },
+  { id: "comparison", label: "Comparison" },
   { id: "how-it-works", label: "How It Works" },
   { id: "faq", label: "FAQ" },
 ];

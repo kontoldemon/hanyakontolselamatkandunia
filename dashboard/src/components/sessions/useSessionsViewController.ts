@@ -12,11 +12,13 @@ const sessionLastSeenMs = (session: CapturedSession) =>
     session.startedAtEpochMs ??
     0;
 
+export type SessionFilterStatus = "all" | "active" | "most_attacks" | "least_attacks" | "high_risk";
+
 export function useSessionsViewController() {
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
     const [lastSelectedIp, setLastSelectedIp] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterStatus, setFilterStatus] = useState<"all" | "active">("all");
+    const [filterStatus, setFilterStatus] = useState<SessionFilterStatus>("all");
     const [blockingIp, setBlockingIp] = useState<string | null>(null);
     const [confirmBlockIp, setConfirmBlockIp] = useState<string | null>(null);
     const [replayMode, setReplayMode] = useState<"attacker" | "both">("both");
@@ -28,8 +30,20 @@ export function useSessionsViewController() {
     const listContainerRef = useRef<HTMLDivElement | null>(null);
     const [listHeight, setListHeight] = useState(500);
     const [displayedSessions, setDisplayedSessions] = useState<CapturedSession[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 15;
     const lastNonEmptySessionsAtRef = useRef(0);
     const lastSelectedSnapshotRef = useRef<CapturedSession | null>(null);
+
+    const [viewedSessionIds, setViewedSessionIds] = useState<Set<string>>(() => {
+        if (typeof window === "undefined") return new Set<string>();
+        try {
+            const raw = window.localStorage.getItem("cloudsentinel.viewed_sessions");
+            return raw ? new Set(JSON.parse(raw)) : new Set<string>();
+        } catch {
+            return new Set<string>();
+        }
+    });
 
     const filteredSessions = useMemo(() => {
         const byIp = new Map<string, CapturedSession[]>();
@@ -111,7 +125,19 @@ export function useSessionsViewController() {
             });
         }
 
-        return selected.sort((a, b) => sessionLastSeenMs(b) - sessionLastSeenMs(a));
+        let result = selected;
+        if (filterStatus === "high_risk") {
+            result = result.filter((s) => (s.riskScore ?? 0) >= 80);
+        }
+
+        if (filterStatus === "most_attacks") {
+            return result.sort((a, b) => (b.input?.length ?? 0) - (a.input?.length ?? 0));
+        }
+        if (filterStatus === "least_attacks") {
+            return result.sort((a, b) => (a.input?.length ?? 0) - (b.input?.length ?? 0));
+        }
+
+        return result.sort((a, b) => sessionLastSeenMs(b) - sessionLastSeenMs(a));
     }, [sessions, searchQuery, filterStatus]);
 
     useEffect(() => {
@@ -126,19 +152,50 @@ export function useSessionsViewController() {
         }
     }, [filteredSessions]);
 
+    const totalPages = Math.max(1, Math.ceil(displayedSessions.length / PAGE_SIZE));
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterStatus]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    const pagedSessions = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return displayedSessions.slice(start, start + PAGE_SIZE);
+    }, [displayedSessions, currentPage]);
+
     const selectSession = useCallback((session: CapturedSession) => {
         setSelectedSessionId(session.id);
         setLastSelectedIp(session.ip);
         lastSelectedSnapshotRef.current = session;
+        setViewedSessionIds((prev) => {
+            if (prev.has(session.id)) return prev;
+            const next = new Set(prev);
+            next.add(session.id);
+            try {
+                window.localStorage.setItem("cloudsentinel.viewed_sessions", JSON.stringify([...next].slice(-500)));
+            } catch {
+                // ignore storage quota error
+            }
+            return next;
+        });
     }, []);
 
     useAgentCommand("sessions.search", useCallback((v: string) => setSearchQuery(v), []));
-    useAgentCommand("sessions.filter", useCallback((v: string) => setFilterStatus(v as "all" | "active"), []));
+    useAgentCommand("sessions.filter", useCallback((v: string) => setFilterStatus(v as SessionFilterStatus), []));
     useAgentCommand("sessions.select", useCallback((ip: string) => {
         const index = displayedSessions.findIndex((s) => s.ip === ip);
         if (index >= 0) {
+            const targetPage = Math.floor(index / PAGE_SIZE) + 1;
+            setCurrentPage(targetPage);
             selectSession(displayedSessions[index]);
-            listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
+            const pageRowIndex = index % PAGE_SIZE;
+            listRef.current?.scrollToRow({ index: pageRowIndex, align: "center", behavior: "smooth" });
         }
     }, [displayedSessions, selectSession, listRef]));
 
@@ -275,8 +332,11 @@ export function useSessionsViewController() {
         }
         const index = displayedSessions.findIndex((session) => session.ip === focusIp);
         if (index >= 0) {
+            const targetPage = Math.floor(index / PAGE_SIZE) + 1;
+            setCurrentPage(targetPage);
             selectSession(displayedSessions[index]);
-            listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
+            const pageRowIndex = index % PAGE_SIZE;
+            listRef.current?.scrollToRow({ index: pageRowIndex, align: "center", behavior: "smooth" });
             setFocusIp("");
         }
     }, [focusIp, displayedSessions, selectSession, listRef]);
@@ -302,12 +362,13 @@ export function useSessionsViewController() {
     }
 
     const rowData: SessionRowData = {
-        sessions: displayedSessions,
+        sessions: pagedSessions,
         selectedSessionId,
         focusIp,
         nowMs,
         searchQuery,
         onSelect: selectSession,
+        viewedSessionIds,
     };
 
     const clearSelection = useCallback(() => {
@@ -330,6 +391,10 @@ export function useSessionsViewController() {
         listContainerRef,
         listHeight,
         displayedSessions,
+        pagedSessions,
+        currentPage,
+        setCurrentPage,
+        totalPages,
         selectedView,
         rowData,
         executeBlockIp,

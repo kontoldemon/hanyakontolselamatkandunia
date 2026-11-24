@@ -272,8 +272,8 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         d={source.path}
                         fill="none"
                         stroke={source.color}
-                        strokeWidth={source.isActive ? "1.2" : "0.8"}
-                        strokeOpacity={source.isActive ? 0.24 : 0.08}
+                        strokeWidth={source.isActive ? "1.4" : "0.9"}
+                        strokeOpacity={theme === "dark" ? (source.isActive ? 0.28 : 0.1) : (source.isActive ? 0.55 : 0.25)}
                         strokeLinecap="round"
                     />
 
@@ -283,8 +283,8 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                             <path
                                 d={source.path}
                                 fill="none"
-                                stroke={source.color}
-                                strokeWidth="2.2"
+                                stroke={theme === "dark" ? source.color : (source.color === "#38bdf8" ? "#0284c7" : source.color)}
+                                strokeWidth={theme === "dark" ? "2.2" : "2.5"}
                                 strokeLinecap="round"
                                 pathLength={100}
                                 strokeDasharray="22 118"
@@ -293,7 +293,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                     animation: `attackBeamFlow ${source.durationSec}s cubic-bezier(0.25, 0.1, 0.25, 1) ${delaySec}s infinite`,
                                 }}
                             />
-                            <circle r="2.6" fill="#ffffff" filter="url(#attack-glow)">
+                            <circle r={theme === "dark" ? "2.6" : "3"} fill={theme === "dark" ? "#ffffff" : source.color} filter="url(#attack-glow)">
                                 <animateMotion
                                     dur={`${source.durationSec}s`}
                                     begin={`${delaySec}s`}
@@ -364,10 +364,10 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     return (
         <>
             {isExpanded && (
-                <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsExpanded(false)} />
+                <div className="fixed inset-0 z-[199] bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsExpanded(false)} />
             )}
             <div className={isExpanded
-                ? "fixed inset-0 m-auto w-[95vw] h-[90vh] z-[100] origin-center bg-slate-50 dark:bg-[#050505] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-center animate-in zoom-in-95 fade-in duration-200"
+                ? "fixed inset-0 m-auto w-[95vw] h-[90vh] z-[200] origin-center bg-slate-50 dark:bg-[#050505] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-center animate-in zoom-in-95 fade-in duration-200"
                 : "relative w-full h-full flex flex-col bg-slate-50 dark:bg-[#050505] overflow-hidden group"}>
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}

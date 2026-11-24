@@ -74,142 +74,178 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            <div className="flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2">
-                    <h2 className="font-display text-lg font-bold leading-tight tracking-tight text-slate-900 dark:text-white">Settings</h2>
-                    <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-500">
-                        Configuration
-                    </span>
-                </div>
-                <button
-                    onClick={handleApplyChanges}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm active:scale-95"
-                >
-                    <Save size={14} />
-                    Apply Changes
-                </button>
-            </div>
-
             <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-5 overflow-hidden">
                 {/* Left Navigation List Buttons */}
-                <div className="md:w-56 shrink-0 flex flex-col gap-1.5 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-xl p-2.5 shadow-sm h-fit">
-                    <button
-                        type="button"
-                        onClick={() => setActiveSection("deception")}
-                        className={cn(
-                            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all text-left",
-                            activeSection === "deception"
-                                ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold"
-                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
-                        )}
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <Database size={15} className={activeSection === "deception" ? "text-indigo-500" : "text-slate-400"} />
-                            <span>Deception Engine</span>
-                        </div>
-                    </button>
+                <div className="md:w-60 shrink-0 flex flex-col justify-between bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-xl p-3 shadow-sm h-full">
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-2 py-1">
+                            Configuration Tabs
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setActiveSection("deception")}
+                            className={cn(
+                                "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all text-left group",
+                                activeSection === "deception"
+                                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold"
+                                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
+                            )}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <Database size={15} className={activeSection === "deception" ? "text-indigo-500" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"} />
+                                <div className="flex flex-col">
+                                    <span>Deception Engine</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">VFS &amp; Honey-Tokens</span>
+                                </div>
+                            </div>
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setActiveSection("soar")}
-                        className={cn(
-                            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all text-left",
-                            activeSection === "soar"
-                                ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold"
-                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
-                        )}
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <Zap size={15} className={activeSection === "soar" ? "text-rose-500" : "text-slate-400"} />
-                            <span>SOAR &amp; Exposure</span>
-                        </div>
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveSection("soar")}
+                            className={cn(
+                                "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all text-left group",
+                                activeSection === "soar"
+                                    ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold"
+                                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
+                            )}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <Zap size={15} className={activeSection === "soar" ? "text-rose-500" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"} />
+                                <div className="flex flex-col">
+                                    <span>SOAR &amp; Exposure</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">Containment &amp; Gateway</span>
+                                </div>
+                            </div>
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setActiveSection("telemetry")}
-                        className={cn(
-                            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all text-left",
-                            activeSection === "telemetry"
-                                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold"
-                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
-                        )}
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <Activity size={15} className={activeSection === "telemetry" ? "text-blue-500" : "text-slate-400"} />
-                            <span>Ops &amp; Telemetry</span>
+                        <button
+                            type="button"
+                            onClick={() => setActiveSection("telemetry")}
+                            className={cn(
+                                "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all text-left group",
+                                activeSection === "telemetry"
+                                    ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold"
+                                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
+                            )}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <Activity size={15} className={activeSection === "telemetry" ? "text-blue-500" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"} />
+                                <div className="flex flex-col">
+                                    <span>Ops &amp; Telemetry</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">Health &amp; Live Sockets</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* Anchored Actions & Cluster Status Widget */}
+                    <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 flex flex-col gap-2.5">
+                        <button
+                            onClick={handleApplyChanges}
+                            className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded-lg text-xs font-semibold transition-all shadow-sm active:scale-95 hover:shadow-blue-500/20"
+                        >
+                            <Save size={13} />
+                            Apply Changes
+                        </button>
+                        <div className="p-2.5 rounded-lg bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 text-[11px] font-mono">
+                            <div className="flex items-center justify-between mb-1.5 font-sans">
+                                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Sensor Cluster</span>
+                                <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-bold">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    {sensorOnline ? "ONLINE" : "OFFLINE"}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-slate-500 text-[10px]">
+                                <span>Policy Mode:</span>
+                                <span className="text-slate-700 dark:text-slate-300 font-semibold">Autonomous</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500 text-[10px] mt-0.5">
+                                <span>Cluster Sync:</span>
+                                <span className="text-slate-700 dark:text-slate-300 font-semibold">Verified</span>
+                            </div>
                         </div>
-                    </button>
+                    </div>
                 </div>
 
                 {/* Right Focused Panel */}
                 <div className="flex-1 min-w-0 h-full overflow-y-auto terminal-scrollbar pr-1">
                     {activeSection === "deception" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in duration-200">
-                            {/* Deception Sensor */}
-                            <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
-                                <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
-                                    <h3 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-indigo-500">
-                                        <Database size={15} /> Sensor Node (AsyncSSH)
-                                    </h3>
-                                </div>
-                                <div className="p-4 space-y-4">
-                                    <div>
-                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Deception Level</label>
-                                        <CustomDropdown
-                                            options={[
-                                                { label: "High (Full VFS)", value: "High (Full VFS)" },
-                                                { label: "Medium (Restricted)", value: "Medium (Restricted)" },
-                                                { label: "Low (Port listener)", value: "Low (Port listener)" },
-                                            ]}
-                                            value={deceptionLevel}
-                                            onChange={setDeceptionLevel}
-                                        />
-                                    </div>
-                                    <div className="pt-2">
-                                        <label className="flex items-center gap-2 cursor-pointer group">
-                                            <div className="relative flex items-center justify-center w-4 h-4 rounded border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[#0f0f0f] group-hover:border-indigo-500 transition-colors">
-                                                <input type="checkbox" checked={fakeKeys} onChange={() => setFakeKeys(!fakeKeys)} className="opacity-0 absolute inset-0 cursor-pointer" />
-                                                {fakeKeys && <Check size={12} className="text-indigo-500 opacity-100" />}
-                                            </div>
-                                            <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Inject Fake AWS API Keys (bash_history)</span>
-                                        </label>
-                                    </div>
-                                </div>
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                            <div className="flex flex-col gap-1 mb-4">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Deception &amp; Honeypot Engine</h3>
+                                <p className="text-xs text-slate-500">Configure virtual filesystem depth, canary tokens, and SSH fingerprint countermeasures.</p>
                             </div>
 
-                            {/* HASSH Engine */}
-                            <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
-                                <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
-                                    <h3 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-purple-500">
-                                        <Fingerprint size={15} /> Identity Engine (HASSH)
-                                    </h3>
-                                </div>
-                                <div className="p-4 space-y-4">
-                                    <div>
-                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Malicious HASSH Action</label>
-                                        <CustomDropdown
-                                            options={[
-                                                { label: "Immediate Drop", value: "Immediate Drop" },
-                                                { label: "Allow & Monitor", value: "Allow & Monitor" },
-                                                { label: "Tarpit", value: "Tarpit" },
-                                            ]}
-                                            value={hasshAction}
-                                            onChange={setHasshAction}
-                                        />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Deception Sensor */}
+                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-visible flex flex-col justify-between">
+                                    <div className="p-3.5 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] rounded-t-xl">
+                                        <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-indigo-500">
+                                            <Database size={15} /> Sensor Node (AsyncSSH)
+                                        </h4>
                                     </div>
-                                    <div>
-                                        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Confidence Threshold</label>
-                                        <div className="flex items-center gap-3">
+                                    <div className="p-4 space-y-4">
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Deception Level</label>
+                                            <CustomDropdown
+                                                options={[
+                                                    { label: "High (Full VFS)", value: "High (Full VFS)" },
+                                                    { label: "Medium (Restricted)", value: "Medium (Restricted)" },
+                                                    { label: "Low (Port listener)", value: "Low (Port listener)" },
+                                                ]}
+                                                value={deceptionLevel}
+                                                onChange={setDeceptionLevel}
+                                            />
+                                        </div>
+                                        <div className="pt-1">
+                                            <label className="flex items-center gap-2.5 cursor-pointer group">
+                                                <div className="relative flex items-center justify-center w-4 h-4 rounded border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[#0f0f0f] group-hover:border-indigo-500 transition-colors">
+                                                    <input type="checkbox" checked={fakeKeys} onChange={() => setFakeKeys(!fakeKeys)} className="opacity-0 absolute inset-0 cursor-pointer" />
+                                                    {fakeKeys && <Check size={12} className="text-indigo-500 opacity-100" />}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Inject Fake AWS API Keys</span>
+                                                    <span className="text-[10px] text-slate-400">Seeds canary credentials in .bash_history to detect exfiltration</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* HASSH Engine */}
+                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-visible flex flex-col justify-between">
+                                    <div className="p-3.5 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] rounded-t-xl">
+                                        <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-purple-500">
+                                            <Fingerprint size={15} /> Identity Engine (HASSH)
+                                        </h4>
+                                    </div>
+                                    <div className="p-4 space-y-4">
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Malicious HASSH Action</label>
+                                            <CustomDropdown
+                                                options={[
+                                                    { label: "Immediate Drop", value: "Immediate Drop" },
+                                                    { label: "Allow & Monitor", value: "Allow & Monitor" },
+                                                    { label: "Tarpit", value: "Tarpit" },
+                                                ]}
+                                                value={hasshAction}
+                                                onChange={setHasshAction}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Confidence Threshold</label>
+                                                <span className="text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300">{hasshThreshold}%</span>
+                                            </div>
                                             <input
                                                 type="range"
                                                 min="0"
                                                 max="100"
                                                 value={hasshThreshold}
                                                 onChange={(e) => setHasshThreshold(parseInt(e.target.value, 10))}
-                                                className="flex-1 accent-purple-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none outline-none"
+                                                className="w-full accent-purple-500 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full appearance-none outline-none cursor-pointer"
                                             />
-                                            <span className="text-[11px] font-mono font-bold w-8 text-right text-slate-700 dark:text-slate-300">{hasshThreshold}%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -218,44 +254,52 @@ export default function SettingsPage() {
                     )}
 
                     {activeSection === "soar" && (
-                        <div className="space-y-5 animate-in fade-in duration-200">
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                            <div className="flex flex-col gap-1 mb-4">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">SOAR &amp; Exposure Gateway</h3>
+                                <p className="text-xs text-slate-500">Control ingress exposure and configure automated firewall isolation triggers.</p>
+                            </div>
+
                             {/* Exposure Control */}
                             <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col gap-3">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
-                                        <h3 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                                        <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-amber-600 dark:text-amber-500">
                                             <Power size={15} />
-                                            Exposure Control
-                                        </h3>
-                                        <p className="text-[10px] text-slate-500 mt-1">
-                                            {sensorOnline ? "Admin API connected. Toggle public honeypot traffic." : "Sensor API unreachable."}
+                                            Honeypot Exposure Gateway
+                                        </h4>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            {sensorOnline ? "Live gateway active. Toggle public honeypot traffic forwarding." : "Sensor API unreachable."}
                                         </p>
                                     </div>
                                     <button
                                         type="button"
                                         disabled={exposureBusy || exposureSyncing || exposureCooldownActive || !sensorOnline}
                                         onClick={openExposureConfirm}
-                                        className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"}`}
+                                        className={`shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all shadow-xs disabled:opacity-50 ${exposurePaused ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20"}`}
                                     >
-                                        <Power size={12} />
-                                        {exposureBusy || exposureSyncing ? "Applying..." : exposureCooldownActive ? `Cooldown ${cooldownRemainingSec}s` : (exposurePaused ? "Offline" : "Online")}
+                                        <Power size={13} />
+                                        {exposureBusy || exposureSyncing ? "Applying..." : exposureCooldownActive ? `Cooldown ${cooldownRemainingSec}s` : (exposurePaused ? "Set Online" : "Set Offline")}
                                     </button>
                                 </div>
-                                <div className="text-[10px] text-slate-500">
-                                    Effective Status: <span className="font-semibold text-slate-700 dark:text-slate-300">{effectiveExposureEnabled === false ? "Offline" : "Online"}</span>
-                                    {exposureSyncing ? <span className="ml-2 text-blue-600 dark:text-blue-400 font-semibold">Syncing...</span> : null}
+                                <div className="text-[11px] text-slate-500 flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                                    <span>Current Exposure:</span>
+                                    <span className={cn("font-semibold font-mono px-1.5 py-0.5 rounded text-[10px]", effectiveExposureEnabled === false ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20")}>
+                                        {effectiveExposureEnabled === false ? "OFFLINE" : "ONLINE"}
+                                    </span>
+                                    {exposureSyncing && <span className="text-blue-600 dark:text-blue-400 font-semibold animate-pulse text-[10px]">Syncing...</span>}
                                 </div>
                             </div>
 
                             {/* Automated SOAR Response */}
-                            <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
-                                <div className="p-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center">
-                                    <h3 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-rose-500">
-                                        <Zap size={15} /> Automated SOAR Response
-                                    </h3>
+                            <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-visible">
+                                <div className="p-3.5 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center rounded-t-xl">
+                                    <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-rose-500">
+                                        <Zap size={15} /> Automated Containment Pipeline
+                                    </h4>
                                     <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold uppercase tracking-wider border border-rose-500/20">Active</span>
                                 </div>
-                                <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-visible">
                                     <div>
                                         <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Trigger Condition</label>
                                         <CustomDropdown
@@ -284,7 +328,7 @@ export default function SettingsPage() {
                                         <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Action Applied</label>
                                         <div className="border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0f0f0f] rounded-lg px-3 py-2 flex items-center gap-2">
                                             <Shield size={14} className="text-slate-400 shrink-0" />
-                                            <span className="text-xs font-mono text-slate-700 dark:text-slate-300 truncate">Revoke IP (Security Group)</span>
+                                            <span className="text-xs font-mono text-slate-700 dark:text-slate-300 truncate">Revoke IP (NSG &amp; Netfilter)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -293,38 +337,63 @@ export default function SettingsPage() {
                     )}
 
                     {activeSection === "telemetry" && (
-                        <div className="space-y-5 animate-in fade-in duration-200">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                            <div className="flex flex-col gap-1 mb-4">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Operations &amp; Telemetry Stream</h3>
+                                <p className="text-xs text-slate-500">Live operational metrics, upstream endpoints, and websocket event logs.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Telemetry Truth */}
-                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col gap-3">
-                                    <h3 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
-                                        <Shield size={15} />
-                                        Telemetry Truth
-                                    </h3>
-                                    <div className="grid grid-cols-1 gap-2 text-[11px]">
-                                        <div className="rounded border border-slate-200 dark:border-white/10 p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
-                                            <div className="text-slate-500 uppercase text-[10px] mb-0.5">Primary Source</div>
-                                            <div className="font-mono font-bold text-slate-800 dark:text-slate-200">{operations?.telemetrySource ?? "mixed"}</div>
+                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-3.5 flex flex-col justify-between">
+                                    <div className="border-b border-slate-100 dark:border-white/5 pb-2.5">
+                                        <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-emerald-600 dark:text-emerald-500 mb-0.5">
+                                            <Shield size={15} />
+                                            Telemetry Truth Source
+                                        </h4>
+                                        <p className="text-xs text-slate-500">
+                                            Authoritative metrics backend and stream pipeline routing status.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        <div className="rounded-lg border border-slate-200 dark:border-white/10 p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
+                                            <div className="text-slate-500 uppercase text-[10px] font-semibold mb-0.5">Primary Storage</div>
+                                            <div className="font-mono text-xs font-bold text-slate-900 dark:text-white uppercase flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                {operations?.telemetrySource ?? "mixed"} (ClickHouse &amp; Redis)
+                                            </div>
+                                        </div>
+                                        <div className="rounded-lg border border-slate-200 dark:border-white/10 p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
+                                            <div className="text-slate-500 uppercase text-[10px] font-semibold mb-0.5">Ingress Pipeline</div>
+                                            <div className="font-mono text-xs font-medium text-slate-800 dark:text-slate-200">
+                                                NATS JetStream Bus &amp; WebSocket Gateway
+                                            </div>
+                                        </div>
+                                        <div className="rounded-lg border border-slate-200 dark:border-white/10 p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
+                                            <div className="text-slate-500 uppercase text-[10px] font-semibold mb-0.5">Deduplication Cache</div>
+                                            <div className="font-mono text-xs font-medium text-slate-800 dark:text-slate-200">
+                                                Active (24-Hour Sliding Window)
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Ops Health */}
-                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col overflow-hidden">
-                                    <div className="p-3 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between shrink-0">
-                                        <h3 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col justify-between overflow-hidden">
+                                    <div className="p-3.5 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between shrink-0">
+                                        <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-slate-800 dark:text-slate-200">
                                             <Activity size={15} className="text-blue-500" />
-                                            Ops Health
-                                        </h3>
+                                            Upstream Endpoint Latencies
+                                        </h4>
                                         <span className="text-[10px] font-mono text-slate-500">
-                                            Max: <span className="font-semibold">{Number(operations?.telemetry?.maxLatencyMs ?? 0)}ms</span>
+                                            Max: <span className="font-semibold text-slate-700 dark:text-slate-300">{Number(operations?.telemetry?.maxLatencyMs ?? 0)}ms</span>
                                         </span>
                                     </div>
-                                    <div className="p-3 max-h-48 overflow-y-auto space-y-1.5 terminal-scrollbar">
+                                    <div className="p-3.5 flex-1 flex flex-col justify-between gap-1.5">
                                         {latencyRows.map((row) => (
                                             <div key={row.name} className="flex items-center justify-between text-[11px] rounded bg-slate-50 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 px-2.5 py-1">
-                                                <span className="text-slate-600 dark:text-slate-400">{row.name}</span>
-                                                <span className="font-mono text-slate-900 dark:text-slate-300 font-medium">{row.value}ms</span>
+                                                <span className="text-slate-600 dark:text-slate-400 font-sans">{row.name}</span>
+                                                <span className="font-mono text-slate-900 dark:text-slate-200 font-semibold">{row.value}ms</span>
                                             </div>
                                         ))}
                                     </div>
@@ -335,7 +404,7 @@ export default function SettingsPage() {
                             <div className={isSocketFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-2xl flex flex-col overflow-hidden" : "bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col overflow-hidden min-h-[220px]"}>
                                 {isSocketFullScreen && <div className="fixed inset-0 z-[-1] bg-black/60 backdrop-blur-sm" onClick={() => setIsSocketFullScreen(false)} />}
                                 <div className="p-3 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center shrink-0">
-                                    <h3 className="font-display font-semibold text-[13px] tracking-tight text-slate-800 dark:text-slate-200">Live Socket Telemetry</h3>
+                                    <h4 className="font-display font-semibold text-[13px] tracking-tight text-slate-800 dark:text-slate-200">Live Socket Telemetry</h4>
                                     <div className="flex items-center gap-3">
                                         <div className="flex gap-3 text-[10px] font-mono text-slate-500 mr-2">
                                             <span>Conn: {socketTelemetry.connectCount}</span>

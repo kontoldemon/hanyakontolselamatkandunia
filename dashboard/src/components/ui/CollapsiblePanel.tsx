@@ -79,7 +79,7 @@ export default function CollapsiblePanel({
             <>
                 <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm h-12" />
                 {createPortal(
-                    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm p-4 md:p-12">
+                    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm p-4 md:p-12">
                         <div className="bg-white dark:bg-[#0a0a0a] rounded-xl shadow-2xl h-full w-full flex flex-col border border-white/10 relative overflow-hidden">
                             {content}
                         </div>

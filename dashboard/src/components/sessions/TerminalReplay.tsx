@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Copy, Terminal as TerminalIcon, Check, Maximize2, Minimize2 } from "lucide-react";
+import { Copy, Terminal as TerminalIcon, Check, Maximize2, Minimize2, Search, X } from "lucide-react";
 import { useAgentCommand } from "@/lib/AgentContext";
-import ScrollDownHint from "@/components/ui/ScrollDownHint";
 import { cn } from "@/lib/utils";
 
 type ReplayEntry = {
@@ -51,7 +50,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
     const stickToBottomRef = useRef(true);
     const [copied, setCopied] = useState(false);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [canScrollDown, setCanScrollDown] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     useAgentCommand("replay.fullscreen", useCallback(() => setIsFullScreen((p) => !p), []));
     useAgentCommand("replay.mode", useCallback((v: string) => onModeChange?.(v as "attacker" | "both"), [onModeChange]));
@@ -81,50 +80,70 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
         [entries, mode],
     );
 
+    const filteredEntries = useMemo(() => {
+        if (!searchQuery.trim()) return visibleEntries;
+        const q = searchQuery.toLowerCase();
+        return visibleEntries.filter((item) =>
+            item.text.toLowerCase().includes(q) || (item.timestamp && item.timestamp.toLowerCase().includes(q))
+        );
+    }, [visibleEntries, searchQuery]);
+
     useEffect(() => {
         if (!scrollRef.current) return;
         if (stickToBottomRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [visibleEntries]);
+    }, [filteredEntries]);
 
     function handleScroll() {
         if (!scrollRef.current) return;
         const el = scrollRef.current;
         const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
         stickToBottomRef.current = distanceFromBottom < 24;
-        setCanScrollDown(distanceFromBottom > 32);
     }
 
-    const scrollToBottom = useCallback(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-            stickToBottomRef.current = true;
-            setCanScrollDown(false);
-        }
-    }, []);
-
     function handleCopy() {
-        const text = visibleEntries.map((entry) => formatReplayLine(entry)).join("\n");
+        const text = filteredEntries.map((entry) => formatReplayLine(entry)).join("\n");
         navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     }
 
     return (
-        <div className={isFullScreen ? "fixed inset-4 z-[120] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden font-mono text-xs shadow-2xl flex flex-col" : isSeamless ? "w-full overflow-hidden font-mono text-xs flex flex-col h-full min-h-0 bg-transparent" : "w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-xs shadow-sm flex flex-col h-full min-h-[280px]"}>
+        <div className={isFullScreen ? "fixed inset-4 z-[200] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden font-mono text-xs shadow-2xl flex flex-col" : isSeamless ? "w-full overflow-hidden font-mono text-xs flex flex-col h-full min-h-0 bg-transparent" : "w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-xs shadow-sm flex flex-col h-full min-h-[280px]"}>
             {isFullScreen && <div className="fixed inset-0 z-[-1] bg-black/60 backdrop-blur-sm" onClick={() => setIsFullScreen(false)} />}
-            <div className="bg-slate-50/80 dark:bg-white/[0.02] px-3.5 py-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/5 shrink-0">
+            <div className="bg-slate-50/80 dark:bg-white/[0.02] px-3.5 py-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/5 shrink-0 flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                     <TerminalIcon size={13} className="text-blue-500 shrink-0" />
                     <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
                         Terminal Output
                     </span>
                     <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                        &bull; {visibleEntries.length} {visibleEntries.length === 1 ? "line" : "lines"}
+                        &bull; {searchQuery.trim() ? `${filteredEntries.length}/${visibleEntries.length}` : visibleEntries.length} {visibleEntries.length === 1 ? "line" : "lines"}
                     </span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                    {/* Search filter input */}
+                    <div className="relative flex items-center">
+                        <Search size={11} className="text-slate-400 dark:text-slate-500 absolute left-2 pointer-events-none" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Filter commands..."
+                            className="w-24 sm:w-32 focus:w-44 h-6 pl-5.5 pr-5 py-0.5 text-[10.5px] font-mono rounded-md bg-slate-200/50 dark:bg-white/[0.06] border border-slate-300/40 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all focus:border-blue-500/50"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+                                title="Clear filter"
+                            >
+                                <X size={10} />
+                            </button>
+                        )}
+                    </div>
+
                     <div className="inline-flex items-center p-0.5 rounded-md bg-slate-200/60 dark:bg-white/[0.06] text-[10.5px] font-sans">
                         <button
                             type="button"
@@ -151,7 +170,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                             Attacker
                         </button>
                     </div>
-                    <div className="w-[1px] h-3.5 bg-slate-200 dark:border-white/10" />
+                    <div className="w-[1px] h-3.5 bg-slate-300 dark:bg-white/10" />
                     <button
                         onClick={handleCopy}
                         className="inline-flex h-6 w-6 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10"
@@ -177,35 +196,43 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                     onScroll={handleScroll}
                     className="h-full overflow-y-auto px-3 py-3 text-[11.5px] text-slate-800 dark:text-emerald-400 terminal-scrollbar"
                 >
-                    {visibleEntries.length === 0 && (
+                    {filteredEntries.length === 0 && (
                         <div className="text-slate-400 dark:text-slate-500 text-xs px-2 py-1">
-                            No command replay stored for this session yet.
+                            {searchQuery.trim()
+                                ? `No commands matching "${searchQuery}".`
+                                : "No command replay stored for this session yet."}
                         </div>
                     )}
-                    {visibleEntries.map((entry, i) => {
+                    {filteredEntries.map((entry, i) => {
                         const infoType = getInfoType(entry.text);
                         return (
-                            <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="group flex items-start gap-2.5 mb-1 leading-relaxed font-mono">
-                                <span className="select-none text-[10.5px] font-mono text-slate-400/60 dark:text-slate-600 w-6 text-right shrink-0 pt-[1px] tabular-nums">
+                            <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="group flex items-start gap-2 mb-1 leading-relaxed font-mono hover:bg-slate-50 dark:hover:bg-white/[0.02] -mx-1 px-1 py-0.5 rounded">
+                                <span className="select-none text-[10.5px] font-mono text-slate-400/60 dark:text-slate-600 w-7 text-right shrink-0 pt-[1px] tabular-nums">
                                     {i + 1}
                                 </span>
-                                <div className="flex-1 min-w-0 break-words">
-                                    {infoType ? (
-                                        <>
-                                            <span className={`select-none mr-1.5 font-semibold text-[9.5px] uppercase px-1 py-0.5 rounded border ${infoTypeClass(infoType)}`}>
-                                                {infoType}
-                                            </span>
-                                            <span className="whitespace-pre-wrap">{entry.text.replace(/^\[[A-Z]+\]\s*/i, "")}</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className={`select-none mr-1.5 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`}>
-                                                {entry.role === "honeypot" ? "#" : "$"}
-                                            </span>
-                                            <span className="whitespace-pre-wrap">{entry.text}</span>
-                                        </>
+                                <div className="flex-1 min-w-0 overflow-x-auto terminal-scrollbar flex items-baseline justify-between gap-3">
+                                    <div className="whitespace-pre font-mono shrink-0">
+                                        {infoType ? (
+                                            <>
+                                                <span className={`select-none mr-1.5 font-semibold text-[9.5px] uppercase px-1 py-0.5 rounded border ${infoTypeClass(infoType)}`}>
+                                                    {infoType}
+                                                </span>
+                                                <span>{entry.text.replace(/^\[[A-Z]+\]\s*/i, "")}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className={`select-none mr-1.5 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`}>
+                                                    {entry.role === "honeypot" ? "#" : "$"}
+                                                </span>
+                                                <span>{entry.text}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    {entry.timestamp && (
+                                        <span className="select-none text-[9.5px] font-mono text-slate-400/80 dark:text-slate-500 shrink-0 tabular-nums ml-auto">
+                                            {entry.timestamp}
+                                        </span>
                                     )}
-                                    {entry.timestamp && <span className="ml-2 text-[10px] text-slate-400 dark:text-slate-500">{entry.timestamp}</span>}
                                 </div>
                             </div>
                         );
@@ -214,7 +241,6 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                         <div className="animate-pulse inline-block w-1.5 h-3.5 bg-slate-400 dark:bg-emerald-400 align-middle" />
                     </div>
                 </div>
-                <ScrollDownHint visible={canScrollDown} onScrollDown={scrollToBottom} />
             </div>
         </div>
     );

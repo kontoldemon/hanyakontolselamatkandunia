@@ -57,15 +57,15 @@ export function HeroSection() {
         >
           <Link
             href="/signin"
-            className="inline-flex h-8.5 sm:h-10 items-center justify-center gap-1.5 sm:gap-2 rounded-full bg-blue-600 px-4 sm:px-6 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-95"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-blue-600 px-5 sm:px-6 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-95 box-border"
           >
             <span>Enter War Room</span>
-            <ArrowRight size={13} />
+            <ArrowRight size={14} />
           </Link>
           <button
             type="button"
             onClick={() => scrollToId("how-it-works")}
-            className="inline-flex h-8.5 sm:h-10 items-center justify-center gap-1.5 sm:gap-2 rounded-full border border-border-line/15 bg-surface-card px-4 sm:px-6 text-xs sm:text-sm font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel hover:border-border-line/25 active:scale-95"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-border-line/20 bg-surface-card px-5 sm:px-6 text-xs sm:text-sm font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel hover:border-border-line/30 active:scale-95 box-border"
           >
             <span>How It Works</span>
           </button>

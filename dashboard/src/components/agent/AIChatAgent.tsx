@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Sparkles, Send, X, Loader2, Minimize2, Maximize2 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { useCapturedSessions, useDashboardStats, useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
 import { useIntelStats } from "@/lib/intelStats";
 import { useAgent } from "@/lib/AgentContext";
@@ -221,79 +222,64 @@ export default function AIChatAgent() {
         }
     }
 
-    const gradientStyle = {
-        background: "linear-gradient(135deg, #1d4ed8, #2563eb, #3b82f6, #4f46e5, #0284c7, #1d4ed8)",
-        backgroundSize: "300% 300%",
-        animation: "ai-gradient-pan 12s ease infinite",
-    };
-
     if (!isOpen) {
         return (
-            <>
-                <style>{`
-                    @keyframes ai-gradient-pan {
-                        0% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
-                        100% { background-position: 0% 50%; }
-                    }
-                `}</style>
-                <button
-                    onClick={() => setIsOpen(true)}
-                    style={gradientStyle}
-                    aria-label="Open CloudSentinel Copilot"
-                    className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] w-13 h-13 md:w-14 md:h-14 hover:opacity-95 rounded-full shadow-xl shadow-blue-600/35 flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 border-2 border-white/25 backdrop-blur-sm"
-                >
-                    <Sparkles size={22} className="drop-shadow-sm" />
-                    {hasUnread && (
-                        <span className="absolute top-0.5 right-0.5 w-3 h-3 bg-sky-400 border-2 border-slate-900 rounded-full animate-pulse" />
-                    )}
-                </button>
-            </>
+            <button
+                onClick={() => setIsOpen(true)}
+                aria-label="Open CloudSentinel Copilot"
+                className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white transition-all duration-200 hover:scale-105 active:scale-95 hover:border-blue-400/60 group overflow-hidden"
+                style={{ backdropFilter: "blur(0.8px)", WebkitBackdropFilter: "blur(0.8px)" }}
+            >
+                {/* Clear curved glass specular shine on top half */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-transparent to-transparent pointer-events-none" />
+                <Sparkles size={20} className="text-blue-500 dark:text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                {hasUnread && (
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-blue-500 rounded-full ring-2 ring-white/80 dark:ring-[#0a0a0a]/80 animate-pulse" />
+                )}
+            </button>
         );
     }
 
     return (
         <div
-            className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[100] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"}`}
+            className={cn(
+                "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-white/[0.08] dark:bg-black/[0.25] border border-white/40 dark:border-white/25 shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1px_1.5px_rgba(255,255,255,0.35)] rounded-2xl flex flex-col overflow-hidden transition-all duration-300",
+                isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"
+            )}
+            style={{ backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }}
         >
-            <style>{`
-                @keyframes ai-gradient-pan {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
-                }
-            `}</style>
+            {/* Top specular curved glass shine reflection */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent pointer-events-none rounded-2xl" />
 
             <div
-                style={gradientStyle}
-                className="text-white px-3.5 py-3 flex justify-between items-center shrink-0 cursor-pointer shadow-md"
+                className="relative px-3.5 py-2.5 bg-white/[0.04] dark:bg-white/[0.02] border-b border-white/30 dark:border-white/10 flex justify-between items-center shrink-0 cursor-pointer transition-colors hover:bg-white/[0.08] dark:hover:bg-white/[0.04]"
                 onClick={() => setIsMinimized(!isMinimized)}
             >
                 <div className="flex items-center gap-2.5">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm">
-                        <Sparkles size={16} />
+                    <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/20 border border-blue-400/40 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]">
+                        <Sparkles size={14} className="text-blue-400" />
                     </div>
                     <div className="flex flex-col leading-tight">
                         <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-xs tracking-tight">CloudSentinel Copilot</span>
-                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="font-semibold text-xs tracking-tight text-slate-900 dark:text-white">CloudSentinel Copilot</span>
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         </div>
-                        <span className="text-[10.5px] text-blue-100/80">AI Security Defense</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">AI Security Defense</span>
                     </div>
                     {isExecuting && (
-                        <span className="flex items-center gap-1 text-[10px] bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                        <span className="flex items-center gap-1 text-[10px] font-medium bg-blue-500/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-400/30">
                             <Loader2 size={10} className="animate-spin" />
                             Mitigating
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
                             setIsMinimized(!isMinimized);
                         }}
-                        className="p-1 hover:bg-white/20 rounded-md transition-colors"
+                        className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors"
                         aria-label={isMinimized ? "Maximize copilot" : "Minimize copilot"}
                     >
                         {isMinimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
@@ -303,7 +289,7 @@ export default function AIChatAgent() {
                             e.stopPropagation();
                             setIsOpen(false);
                         }}
-                        className="p-1 hover:bg-white/20 rounded-md transition-colors"
+                        className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors"
                         aria-label="Close copilot"
                     >
                         <X size={13} />
@@ -322,7 +308,7 @@ export default function AIChatAgent() {
                         onDeny={handleActionDeny}
                     />
 
-                    <div className="p-3 bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-white/5 shrink-0">
+                    <div className="relative p-2.5 bg-white/[0.04] dark:bg-white/[0.02] border-t border-white/30 dark:border-white/10 shrink-0">
                         <div className="relative flex items-center">
                             <textarea
                                 rows={1}
@@ -341,13 +327,13 @@ export default function AIChatAgent() {
                                 }}
                                 placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
                                 disabled={isExecuting}
-                                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl pl-4 pr-10 py-2 text-[13px] outline-none focus:ring-1 focus:ring-blue-600 text-slate-900 dark:text-white placeholder:text-slate-500 disabled:opacity-50 resize-none overflow-hidden block"
+                                className="w-full bg-white/[0.05] dark:bg-white/[0.03] border border-white/30 dark:border-white/10 rounded-xl pl-3.5 pr-10 py-2.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left"
                                 style={{ minHeight: "36px" }}
                             />
                             <button
                                 onClick={handleSend}
                                 disabled={!input.trim() || isLoading || isExecuting}
-                                className={`absolute right-1 w-8 h-8 flex items-center justify-center rounded-full text-white transition-colors ${!input.trim() || isLoading || isExecuting ? "bg-slate-400 dark:bg-slate-600" : "bg-blue-600 hover:bg-blue-700"}`}
+                                className="absolute right-1.5 w-7 h-7 flex items-center justify-center rounded-lg text-white transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)] disabled:opacity-30 disabled:bg-slate-400 dark:disabled:bg-slate-700"
                             >
                                 <Send size={12} />
                             </button>

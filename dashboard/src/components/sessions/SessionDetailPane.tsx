@@ -86,40 +86,26 @@ export default function SessionDetailPane({
                     </div>
                 ) : (
                     <>
-                        <div className="px-4 py-3 border-b border-slate-200 dark:border-white/5 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
-                            <div className="flex items-center gap-3 min-w-0">
+                        <div className="px-4 py-2.5 border-b border-slate-200 dark:border-white/5 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
+                            <div className="flex items-center gap-2.5 min-w-0">
                                 <button onClick={onClearSelection} className="md:hidden p-1 -ml-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded shrink-0">
                                     <ArrowLeft size={16} />
                                 </button>
-                                <div className="min-w-0 flex flex-col gap-0.5">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <h2 className="font-mono text-base font-bold text-slate-900 dark:text-white tracking-tight leading-none truncate">
-                                            {selectedView.ip}
-                                        </h2>
-                                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-300/40 dark:border-white/5 font-semibold">
-                                            {selectedView.asn || "ASN N/A"}
-                                        </span>
-                                        {(selectedView.city || selectedView.countryName || selectedView.country) && (
-                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[200px]" title={`${selectedView.city ? `${selectedView.city}, ` : ""}${selectedView.countryName || selectedView.country}`}>
-                                                {selectedView.city ? `${selectedView.city}, ` : ""}{selectedView.countryName || selectedView.country}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 font-mono">
-                                        <span>HASSH: <span className="text-slate-600 dark:text-slate-300">{selectedView.fingerprint ? `${selectedView.fingerprint.slice(0, 12)}...` : "N/A"}</span></span>
-                                        <span>&bull;</span>
-                                        <span>Seen {formatSeenTime(selectedView.lastSeenEpochMs ?? selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
-                                    </div>
-                                </div>
+                                <h2 className="font-mono text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-none truncate">
+                                    {selectedView.ip}
+                                </h2>
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-white/10 shrink-0">
+                                    Port 22/TCP
+                                </span>
                             </div>
                             <button
                                 onClick={() => onRequestBlockIp(selectedView.ip)}
                                 disabled={blockingIp === selectedView.ip}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white disabled:opacity-50 transition-colors shrink-0"
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white disabled:opacity-50 transition-colors shrink-0"
                                 title="Block IP at sensor firewall"
                                 aria-label="Block IP"
                             >
-                                <Ban size={15} />
+                                <Ban size={14} />
                             </button>
                         </div>
 
@@ -158,23 +144,32 @@ export default function SessionDetailPane({
                                         title="MITRE ATT&CK Techniques"
                                         aria-label="MITRE ATT&CK Techniques"
                                         className={cn(
-                                            "flex items-center justify-center gap-1.5 py-2 px-2 rounded-md transition-all relative",
+                                            "flex items-center justify-center py-2 px-2 rounded-md transition-all",
                                             activeTab === "mitre"
                                                 ? "bg-white dark:bg-white/10 text-red-500 shadow-sm"
                                                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                                         )}
                                     >
-                                        <ShieldAlert size={16} />
-                                        {selectedView.mitreTechniques && selectedView.mitreTechniques.length > 0 && (
-                                            <span className={cn(
-                                                "text-[9px] font-mono px-1 py-0.2 rounded-full leading-none font-bold",
-                                                activeTab === "mitre"
-                                                    ? "bg-red-500/20 text-red-500 dark:text-red-400"
-                                                    : "bg-slate-300/70 dark:bg-white/10 text-slate-500"
-                                            )}>
-                                                {selectedView.mitreTechniques.length}
-                                            </span>
-                                        )}
+                                        <div className="relative inline-flex items-center justify-center">
+                                            <ShieldAlert size={16} />
+                                            {selectedView.mitreTechniques && selectedView.mitreTechniques.length > 0 && (
+                                                <span className={cn(
+                                                    "absolute -top-1.5 -right-2.5 h-3.5 min-w-4 px-1 rounded-full font-mono font-bold border shadow-xs flex items-center justify-center leading-none text-center",
+                                                    selectedView.mitreTechniques.length > 99
+                                                        ? "text-[6px]"
+                                                        : selectedView.mitreTechniques.length > 9
+                                                            ? "text-[7.5px]"
+                                                            : "text-[8.5px]",
+                                                    activeTab === "mitre"
+                                                        ? "bg-red-500 text-white border-red-600"
+                                                        : "bg-slate-100 dark:bg-[#14161f] text-red-600 dark:text-red-400 border-red-500/40"
+                                                )}>
+                                                    <span className="translate-y-[0.5px]">
+                                                        {selectedView.mitreTechniques.length}
+                                                    </span>
+                                                </span>
+                                            )}
+                                        </div>
                                     </button>
 
                                     <button
@@ -183,14 +178,20 @@ export default function SessionDetailPane({
                                         title="SOAR Response & Defense"
                                         aria-label="SOAR Response & Defense"
                                         className={cn(
-                                            "flex items-center justify-center gap-1.5 py-2 px-2 rounded-md transition-all",
+                                            "flex items-center justify-center py-2 px-2 rounded-md transition-all",
                                             activeTab === "soar"
                                                 ? "bg-white dark:bg-white/10 text-blue-500 shadow-sm"
                                                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
                                         )}
                                     >
-                                        <Shield size={16} />
-                                        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", selectedBlocked ? "bg-red-500" : "bg-emerald-500")} />
+                                        <div className="relative inline-flex items-center justify-center">
+                                            <Shield size={16} />
+                                            <span className={cn(
+                                                "absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ring-2",
+                                                activeTab === "soar" ? "ring-white dark:ring-[#14171f]" : "ring-slate-200 dark:ring-[#0c0d10]",
+                                                selectedBlocked ? "bg-rose-500" : "bg-emerald-500"
+                                            )} />
+                                        </div>
                                     </button>
                                 </div>
 
@@ -288,24 +289,29 @@ export default function SessionDetailPane({
                                             </div>
 
                                             {/* Session Activity Metrics */}
-                                            <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 text-xs font-mono">
-                                                <span className="text-[10px] text-slate-400 block mb-1.5 font-sans">Session Metrics</span>
-                                                <div className="flex flex-col gap-1 text-[11px] text-slate-700 dark:text-slate-300">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Duration</span>
-                                                        <span className="font-medium">{selectedView.duration || "N/A"}</span>
+                                            <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-white/5">
+                                                    <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                                        Session Metrics
+                                                    </span>
+                                                    <span className="text-[10px] font-mono text-slate-400">Telemetry</span>
+                                                </div>
+                                                <div className="flex flex-col gap-1.5 text-[11px]">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-sans text-slate-500 dark:text-slate-400">Duration</span>
+                                                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{selectedView.duration || "N/A"}</span>
                                                     </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Commands Run</span>
-                                                        <span className="font-medium">{selectedView.input?.length ?? 0}</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-sans text-slate-500 dark:text-slate-400">Commands Run</span>
+                                                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{selectedView.input?.length ?? 0}</span>
                                                     </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">First Seen</span>
-                                                        <span>{formatSeenTime(selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-sans text-slate-500 dark:text-slate-400">First Seen</span>
+                                                        <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatSeenTime(selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
                                                     </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Last Active</span>
-                                                        <span>{formatSeenTime(selectedView.lastSeenEpochMs ?? selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-sans text-slate-500 dark:text-slate-400">Last Active</span>
+                                                        <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatSeenTime(selectedView.lastSeenEpochMs ?? selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -316,7 +322,7 @@ export default function SessionDetailPane({
                                                     Deception Sensor Profile
                                                 </span>
                                                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                                    Captured interactive SSH session on Cowrie honeypot node with full keystroke auditing.
+                                                    Captured interactive SSH session on CloudSentinel honeypot node with full keystroke auditing.
                                                 </p>
                                             </div>
                                         </div>
@@ -435,12 +441,11 @@ export default function SessionDetailPane({
                                 </div>
 
                                 {/* Pinned Status Footer Anchoring the Bottom */}
-                                <div className="mt-auto pt-2.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0">
+                                <div className="mt-auto pt-2.5 border-t border-slate-200/60 dark:border-white/5 flex items-center text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0">
                                     <span className="flex items-center gap-1.5">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        Cowrie Sensor
+                                        CloudSentinel Sensor
                                     </span>
-                                    <span>Port 22/TCP</span>
                                 </div>
                             </div>
                         </div>
@@ -449,7 +454,7 @@ export default function SessionDetailPane({
             </div>
 
             {confirmBlockIp && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                         <h3 className="text-lg font-bold mb-2">Block IP</h3>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Are you sure you want to block <span className="font-mono bg-slate-100 dark:bg-white/10 px-1 rounded">{confirmBlockIp}</span> at the sensor firewall?</p>

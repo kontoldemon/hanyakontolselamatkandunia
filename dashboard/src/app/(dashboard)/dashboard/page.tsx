@@ -19,23 +19,43 @@ export default function Dashboard() {
 
   const uniqueIpsCount = useMemo(() => new Set(combinedLogs.map((l) => l.ip)).size, [combinedLogs]);
 
+  const topCountry = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const log of combinedLogs) {
+      const c = log.countryName || log.country;
+      if (c && c !== "Unknown") {
+        counts[c] = (counts[c] || 0) + 1;
+      }
+    }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return sorted.length > 0 ? { country: sorted[0][0], count: sorted[0][1] } : null;
+  }, [combinedLogs]);
+
   return (
     <div className="flex flex-col gap-4 lg:h-full">
       <div className="flex items-center justify-between shrink-0">
         <div className="flex bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-lg shadow-sm text-xs overflow-x-auto w-full sm:w-auto scrollbar-hide">
-          <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
+          <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5 shrink-0">
             <span className="text-slate-500 text-[11px] mr-2">Connections</span>
             <span className="font-mono font-semibold text-slate-900 dark:text-white">{displayConnections.toLocaleString()}</span>
           </div>
-          <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
+          <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5 shrink-0">
             <span className="text-slate-500 text-[11px] mr-2">MTTB</span>
             <span className="font-mono font-semibold text-slate-900 dark:text-white">{stats.mttb}</span>
           </div>
-          <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5">
+          <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5 shrink-0">
             <span className="text-slate-500 text-[11px] mr-2">MITRE TTPs</span>
             <span className="font-mono font-semibold text-slate-900 dark:text-white">{mappedMitreCount}</span>
           </div>
-          <div className="px-3 py-1.5">
+          {topCountry && (
+            <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5 flex items-center shrink-0">
+              <span className="text-slate-500 text-[11px] mr-2">Top Origin</span>
+              <span className="font-mono font-semibold text-rose-600 dark:text-rose-400">
+                {topCountry.country} ({topCountry.count})
+              </span>
+            </div>
+          )}
+          <div className="px-3 py-1.5 shrink-0">
             <span className="text-slate-500 text-[11px] mr-2">Uptime</span>
             <span className="font-mono font-semibold text-slate-900 dark:text-white">{stats.systemUptime}</span>
           </div>

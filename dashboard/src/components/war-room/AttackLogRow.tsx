@@ -121,10 +121,10 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                     <div className="flex items-center gap-2 shrink-0">
                         {log.blocked && (
                             <span
-                                className="inline-flex items-center gap-0.5 text-[10px] font-mono font-medium text-rose-600 dark:text-rose-400"
+                                className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-rose-600 dark:text-rose-400"
                                 title={log.lastMttb ? `Blocked in ${log.lastMttb}` : "Blocked"}
                             >
-                                <Shield size={10} />
+                                <Shield size={10} className="shrink-0 -translate-y-[1px]" />
                                 <span>{log.lastMttb || "Blocked"}</span>
                             </span>
                         )}
@@ -149,7 +149,7 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                 {/* Row 2: Clean Inline Metadata Strip (no pill clutter) */}
                 <div className="flex items-center justify-between gap-2 text-[10.5px] text-slate-500 dark:text-slate-400">
                     <div className="flex items-center gap-1.5 min-w-0 truncate font-mono">
-                        <span>{log.eventCount} {log.eventCount === 1 ? "evt" : "evts"}</span>
+                        <span>{log.eventCount} {log.eventCount === 1 ? "event" : "events"}</span>
                         {log.latestMitreId && (
                             <>
                                 <span className="text-slate-300 dark:text-slate-600">&middot;</span>

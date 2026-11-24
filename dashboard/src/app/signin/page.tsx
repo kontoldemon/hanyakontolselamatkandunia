@@ -173,7 +173,7 @@ export default function SignInPage() {
                 ? "Sign in to access the War Room"
                 : step === "otp"
                   ? "Enter two-factor security code"
-                  : "Access Granted"}
+                  : "Identity verified"}
             </p>
           </div>
 
@@ -291,9 +291,9 @@ export default function SignInPage() {
 
           {/* SUCCESS STEP */}
           {step === "success" && (
-            <div className="flex flex-col items-center justify-center py-4 text-center">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
-                <CheckCircle2 size={24} />
+            <div className="flex flex-col items-center justify-center py-3 text-center animate-in fade-in zoom-in-95 duration-200">
+              <div className="mb-3.5 -mt-1 flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 shadow-sm shadow-emerald-500/10">
+                <CheckCircle2 size={24} className="-translate-y-[1.5px]" />
               </div>
               <h2 className="font-display text-base font-bold text-slate-900 dark:text-white">
                 Access Granted

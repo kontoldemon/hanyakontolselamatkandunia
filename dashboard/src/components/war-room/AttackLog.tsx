@@ -156,13 +156,13 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
         <div className="h-full flex flex-col min-h-0 overflow-hidden">
             <div className="sticky top-0 z-20 mb-2 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur border border-slate-200 dark:border-white/10 rounded-lg p-1.5 flex items-center justify-between gap-2 shrink-0">
                 <div className="relative flex-1">
-                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
                         placeholder="Search IP, HASSH..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded py-1 pl-7 pr-6 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        className="h-8 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg py-1 pl-7 pr-6 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
                     />
                     {searchQuery && (
                         <button
@@ -220,7 +220,7 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
             </div>
 
             {confirmBlockIp && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                         <h3 className="text-lg font-bold mb-2">Block IP</h3>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Are you sure you want to block <span className="font-mono bg-slate-100 dark:bg-white/10 px-1 rounded">{confirmBlockIp}</span> at the sensor firewall?</p>

@@ -64,30 +64,30 @@ export default function AgentMessageList({
     onDeny,
 }: AgentMessageListProps) {
     return (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-[#050505]">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-transparent terminal-scrollbar">
             {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                     <div className="max-w-[90%] flex flex-col gap-2">
                         <div
-                            className={`whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] leading-relaxed shadow-sm ${
+                            className={`whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed text-left ${
                                 msg.role === "user"
-                                    ? "bg-blue-600 text-white rounded-br-none"
-                                    : "bg-white dark:bg-[#151515] border border-slate-200 dark:border-white/5 text-slate-800 dark:text-slate-200 rounded-bl-none"
+                                    ? "bg-blue-600/60 dark:bg-blue-600/50 text-white rounded-br-xs border border-blue-400/40 shadow-[0_4px_16px_rgba(37,99,235,0.25),inset_0_1px_1px_rgba(255,255,255,0.3)]"
+                                    : "bg-white/10 dark:bg-white/[0.04] border border-white/20 dark:border-white/10 text-slate-800 dark:text-slate-100 rounded-bl-xs shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]"
                             }`}
                         >
                             {formatAiText(msg.content)}
                         </div>
 
                         {msg.actions && msg.actions.length > 0 && (
-                            <div className="space-y-2 mt-2">
+                            <div className="space-y-2 mt-1">
                                 {msg.actions.map((action, ai) => (
                                     <div
                                         key={ai}
-                                        className="bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl p-3 shadow-sm flex items-start gap-2"
+                                        className="bg-white/10 dark:bg-white/[0.03] border border-white/20 dark:border-white/10 rounded-xl p-3 shadow-xs flex items-start gap-2.5 text-left"
                                     >
                                         <Zap size={14} className="text-amber-500 shrink-0 mt-0.5" />
                                         <div>
-                                            <p className="text-[12px] font-semibold text-slate-800 dark:text-slate-200">
+                                            <p className="text-[11.5px] font-semibold text-slate-800 dark:text-slate-200">
                                                 {action.label}
                                             </p>
                                             <p className="text-[10px] text-slate-500 dark:text-slate-400">
@@ -98,11 +98,11 @@ export default function AgentMessageList({
                                 ))}
 
                                 {msg.actionState === "pending" && (
-                                    <div className="flex items-center gap-2 mt-3 pl-1">
+                                    <div className="flex items-center gap-2 mt-2 pl-1">
                                         <button
                                             onClick={() => onApprove(i)}
                                             disabled={isExecuting}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-500 transition-all disabled:opacity-50 shadow-[0_0_10px_rgba(37,99,235,0.3)]"
                                         >
                                             <ShieldCheck size={12} />
                                             {msg.actions.length > 1 ? "Allow All" : "Allow"}
@@ -145,8 +145,8 @@ export default function AgentMessageList({
             ))}
             {isLoading && (
                 <div className="flex justify-start">
-                    <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-white/5 text-slate-800 dark:text-slate-200 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
-                        <Loader2 size={14} className="animate-spin text-blue-500" />
+                    <div className="bg-white/40 dark:bg-white/[0.04] border border-white/40 dark:border-white/10 text-slate-800 dark:text-slate-200 rounded-2xl rounded-bl-xs px-3.5 py-2.5 shadow-xs backdrop-blur-xl">
+                        <Loader2 size={13} className="animate-spin text-blue-500" />
                     </div>
                 </div>
             )}

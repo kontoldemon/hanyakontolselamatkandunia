@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { ScrollProgressBar, ScrollToTopButton } from "./LandingPrimitives";
 import LandingNavbar from "./LandingNavbar";
 import CapabilitiesSection from "./CapabilitiesSection";
+import ComparisonSection from "./ComparisonSection";
 import {
   CtaSection,
   FaqSection,
@@ -65,6 +66,7 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <CapabilitiesSection />
+        <ComparisonSection />
         <HowItWorksSection />
         <FaqSection
           openFaqIndex={openFaqIndex}
