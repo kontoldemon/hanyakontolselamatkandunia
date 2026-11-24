@@ -105,7 +105,7 @@ async def test_begin_auth_branches(monkeypatch) -> None:
     server = _server()
     server._accepted = True
     server.conn = FakeConn("SSH-2.0-client")  # type: ignore[assignment]
-    monkeypatch.setattr(server_module, "extract_hassh", lambda _conn: ("h" * 32, "algs"))
+    monkeypatch.setattr("cloudsentinel.sensor.ssh.extract_hassh", lambda _conn: ("h" * 32, "algs"))
     monkeypatch.setattr(
         server.hassh_dna,
         "lookup",

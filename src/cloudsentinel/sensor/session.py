@@ -16,7 +16,7 @@ from ..vfs_agent import VFSAgent, VFSContext
 from .tty import detect_fuzz
 
 if TYPE_CHECKING:
-    from ..server import CloudSentinelSSHServer
+    from .ssh import CloudSentinelSSHServer
 
 logger = structlog.get_logger("cloudsentinel.sensor.session")
 

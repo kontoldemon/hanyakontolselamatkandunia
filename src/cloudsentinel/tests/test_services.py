@@ -209,7 +209,7 @@ def test_admin_clickhouse_disabled_loaders() -> None:
 
 
 def test_server_session_methods(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("cloudsentinel.server.geo_enrich", lambda _ip: {})
+    monkeypatch.setattr("cloudsentinel.sensor.ssh.geo_enrich", lambda _ip: {})
     settings = SimpleNamespace(
         fingerprinting=SimpleNamespace(enable_hassh=False, enable_ja4s=False),
         honeypot=SimpleNamespace(server_version="SSH-2.0-test", hostname="unit-host"),

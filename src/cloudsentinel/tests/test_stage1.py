@@ -1071,11 +1071,12 @@ def test_llm_budget_defaults() -> None:
 
 
 def test_server_emits_connect_event_and_has_cli_args() -> None:
-    source = Path("src/cloudsentinel/server.py").read_text(encoding="utf-8")
-    assert "cloudsentinel.session.connect" in source
-    assert 'parser.add_argument("--host")' in source
-    assert 'parser.add_argument("--port", type=int)' in source
-    assert "run_until_complete" not in source
+    sensor_source = Path("src/cloudsentinel/sensor/ssh.py").read_text(encoding="utf-8")
+    entrypoint_source = Path("src/cloudsentinel/server.py").read_text(encoding="utf-8")
+    assert "cloudsentinel.session.connect" in sensor_source
+    assert 'parser.add_argument("--host")' in entrypoint_source
+    assert 'parser.add_argument("--port", type=int)' in entrypoint_source
+    assert "run_until_complete" not in entrypoint_source
 
 
 def test_deploy_uses_module_entrypoint() -> None:
