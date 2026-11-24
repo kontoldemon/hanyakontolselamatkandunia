@@ -157,18 +157,54 @@ class Find(Command):
 @register("/usr/bin/grep")
 class Grep(Command):
     def call(self):
-        if not self.args:
-            return
         stdin = getattr(self.protocol, "stdin", "")
         if not stdin:
             return
+        ignore_case = False
+        invert = False
+        count = False
+        fixed = False
+        patterns: list[str] = []
+        end_options = False
+        for arg in self.args:
+            if not end_options and arg == "--":
+                end_options = True
+                continue
+            if not end_options and arg.startswith("--"):
+                continue
+            if not end_options and arg.startswith("-") and len(arg) > 1:
+                for flag in arg[1:]:
+                    if flag == "i":
+                        ignore_case = True
+                    elif flag == "v":
+                        invert = True
+                    elif flag == "c":
+                        count = True
+                    elif flag == "F":
+                        fixed = True
+                    elif flag == "E":
+                        continue
+                continue
+            patterns.append(arg)
+        if not patterns:
+            return
+        expression = "|".join(re.escape(pattern) for pattern in patterns) if fixed else "|".join(patterns)
         try:
-            regex = re.compile(self.args[0])
+            regex = re.compile(expression, re.IGNORECASE if ignore_case else 0)
         except re.error:
             return
+        matches = 0
         for line in stdin.splitlines():
-            if regex.search(line):
+            hit = bool(regex.search(line))
+            if invert:
+                hit = not hit
+            if not hit:
+                continue
+            matches += 1
+            if not count:
                 self.write(line + "\n")
+        if count:
+            self.write(str(matches) + "\n")
 @register("/usr/bin/cut")
 class Cut(Command):
     def call(self):

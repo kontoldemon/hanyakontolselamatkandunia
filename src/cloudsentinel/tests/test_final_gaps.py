@@ -94,6 +94,8 @@ async def test_session_pipe_filters_output() -> None:
     assert "root" in output
     output = await session._execute("cat /etc/passwd | grep zzz_not_present")
     assert output == ""
+    output = await session._execute("cat /etc/passwd | grep -i ROOT")
+    assert "root" in output
 
 
 @pytest.mark.asyncio
@@ -102,6 +104,39 @@ async def test_session_pipe_cut_fields() -> None:
     output = await session._execute("cat /etc/passwd | cut -d: -f1")
     assert "root" in output
     assert ":" not in output
+
+
+def test_grep_pipe_flags_and_patterns() -> None:
+    from cloudsentinel.commands.base import Grep
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        (["-i", "ROOT"], "root:x\nbin:y\n", "root:x\n"),
+        (["-v", "root"], "root:x\nbin:y\n", "bin:y\n"),
+        (["-c", "root"], "root\nroot\nbin\n", "2\n"),
+        (["-iv", "ROOT"], "root\nBIN\n", "BIN\n"),
+        (["-F", "a.b"], "a.b\naXb\n", "a.b\n"),
+        (["root", "bin"], "root\nbin\nother\n", "root\nbin\n"),
+        (["-c", "-v", "root"], "root\nbin\n", "1\n"),
+        (["-n", "root"], "root\n", "root\n"),
+        (["--color=always", "root"], "root\n", "root\n"),
+        (["-E", "ro+t"], "root\n", "root\n"),
+        (["--", "-i"], "x-i\n", "x-i\n"),
+        (["["], "root\n", ""),
+        (["-i"], "root\n", ""),
+        (["root"], "", ""),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Grep(proto, *args).start()
+        assert "".join(proto.out) == expected
 
 
 def test_cut_pipe_fields_and_ranges() -> None:
