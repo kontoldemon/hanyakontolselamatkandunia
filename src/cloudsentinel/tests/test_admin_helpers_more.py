@@ -66,7 +66,7 @@ def test_admin_helpers(monkeypatch) -> None:
     assert admin_module._is_allowlisted("10.1.2.3", ["bad", "10.0.0.0/8"]) is True
     assert admin_module._display_country({"country_code": "US"}) == "US"
     assert admin_module._display_country({"country_code": "XX", "country_name": "Unknown"}) == "Unknown"
-    monkeypatch.setattr(admin_module, "geo_enrich", lambda _ip: {"country_code": "XX", "country_name": "Unknown"})
+    monkeypatch.setattr("cloudsentinel.api.queries.geo_enrich", lambda _ip: {"country_code": "XX", "country_name": "Unknown"})
     enriched = admin_module._enrichment_for_ip("8.8.8.8", "US", "United States")
     assert enriched["country_code"] == "US"
     assert enriched["country_name"] == "United States"
