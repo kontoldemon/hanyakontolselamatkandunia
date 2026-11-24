@@ -24,7 +24,7 @@ from typing import Any
 import asyncssh
 import structlog
 
-from .admin_api import create_admin_app
+from .api.bootstrap import start_admin_api
 from .anomaly import CommandAnomalyDetector
 from .auth import get_auth
 from .commands import CommandAdapter
@@ -43,6 +43,7 @@ from .sensor.fingerprint import (
     extract_ja4s,
     load_or_create_host_key,
 )
+from .sensor.http import start_http_honeypot
 from .sensor.limits import ConnectionLimiter
 from .sensor.tty import TTYLogger, detect_fuzz
 from .soar import SOAREngine
@@ -754,136 +755,6 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             if token_path in normalized:
                 return token_path
         return None
-
-
-# ── HTTP Honeypot ────────────────────────────────────────────────────
-
-
-async def start_http_honeypot(
-    settings: Settings,
-    pipeline: EventPipeline,
-    soar: SOAREngine,
-) -> None:
-    try:
-        import granian as _granian_http
-        from granian.constants import Interfaces
-        from granian.constants import Loops as GranianLoops
-        _USE_GRANIAN_HTTP = True
-    except ImportError:
-        import uvicorn as _uvicorn_http
-        _USE_GRANIAN_HTTP = False
-
-    from .http_server import create_http_honeypot
-
-    app = create_http_honeypot(pipeline, soar)
-    http_port = getattr(settings.honeypot, "http_port", 8080)
-
-    tls_kwargs: dict[str, Any] = {}
-    if settings.honeypot.tls_enabled:
-        cert = settings.honeypot.tls_cert_file
-        key = settings.honeypot.tls_key_file
-        if Path(cert).exists() and Path(key).exists():
-            tls_kwargs = {"ssl_certfile": cert, "ssl_keyfile": key}
-            logger.info("TLS enabled for HTTP honeypot: %s", cert)
-        else:
-            logger.warning("TLS cert/key not found, falling back to plain HTTP")
-
-    proto = "https" if tls_kwargs else "http"
-    if _USE_GRANIAN_HTTP:
-        logger.info("HTTP honeypot (granian) listening on %s://%s:%s", proto, settings.honeypot.listen_host, http_port)
-        await _granian_http.serve(
-            app,
-            host=settings.honeypot.listen_host,
-            port=http_port,
-            interface=Interfaces.ASGI,
-            loop=GranianLoops.uvloop,
-            ssl_certfile=tls_kwargs.get("ssl_certfile") if tls_kwargs else None,
-            ssl_keyfile=tls_kwargs.get("ssl_keyfile") if tls_kwargs else None,
-        )
-    else:
-        config = _uvicorn_http.Config(
-            app,
-            host=settings.honeypot.listen_host,
-            port=http_port,
-            log_level="warning",
-            loop="asyncio",
-            **tls_kwargs,
-        )
-        server = _uvicorn_http.Server(config)
-        logger.info("HTTP honeypot (uvicorn) listening on %s://%s:%s", proto, settings.honeypot.listen_host, http_port)
-        await server.serve()
-
-
-# ── Admin API ────────────────────────────────────────────────────────
-
-
-async def start_admin_api(
-    settings: Settings,
-    pipeline: EventPipeline,
-    soar: Any = None,
-    cert_path: str = "",
-    key_path: str = "",
-) -> None:
-    admin_server = os.getenv("ADMIN_SERVER", "uvicorn").lower()
-    if admin_server == "granian":
-        try:
-            import granian
-            from granian.constants import Interfaces, Loops
-
-            _USE_GRANIAN = True
-        except ImportError:
-            import uvicorn
-
-            logger.warning("Granian requested but unavailable, falling back to uvicorn")
-            _USE_GRANIAN = False
-    else:
-        import uvicorn
-
-        _USE_GRANIAN = False
-
-    app = create_admin_app(settings, pipeline, soar)
-
-    tls_kwargs: dict[str, Any] = {}
-    if cert_path and key_path and Path(cert_path).exists() and Path(key_path).exists():
-        tls_kwargs = {"ssl_certfile": cert_path, "ssl_keyfile": key_path}
-        logger.info("TLS enabled for admin API: %s", cert_path)
-    elif settings.tls.enabled:
-        # Auto-generate TLS cert if not provided
-        from .tls import generate_self_signed_cert
-        gen_cert, gen_key = generate_self_signed_cert(
-            hostname=settings.honeypot.hostname,
-            output_dir="var/lib/cloudsentinel/tls",
-        )
-        if gen_cert and gen_key:
-            tls_kwargs = {"ssl_certfile": gen_cert, "ssl_keyfile": gen_key}
-            logger.info("TLS auto-generated for admin API: %s", gen_cert)
-    else:
-        logger.warning("Admin API running without TLS - JWT tokens sent in plaintext")
-
-    proto = "https" if tls_kwargs else "http"
-    if _USE_GRANIAN:
-        logger.info("Admin API (granian) listening on %s://%s:%s", proto, settings.admin.host, settings.admin.port)
-        await granian.serve(
-            app,
-            host=settings.admin.host,
-            port=settings.admin.port,
-            interface=Interfaces.ASGI,
-            loop=Loops.uvloop,
-            ssl_certfile=tls_kwargs.get("ssl_certfile"),
-            ssl_keyfile=tls_kwargs.get("ssl_keyfile"),
-        )
-    else:
-        config = uvicorn.Config(
-            app,
-            host=settings.admin.host,
-            port=settings.admin.port,
-            log_level="info",
-            loop="asyncio",
-            **tls_kwargs,
-        )
-        server = uvicorn.Server(config)
-        logger.info("Admin API (uvicorn) listening on %s://%s:%s", proto, settings.admin.host, settings.admin.port)
-        await server.serve()
 
 
 # ── Main ─────────────────────────────────────────────────────────────
