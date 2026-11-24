@@ -162,9 +162,9 @@ export function ScrollToTopButton() {
       type="button"
       onClick={() => scrollToId("top")}
       aria-label="Scroll to top"
-      className="fixed right-5 bottom-5 z-40 flex h-8 w-8 items-center justify-center rounded-full border border-border-line/10 bg-surface-card/90 text-text-muted shadow-md backdrop-blur-md transition-all hover:border-border-line/25 hover:text-text-primary active:scale-95"
+      className="fixed right-4 md:right-6 bottom-5 md:bottom-6 z-40 flex h-12 w-12 md:h-13 md:w-13 items-center justify-center rounded-full border border-border-line/20 bg-surface-card/85 text-text-muted shadow-lg backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 hover:border-blue-500/50 hover:text-blue-600 dark:hover:text-blue-400 group"
     >
-      <ArrowUp size={15} />
+      <ArrowUp size={20} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
     </button>
   );
 }

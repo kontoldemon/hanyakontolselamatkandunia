@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Zap,
   Sparkles,
@@ -18,12 +19,12 @@ const COMPARISON_ROWS = [
     capability: "Incident Mitigation (SOAR)",
     cowrie: {
       badge: "Passive Logging",
-      detail: "Alerts only; external Fail2ban needed",
+      detail: "Alerts only, requires external Fail2ban",
       negative: true,
     },
     cloudsentinel: {
       badge: "Autonomous SOAR",
-      detail: "Automated iptables & NSG drop rules (< 2ms)",
+      detail: "Automated iptables and NSG drop rules (< 2ms)",
       highlight: true,
     },
   },
@@ -32,12 +33,12 @@ const COMPARISON_ROWS = [
     capability: "Threat Intelligence & TTPs",
     cowrie: {
       badge: "JSON Event Logs",
-      detail: "Flat cowrie.json; manual SIEM triage",
+      detail: "Flat cowrie.json with manual SIEM triage",
       negative: true,
     },
     cloudsentinel: {
       badge: "Built-in MITRE & AI",
-      detail: "17 automated TTP tags & AI Copilot",
+      detail: "17 automated TTP tags and AI Copilot",
       highlight: true,
     },
   },
@@ -51,7 +52,7 @@ const COMPARISON_ROWS = [
     },
     cloudsentinel: {
       badge: "In-Memory VFS",
-      detail: "Ephemeral RAM sandbox; zero disk footprint",
+      detail: "Ephemeral RAM sandbox with zero disk footprint",
       highlight: true,
     },
   },
@@ -65,7 +66,7 @@ const COMPARISON_ROWS = [
     },
     cloudsentinel: {
       badge: "Integrated War Room",
-      detail: "Live 3D threat globe & web keystroke DVR",
+      detail: "Live 3D threat globe and web keystroke DVR",
       highlight: true,
     },
   },
@@ -79,7 +80,7 @@ const COMPARISON_ROWS = [
     },
     cloudsentinel: {
       badge: "HASSH & Behavioral ML",
-      detail: "Cipher profiling + Isolation Forest model",
+      detail: "Cipher profiling plus Isolation Forest model",
       highlight: true,
     },
   },
@@ -91,9 +92,35 @@ export default function ComparisonSection() {
       id="comparison"
       className="relative flex flex-col justify-center scroll-mt-14 px-4 py-8 sm:py-10 md:min-h-dvh md:py-6 md:px-6 border-t border-border-line/[0.08] bg-surface-panel/10 overflow-hidden"
     >
-      {/* Subtle ambient gradient */}
+      {/* Background decorative logos & ambient lighting */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 select-none overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[22rem] w-[36rem] rounded-full bg-blue-500/[0.04] blur-[120px] dark:bg-blue-600/[0.06]" />
+        {/* Subtle ambient gradients */}
+        <div className="absolute top-1/4 -left-20 h-[28rem] w-[28rem] rounded-full bg-amber-500/[0.04] blur-[140px] dark:bg-amber-600/[0.06]" />
+        <div className="absolute bottom-1/4 -right-20 h-[28rem] w-[28rem] rounded-full bg-blue-500/[0.05] blur-[140px] dark:bg-blue-600/[0.08]" />
+
+        {/* Top-Left: Cowrie Shell Watermark Logo */}
+        <div className="absolute top-8 -left-6 sm:top-14 sm:left-2 lg:left-8 w-52 h-52 sm:w-72 sm:h-72 lg:w-80 lg:h-80 opacity-[0.16] dark:opacity-[0.20] dark:invert rotate-[-12deg] transition-transform duration-700">
+          <Image
+            src="/cowrie-logo.png"
+            alt=""
+            width={320}
+            height={320}
+            className="w-full h-full object-contain"
+            priority={false}
+          />
+        </div>
+
+        {/* Bottom-Right: CloudSentinel Shield Watermark Logo */}
+        <div className="absolute bottom-6 -right-6 sm:bottom-10 sm:right-2 lg:right-8 w-52 h-52 sm:w-72 sm:h-72 lg:w-80 lg:h-80 opacity-[0.14] dark:opacity-[0.18] rotate-[8deg] transition-transform duration-700">
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={340}
+            height={340}
+            className="w-full h-full object-contain"
+            priority={false}
+          />
+        </div>
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-4xl">
@@ -119,12 +146,24 @@ export default function ComparisonSection() {
                 Capability
               </div>
               <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5 text-text-muted">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500/60" />
+                <Image
+                  src="/cowrie-logo.png"
+                  alt=""
+                  width={14}
+                  height={14}
+                  className="w-3.5 h-3.5 object-contain dark:invert shrink-0 opacity-80"
+                />
                 <span className="font-semibold text-slate-700 dark:text-slate-300 text-[11px]">Cowrie Honeypot</span>
                 <span className="text-[9.5px] text-text-muted/70">(Passive)</span>
               </div>
               <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <Image
+                  src="/logo.svg"
+                  alt=""
+                  width={14}
+                  height={14}
+                  className="w-3.5 h-3.5 object-contain shrink-0"
+                />
                 <span className="font-bold text-blue-600 dark:text-blue-400 text-[11px]">CloudSentinel</span>
                 <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-semibold">(SOAR)</span>
               </div>
@@ -186,7 +225,7 @@ export default function ComparisonSection() {
             <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border-line/[0.10] bg-surface-panel/30 border-t border-border-line/[0.10] text-[11px] font-mono">
               <div className="px-3.5 py-2.5 flex items-center justify-center gap-1.5 text-center">
                 <span className="text-text-muted">MTTB:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">&lt; 2ms</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{"< 2ms"}</span>
                 <span className="text-text-muted/60">(vs Manual)</span>
               </div>
               <div className="px-3.5 py-2.5 flex items-center justify-center gap-1.5 text-center">

@@ -12,6 +12,7 @@ const publicPaths = [
   "/505",
   "/favicon.ico",
   "/logo.svg",
+  "/cowrie-logo.png",
   "/world-atlas.json",
   "/sw.js",
 ];
@@ -30,7 +31,8 @@ function isPublicPath(pathname: string) {
   return (
     publicPaths.includes(pathname) ||
     pathname.startsWith("/_next/") ||
-    pathname.startsWith("/api/auth/")
+    pathname.startsWith("/api/auth/") ||
+    /\.(png|jpg|jpeg|gif|svg|ico|webp|json|woff2?|ttf|eot)$/i.test(pathname)
   );
 }
 
