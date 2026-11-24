@@ -164,11 +164,15 @@ class Grep(Command):
         invert = False
         count = False
         fixed = False
+        line_numbers = False
         patterns: list[str] = []
         end_options = False
         for arg in self.args:
             if not end_options and arg == "--":
                 end_options = True
+                continue
+            if not end_options and arg == "--line-number":
+                line_numbers = True
                 continue
             if not end_options and arg.startswith("--"):
                 continue
@@ -182,6 +186,8 @@ class Grep(Command):
                         count = True
                     elif flag == "F":
                         fixed = True
+                    elif flag == "n":
+                        line_numbers = True
                     elif flag == "E":
                         continue
                 continue
@@ -194,7 +200,7 @@ class Grep(Command):
         except re.error:
             return
         matches = 0
-        for line in stdin.splitlines():
+        for number, line in enumerate(stdin.splitlines(), start=1):
             hit = bool(regex.search(line))
             if invert:
                 hit = not hit
@@ -202,7 +208,7 @@ class Grep(Command):
                 continue
             matches += 1
             if not count:
-                self.write(line + "\n")
+                self.write(f"{number}:{line}\n" if line_numbers else line + "\n")
         if count:
             self.write(str(matches) + "\n")
 @register("/usr/bin/cut")
