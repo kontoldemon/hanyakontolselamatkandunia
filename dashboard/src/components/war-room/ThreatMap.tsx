@@ -40,7 +40,7 @@ type TooltipState = {
 
 const WIDTH = 800;
 const HEIGHT = 400;
-const TARGET_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='1.5'%3E%3Ccircle cx='12' cy='12' r='7.5' stroke-dasharray='3 2'/%3E%3Cline x1='12' y1='2' x2='12' y2='6'/%3E%3Cline x1='12' y1='18' x2='12' y2='22'/%3E%3Cline x1='2' y1='12' x2='6' y2='12'/%3E%3Cline x1='18' y1='12' x2='22' y2='12'/%3E%3Ccircle cx='12' cy='12' r='1.2' fill='%2338bdf8'/%3E%3C/svg%3E\") 12 12, crosshair";
+const CROSSHAIR_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21'%3E%3Cline x1='10.5' y1='1' x2='10.5' y2='20' stroke='%23000000' stroke-width='3.2' stroke-linecap='square'/%3E%3Cline x1='1' y1='10.5' x2='20' y2='10.5' stroke='%23000000' stroke-width='3.2' stroke-linecap='square'/%3E%3Cline x1='10.5' y1='2' x2='10.5' y2='19' stroke='%23ffffff' stroke-width='1.4' stroke-linecap='square'/%3E%3Cline x1='2' y1='10.5' x2='19' y2='10.5' stroke='%23ffffff' stroke-width='1.4' stroke-linecap='square'/%3E%3C/svg%3E\") 10 10, crosshair";
 
 type CountryFeature = {
     type: "Feature";
@@ -369,9 +369,13 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
         if (!tooltipContent) return undefined;
         const pad = 16;
         const winW = typeof window !== "undefined" ? window.innerWidth : 1280;
-        const left = Math.min(Math.max(tooltipContent.x, 120 + pad), winW - 120 - pad);
-        const top = Math.max(tooltipContent.y, 110);
-        return { left, top };
+        const winH = typeof window !== "undefined" ? window.innerHeight : 800;
+        const left = Math.min(Math.max(tooltipContent.x, 140 + pad), winW - 140 - pad);
+        const isNearTop = tooltipContent.y < 230;
+        const top = isNearTop
+            ? Math.min(Math.max(tooltipContent.y, pad), winH - 240)
+            : Math.min(Math.max(tooltipContent.y, 220), winH - pad);
+        return { left, top, isNearTop };
     }, [tooltipContent]);
 
     return (
@@ -392,7 +396,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
 
                 <style>{`
                     .threat-map-canvas, .threat-map-canvas * {
-                        cursor: ${TARGET_CURSOR} !important;
+                        cursor: ${CROSSHAIR_CURSOR} !important;
                     }
                 `}</style>
 
@@ -521,7 +525,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     {/* Custom Glassmorphic Country & Node Tooltip */}
                     {tooltipContent && clampedTooltipStyle && (
                         <div
-                            className="fixed z-[120] pointer-events-none -translate-x-1/2 -translate-y-full -mt-3 min-w-[195px] max-w-[275px] rounded-2xl border border-slate-900/15 dark:border-white/20 bg-slate-900/[0.06] dark:bg-black/[0.30] px-3.5 py-2.5 text-slate-900 dark:text-slate-100 shadow-[0_16px_36px_rgba(0,0,0,0.35),0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-150 overflow-hidden"
+                            className={`fixed z-[120] pointer-events-none -translate-x-1/2 ${clampedTooltipStyle.isNearTop ? "mt-3" : "-translate-y-full -mt-3"} min-w-[195px] max-w-[275px] rounded-2xl border border-slate-900/15 dark:border-white/20 bg-slate-900/[0.06] dark:bg-black/[0.30] px-3.5 py-2.5 text-slate-900 dark:text-slate-100 shadow-[0_16px_36px_rgba(0,0,0,0.35),0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-150 overflow-hidden`}
                             style={{
                                 ...clampedTooltipStyle,
                                 backdropFilter: "blur(1.5px)",
