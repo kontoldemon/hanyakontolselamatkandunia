@@ -8,6 +8,7 @@ import types
 import pytest
 
 import cloudsentinel.server as server_module
+import cloudsentinel.sensor.session as session_module
 from cloudsentinel.config import load_settings
 from cloudsentinel.hassh import HASSHDNA
 from cloudsentinel.server import CloudSentinelSession, CloudSentinelSSHServer, ConnectionLimiter
@@ -80,7 +81,7 @@ async def test_session_command_fallbacks(monkeypatch) -> None:
         def start(self) -> None:
             raise RuntimeError("registry failed")
 
-    monkeypatch.setitem(server_module.cmd_registry, "echo", BrokenCommand)
+    monkeypatch.setitem(session_module.cmd_registry, "echo", BrokenCommand)
     await session._execute("echo hello")
 
     class Anomaly:
