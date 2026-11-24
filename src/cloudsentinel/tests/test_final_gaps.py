@@ -100,6 +100,8 @@ async def test_session_pipe_filters_output() -> None:
     assert output.strip() == "1"
     output = await session._execute("cat /etc/passwd | cut -d: -f1 | sort | uniq -c")
     assert "1 root" in output
+    output = await session._execute("echo foo | sed 's/foo/bar/'")
+    assert output.strip() == "bar"
 
 
 @pytest.mark.asyncio
@@ -108,6 +110,41 @@ async def test_session_pipe_cut_fields() -> None:
     output = await session._execute("cat /etc/passwd | cut -d: -f1")
     assert "root" in output
     assert ":" not in output
+
+
+def test_sed_pipe_substitutions() -> None:
+    from cloudsentinel.commands.base import Sed
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        (["s/foo/bar/"], "foo foo\n", "bar foo\n"),
+        (["s/foo/bar/g"], "foo foo\n", "bar bar\n"),
+        (["s/foo/bar/i"], "FOO\n", "bar\n"),
+        (["s|a|b|"], "a\n", "b\n"),
+        (["s/foo/[&]/"], "foo\n", "[foo]\n"),
+        (["s/(f)(oo)/\\2\\1/"], "foo\n", "oof\n"),
+        (["-e", "s/foo/bar/"], "foo\n", "bar\n"),
+        (["-x", "s/foo/bar/"], "foo\n", "bar\n"),
+        (["-n", "s/foo/bar/"], "foo\n", ""),
+        (["s/[/x/"], "foo\n", ""),
+        (["s/foo/\\9/"], "foo\n", ""),
+        (["p"], "foo\n", ""),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Sed(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    empty = Fake("")
+    Sed(empty, "s/foo/bar/").start()
+    assert empty.out == []
 
 
 def test_sort_pipe_lines() -> None:

@@ -301,6 +301,32 @@ class Wc(Command):
         self.write(" ".join(values) + "\n")
 
 
+@register("/usr/bin/sed")
+class Sed(Command):
+    def call(self):
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            return
+        if any(arg == "-n" or (arg.startswith("-") and "n" in arg[1:]) for arg in self.args):
+            return
+        expression = next((arg for arg in self.args if not arg.startswith("-") or len(arg) == 1), "")
+        match = re.fullmatch(r"s(.)(.*?)\1(.*?)\1([gi]*)", expression, re.DOTALL)
+        if not match:
+            return
+        delimiter, pattern, replacement, flags = match.groups()
+        try:
+            regex = re.compile(pattern, re.IGNORECASE if "i" in flags else 0)
+        except re.error:
+            return
+        replacement = replacement.replace("&", r"\g<0>")
+        count = 0 if "g" in flags else 1
+        try:
+            for line in stdin.splitlines():
+                self.write(regex.sub(replacement, line, count=count) + "\n")
+        except re.error:
+            return
+
+
 @register("/usr/bin/sort")
 class Sort(Command):
     def call(self):
