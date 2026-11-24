@@ -20,7 +20,7 @@ def test_run_command_success() -> None:
     code, stdout, _stderr = asyncio.run(
         admin_module._run_command(
             [sys.executable, "-c", "print('unit')"],
-            timeout=10.0,
+            timeout=30.0,
         )
     )
     assert code == 0

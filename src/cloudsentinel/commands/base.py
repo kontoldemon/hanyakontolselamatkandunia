@@ -231,7 +231,48 @@ class Cut(Command):
         return fields
 @register("/usr/bin/awk")
 class Awk(Command):
-    def call(self): self.write("")
+    def call(self):
+        stdin = getattr(self.protocol, "stdin", "")
+        delimiter: str | None = None
+        program = ""
+        args = list(self.args)
+        index = 0
+        while index < len(args):
+            arg = args[index]
+            if arg in ("-F", "--field-separator") and index + 1 < len(args):
+                delimiter = args[index + 1]
+                index += 2
+                continue
+            if arg.startswith("-F") and len(arg) > 2:
+                delimiter = arg[2:]
+                index += 1
+                continue
+            if not program:
+                program = arg
+            index += 1
+        match = re.fullmatch(r"\s*\{\s*print\s*(.*?)\s*;?\s*\}\s*", program)
+        if not stdin or not match:
+            return
+        expression = match.group(1).strip()
+        fields = [part.strip() for part in expression.split(",")] if expression else ["$0"]
+        for line in stdin.splitlines():
+            parts = line.split(delimiter) if delimiter else line.split()
+            self.write(" ".join(self._field(field, line, parts) for field in fields) + "\n")
+
+    @staticmethod
+    def _field(expression: str, line: str, parts: list[str]) -> str:
+        if expression == "$0":
+            return line
+        if expression == "$NF":
+            return parts[-1] if parts else ""
+        if expression == "NF":
+            return str(len(parts))
+        if expression.startswith("$") and expression[1:].isdigit():
+            position = int(expression[1:])
+            return parts[position - 1] if 0 < position <= len(parts) else ""
+        if len(expression) >= 2 and expression[0] == expression[-1] == '"':
+            return expression[1:-1]
+        return expression
 
 # ── Network ────────────────────────────────────────────────────────
 

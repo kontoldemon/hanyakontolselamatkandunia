@@ -134,6 +134,50 @@ def test_cut_pipe_fields_and_ranges() -> None:
 
 
 @pytest.mark.asyncio
+async def test_session_pipe_awk_fields() -> None:
+    session = _session()
+    output = await session._execute("cat /etc/passwd | awk -F: '{print $1}'")
+    assert "root" in output
+    assert ":" not in output
+
+
+def test_awk_pipe_fields_and_expressions() -> None:
+    from cloudsentinel.commands.base import Awk
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        (["-F:", "{print $1}"], "root:x:0\nbin:y:1\n", "root\nbin\n"),
+        (["-F", ":", "{print $1, $3}"], "root:x:0\n", "root 0\n"),
+        (["--field-separator", ":", "{print $2}"], "a:b:c\n", "b\n"),
+        (["{print $2}"], "one two three\n", "two\n"),
+        (["{print}"], "a b\n", "a b\n"),
+        (["{print $NF}"], "a b c\n", "c\n"),
+        (["{print $NF}"], "\n", "\n"),
+        (["{print NF}"], "a b\n", "2\n"),
+        (["{print $9}"], "a b\n", "\n"),
+        (["{print \"literal\"}"], "a b\n", "literal\n"),
+        (["{print word}"], "a b\n", "word\n"),
+        (["{print $1"], "a b\n", ""),
+        (["-F"], "a b\n", ""),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Awk(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    empty = Fake("")
+    Awk(empty, "{print $1}").start()
+    assert empty.out == []
+
+
+@pytest.mark.asyncio
 async def test_clickhouse_forwarder_run(tmp_path) -> None:
     class FakeResult:
         def __init__(self, rows: list) -> None:
