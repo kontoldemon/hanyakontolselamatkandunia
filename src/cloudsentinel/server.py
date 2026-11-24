@@ -15,6 +15,7 @@ import asyncio
 import hashlib
 import logging
 import os
+import re
 import signal
 import time
 import uuid
@@ -804,6 +805,24 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
         command = command.strip()[:1000]
         if not command:
             return ""
+
+        if command in ("exit", "logout"):
+            if self.chan is not None:
+                self.chan.exit(0)
+            return ""
+
+        if any(operator in command for operator in ("|", ";", "&&", "||")):
+            segments = re.split(r"\s*(?:\|\||&&|\||;)\s*", command)
+            outputs = []
+            for segment in segments:
+                if segment.strip():
+                    outputs.append(await self._execute(segment))
+            return "\n".join(part for part in outputs if part)
+
+        if ">" in command or "<" in command:
+            command = command.split(">")[0].split("<")[0].strip()
+            if not command:
+                return ""
 
         # Emit command input for SOAR scoring + pipeline
         asyncio.create_task(self.server._emit_event("cloudsentinel.command.input", {

@@ -72,6 +72,22 @@ def test_session_caps_command_line_buffer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_session_executes_command_chain() -> None:
+    session = _session()
+    output = await session._execute("id; whoami")
+    assert "uid=" in output
+    assert "root" in output
+
+
+@pytest.mark.asyncio
+async def test_session_strips_redirect_target() -> None:
+    session = _session()
+    output = await session._execute("echo hello > /tmp/out")
+    assert "hello" in output
+    assert ">" not in output
+
+
+@pytest.mark.asyncio
 async def test_clickhouse_forwarder_run(tmp_path) -> None:
     class FakeResult:
         def __init__(self, rows: list) -> None:
