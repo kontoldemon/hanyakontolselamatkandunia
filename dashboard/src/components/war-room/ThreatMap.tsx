@@ -502,22 +502,29 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     {/* Custom Glassmorphic Country & Node Tooltip */}
                     {tooltipContent && clampedTooltipStyle && (
                         <div
-                            className="fixed z-[120] pointer-events-none -translate-x-1/2 -translate-y-full -mt-3 min-w-[180px] max-w-[260px] rounded-xl border border-slate-200/90 dark:border-white/15 bg-white/92 dark:bg-[#0b0d13]/92 px-3 py-2 text-slate-900 dark:text-slate-100 shadow-2xl backdrop-blur-xl transition-opacity duration-100"
-                            style={clampedTooltipStyle}
+                            className="fixed z-[120] pointer-events-none -translate-x-1/2 -translate-y-full -mt-3 min-w-[195px] max-w-[275px] rounded-2xl border border-slate-900/15 dark:border-white/20 bg-slate-900/[0.06] dark:bg-black/[0.30] px-3.5 py-2.5 text-slate-900 dark:text-slate-100 shadow-[0_16px_36px_rgba(0,0,0,0.35),0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-150 overflow-hidden"
+                            style={{
+                                ...clampedTooltipStyle,
+                                backdropFilter: "blur(1.5px)",
+                                WebkitBackdropFilter: "blur(1.5px)",
+                            }}
                         >
-                            <div className="flex items-center justify-between gap-2">
-                                <span className="font-display text-xs font-semibold tracking-tight text-slate-900 dark:text-white truncate">
+                            {/* Subtle light specular shine on top rim */}
+                            <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-white/12 dark:from-white/8 to-transparent pointer-events-none rounded-t-2xl" />
+
+                            <div className="relative flex items-center justify-between gap-2">
+                                <span className="font-display text-xs font-bold tracking-tight text-slate-900 dark:text-white truncate">
                                     {tooltipContent.title}
                                 </span>
                                 {tooltipContent.badge && (
-                                    <span className="shrink-0 rounded bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-[9.5px] font-semibold text-slate-600 dark:text-slate-300">
+                                    <span className="shrink-0 rounded-md bg-white/40 dark:bg-white/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-700 dark:text-slate-200 border border-slate-300/60 dark:border-white/15 backdrop-blur-md">
                                         {tooltipContent.badge}
                                     </span>
                                 )}
                             </div>
                             {tooltipContent.subtitle && (
                                 <div
-                                    className={`mt-0.5 text-[10px] font-medium ${
+                                    className={`relative mt-0.5 text-[10px] font-medium ${
                                         tooltipContent.accent === "danger"
                                             ? "text-rose-600 dark:text-rose-400"
                                             : tooltipContent.accent === "warning"
@@ -532,11 +539,11 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                             )}
 
                             {tooltipContent.details && tooltipContent.details.length > 0 && (
-                                <div className="mt-2 flex flex-col gap-1 border-t border-slate-200/80 dark:border-white/10 pt-1.5">
+                                <div className="relative mt-2 flex flex-col gap-1 border-t border-slate-300/40 dark:border-white/10 pt-1.5">
                                     {tooltipContent.details.map((detail, idx) => (
                                         <div key={idx} className="flex items-center justify-between gap-3 text-[10.5px]">
-                                            <span className="text-slate-500 dark:text-slate-400">{detail.label}</span>
-                                            <span className="font-mono font-medium text-blue-600 dark:text-blue-300 truncate max-w-[130px]">
+                                            <span className="text-slate-500 dark:text-slate-400 font-medium">{detail.label}</span>
+                                            <span className="font-mono font-semibold text-blue-600 dark:text-blue-300 truncate max-w-[135px]">
                                                 {detail.value}
                                             </span>
                                         </div>

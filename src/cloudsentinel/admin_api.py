@@ -15,6 +15,7 @@ from datetime import UTC
 from typing import Any
 
 import structlog
+from pydantic import SecretStr
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -2256,6 +2257,42 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         except Exception as exc:
             logger.warning("LLM chat failed: %s", exc)
             return {"ok": False, "error": "AI assistant unavailable"}
+
+    @app.post("/llm/config", dependencies=[Depends(require_auth)])
+    async def llm_config(body: dict[str, Any]) -> dict[str, Any]:
+        api_key = str(body.get("api_key") or "")
+        provider = str(body.get("provider") or "")
+        model = str(body.get("model") or "")
+        fallback_models = body.get("fallback_models")
+
+        if api_key:
+            settings.llm.api_key = SecretStr(api_key)
+            os.environ["LLM_API_KEY"] = api_key
+            if "gemini" in (provider or model).lower():
+                os.environ["GEMINI_API_KEY"] = api_key
+            elif "openai" in (provider or model).lower():
+                os.environ["OPENAI_API_KEY"] = api_key
+            elif "groq" in (provider or model).lower():
+                os.environ["GROQ_API_KEY"] = api_key
+            elif "anthropic" in (provider or model).lower():
+                os.environ["ANTHROPIC_API_KEY"] = api_key
+        if provider:
+            settings.llm.provider = provider
+        if model:
+            settings.llm.model = model
+            os.environ["LLM_MODEL"] = model
+        if isinstance(fallback_models, list) and fallback_models:
+            settings.llm.fallback_models = [str(m).strip() for m in fallback_models if str(m).strip()]
+            os.environ["LLM_FALLBACK_MODELS"] = ",".join(settings.llm.fallback_models)
+
+        return {
+            "ok": True,
+            "status": "configured",
+            "available": bool(secret_to_str(settings.llm.api_key)),
+            "provider": settings.llm.provider,
+            "model": settings.llm.model,
+            "fallback_models": settings.llm.fallback_models,
+        }
 
     @app.post("/auth/login")
     async def login(body: dict[str, str]) -> dict[str, Any]:

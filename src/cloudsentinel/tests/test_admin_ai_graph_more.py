@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import types
 
 import pytest
@@ -73,3 +74,53 @@ def test_admin_ai_error_branches(monkeypatch) -> None:
     login = client.post("/auth/login", json={"username": "x", "password": "y"})
     assert login.status_code == 200
     assert login.json()["token"] == "dev-mode"
+
+
+def test_llm_config_endpoint_updates_runtime(monkeypatch) -> None:
+    for key in (
+        "LLM_API_KEY",
+        "OPENAI_API_KEY",
+        "GEMINI_API_KEY",
+        "GROQ_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "LLM_MODEL",
+        "LLM_FALLBACK_MODELS",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    client = _client()
+    headers = {"Authorization": "Bearer test-token"}
+
+    def configure(payload: dict) -> dict:
+        response = client.post("/llm/config", headers=headers, json=payload)
+        assert response.status_code == 200
+        return response.json()
+
+    data = configure(
+        {
+            "api_key": "sk-openai",
+            "provider": "OpenAI",
+            "model": "gpt-4o-mini",
+            "fallback_models": ["a", "", " b "],
+        }
+    )
+    assert data["ok"] is True
+    assert data["available"] is True
+    assert data["provider"] == "OpenAI"
+    assert data["model"] == "gpt-4o-mini"
+    assert data["fallback_models"] == ["a", "b"]
+    assert os.environ["LLM_API_KEY"] == "sk-openai"
+    assert os.environ["OPENAI_API_KEY"] == "sk-openai"
+    assert os.environ["LLM_MODEL"] == "gpt-4o-mini"
+    assert os.environ["LLM_FALLBACK_MODELS"] == "a,b"
+
+    configure({"api_key": "gemini-key", "provider": "Google Gemini"})
+    assert os.environ["GEMINI_API_KEY"] == "gemini-key"
+
+    configure({"api_key": "groq-key", "provider": "Groq"})
+    assert os.environ["GROQ_API_KEY"] == "groq-key"
+
+    configure({"api_key": "claude-key", "provider": "Anthropic"})
+    assert os.environ["ANTHROPIC_API_KEY"] == "claude-key"
+
+    empty = configure({})
+    assert empty["ok"] is True

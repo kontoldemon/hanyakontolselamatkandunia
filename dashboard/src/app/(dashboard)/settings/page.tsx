@@ -1,14 +1,14 @@
 "use client";
 
-import { Activity, Check, Database, Fingerprint, Maximize2, Minimize2, Power, Save, Shield, Zap } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Activity, Check, Database, Fingerprint, Maximize2, Minimize2, Power, Save, Shield, Zap, Sparkles, Bot, Key, Eye, EyeOff } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
 import { useSensorOperations, useSocketTelemetry, useWarRoomState } from "@/lib/liveEvents";
 import { useAgentCommand } from "@/lib/AgentContext";
 import { useExposureControl } from "@/components/settings/useExposureControl";
 import CustomDropdown from "@/components/ui/CustomDropdown";
 import { cn } from "@/lib/utils";
 
-type SettingsSection = "deception" | "soar" | "telemetry";
+type SettingsSection = "deception" | "soar" | "telemetry" | "llm";
 
 export default function SettingsPage() {
     const operations = useSensorOperations();
@@ -24,6 +24,42 @@ export default function SettingsPage() {
     const [fakeKeys, setFakeKeys] = useState(true);
     const [soarTrigger, setSoarTrigger] = useState("MITRE Match (>1)");
     const [soarExecution, setSoarExecution] = useState("Lambda (Warm)");
+
+    // AI & LLM Engine Configuration State (Both Copilot & Honeypot VFS)
+    const [copilotProvider, setCopilotProvider] = useState("Google Gemini");
+    const [copilotModel, setCopilotModel] = useState("gemini/gemini-2.0-flash");
+    const [copilotApiKey, setCopilotApiKey] = useState("");
+    const [hasCopilotKey, setHasCopilotKey] = useState(false);
+    const [showCopilotKey, setShowCopilotKey] = useState(false);
+
+    const [honeypotLlmMode, setHoneypotLlmMode] = useState("Dynamic VFS Terminal Emulation");
+    const [honeypotProvider, setHoneypotProvider] = useState("Inherit from Copilot");
+    const [honeypotModel, setHoneypotModel] = useState("gemini/gemini-2.0-flash");
+    const [honeypotApiKey, setHoneypotApiKey] = useState("");
+    const [showHoneypotKey, setShowHoneypotKey] = useState(false);
+    const [useCopilotKeyForHoneypot, setUseCopilotKeyForHoneypot] = useState(true);
+    const [fallbackChain, setFallbackChain] = useState("groq/llama-3.3-70b-versatile, openai/gpt-4o-mini");
+    const [hourlyLimit, setHourlyLimit] = useState(200);
+
+    useEffect(() => {
+        fetch("/api/cloudsentinel/llm-config")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data?.ok && data.config) {
+                    if (data.config.copilotProvider) setCopilotProvider(data.config.copilotProvider);
+                    if (data.config.copilotModel) setCopilotModel(data.config.copilotModel);
+                    if (typeof data.config.hasCopilotKey === "boolean") setHasCopilotKey(data.config.hasCopilotKey);
+                    if (data.config.honeypotLlmMode) setHoneypotLlmMode(data.config.honeypotLlmMode);
+                    if (data.config.honeypotProvider) setHoneypotProvider(data.config.honeypotProvider);
+                    if (data.config.honeypotModel) setHoneypotModel(data.config.honeypotModel);
+                    if (data.config.honeypotApiKey) setHoneypotApiKey(data.config.honeypotApiKey);
+                    if (typeof data.config.useCopilotKeyForHoneypot === "boolean") setUseCopilotKeyForHoneypot(data.config.useCopilotKeyForHoneypot);
+                    if (data.config.fallbackChain) setFallbackChain(data.config.fallbackChain);
+                    if (data.config.hourlyLimit) setHourlyLimit(data.config.hourlyLimit);
+                }
+            })
+            .catch(() => null);
+    }, []);
 
     useAgentCommand("settings.deception_level", useCallback((v: string) => setDeceptionLevel(v), []));
     useAgentCommand("settings.hassh_action", useCallback((v: string) => setHasshAction(v), []));
@@ -49,9 +85,35 @@ export default function SettingsPage() {
         cancelExposureConfirm,
     } = useExposureControl(operations, warRoom);
 
-    const handleApplyChanges = () => {
+    const handleApplyChanges = async () => {
         setSavedToast(true);
-        setTimeout(() => setSavedToast(false), 2000);
+        setTimeout(() => setSavedToast(false), 2500);
+        const submittedCopilotKey = copilotApiKey.trim();
+
+        try {
+            await fetch("/api/cloudsentinel/llm-config", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    copilotProvider,
+                    copilotModel,
+                    copilotApiKey: submittedCopilotKey,
+                    honeypotLlmMode,
+                    honeypotProvider,
+                    honeypotModel,
+                    honeypotApiKey,
+                    useCopilotKeyForHoneypot,
+                    fallbackChain,
+                    hourlyLimit,
+                }),
+            });
+            if (submittedCopilotKey) {
+                setCopilotApiKey("");
+                setHasCopilotKey(true);
+            }
+        } catch {
+            // Silently tolerate
+        }
     };
 
     const upstreamLatency = operations?.telemetry?.upstreamLatencyMs ?? {};
@@ -115,6 +177,25 @@ export default function SettingsPage() {
                                 <div className="flex flex-col">
                                     <span>SOAR &amp; Exposure</span>
                                     <span className="text-[10px] text-slate-400 font-normal">Containment &amp; Gateway</span>
+                                </div>
+                            </div>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveSection("llm")}
+                            className={cn(
+                                "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all text-left group",
+                                activeSection === "llm"
+                                    ? "bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold"
+                                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
+                            )}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <Sparkles size={15} className={activeSection === "llm" ? "text-purple-500" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"} />
+                                <div className="flex flex-col">
+                                    <span>AI &amp; LLM Engines</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">Copilot &amp; Honeypot VFS</span>
                                 </div>
                             </div>
                         </button>
@@ -329,6 +410,187 @@ export default function SettingsPage() {
                                         <div className="border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0f0f0f] rounded-lg px-3 py-2 flex items-center gap-2">
                                             <Shield size={14} className="text-slate-400 shrink-0" />
                                             <span className="text-xs font-mono text-slate-700 dark:text-slate-300 truncate">Revoke IP (NSG &amp; Netfilter)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSection === "llm" && (
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                            <div className="flex flex-col gap-1 mb-4">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <Sparkles size={16} className="text-purple-500" />
+                                    AI &amp; LLM Configuration (Both Engines)
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Configure LLM API keys and model parameters directly from the UI for both the Security Analyst Copilot and the Honeypot Virtual Filesystem (VFS) deception engine.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Side 1: Security Analyst Copilot */}
+                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-visible flex flex-col justify-between">
+                                    <div className="p-3.5 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] rounded-t-xl flex items-center justify-between">
+                                        <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-blue-500">
+                                            <Bot size={15} /> Copilot Chat Agent (Security Analyst)
+                                        </h4>
+                                        <span className={cn(
+                                            "px-2 py-0.5 rounded text-[9.5px] font-mono font-bold uppercase tracking-wider border",
+                                            copilotApiKey || hasCopilotKey
+                                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                        )}>
+                                            {copilotApiKey || hasCopilotKey ? "Configured" : "CLI Fallback"}
+                                        </span>
+                                    </div>
+                                    <div className="p-4 space-y-4">
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                                AI Provider
+                                            </label>
+                                            <CustomDropdown
+                                                options={[
+                                                    { label: "Google Gemini (Recommended)", value: "Google Gemini" },
+                                                    { label: "Groq Cloud (Ultra-Fast)", value: "Groq Cloud" },
+                                                    { label: "OpenAI (GPT-4o)", value: "OpenAI" },
+                                                    { label: "Anthropic Claude", value: "Anthropic Claude" },
+                                                    { label: "LiteLLM Unified Gateway", value: "LiteLLM Unified Gateway" },
+                                                ]}
+                                                value={copilotProvider}
+                                                onChange={setCopilotProvider}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                                Primary Model
+                                            </label>
+                                            <CustomDropdown
+                                                options={[
+                                                    { label: "gemini/gemini-2.0-flash", value: "gemini/gemini-2.0-flash" },
+                                                    { label: "groq/llama-3.3-70b-versatile", value: "groq/llama-3.3-70b-versatile" },
+                                                    { label: "openai/gpt-4o-mini", value: "openai/gpt-4o-mini" },
+                                                    { label: "anthropic/claude-3-5-sonnet", value: "anthropic/claude-3-5-sonnet" },
+                                                ]}
+                                                value={copilotModel}
+                                                onChange={setCopilotModel}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                                                    API Key
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowCopilotKey(!showCopilotKey)}
+                                                    className="text-[10px] text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 font-sans normal-case flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    {showCopilotKey ? <EyeOff size={11} /> : <Eye size={11} />}
+                                                    <span>{showCopilotKey ? "Hide" : "Show"}</span>
+                                                </button>
+                                            </div>
+                                            <div className="relative">
+                                                <input
+                                                    type={showCopilotKey ? "text" : "password"}
+                                                    value={copilotApiKey}
+                                                    onChange={(e) => setCopilotApiKey(e.target.value)}
+                                                    placeholder={hasCopilotKey ? "Leave blank to keep current key" : "AIzaSy... / gsk_... / sk-..."}
+                                                    className="w-full h-9 rounded-lg bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                                                />
+                                            </div>
+                                            <span className="text-[10px] text-slate-400 mt-1 block">
+                                                Powers real-time natural language threat explanations and SOAR command execution.
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Side 2: Honeypot Deception Engine (VFS) */}
+                                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-visible flex flex-col justify-between">
+                                    <div className="p-3.5 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] rounded-t-xl flex items-center justify-between">
+                                        <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-purple-500">
+                                            <Database size={15} /> Honeypot Deception Engine (VFS)
+                                        </h4>
+                                        <span className="px-2 py-0.5 rounded text-[9.5px] font-mono font-bold uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                                            Deception Node
+                                        </span>
+                                    </div>
+                                    <div className="p-4 space-y-4">
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                                Terminal Emulation Mode
+                                            </label>
+                                            <CustomDropdown
+                                                options={[
+                                                    { label: "Dynamic VFS Terminal Emulation", value: "Dynamic VFS Terminal Emulation" },
+                                                    { label: "Deterministic Offline Fallback", value: "Deterministic Offline Fallback" },
+                                                ]}
+                                                value={honeypotLlmMode}
+                                                onChange={setHoneypotLlmMode}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                                Engine Provider
+                                            </label>
+                                            <CustomDropdown
+                                                options={[
+                                                    { label: "Inherit from Copilot (Unified)", value: "Inherit from Copilot" },
+                                                    { label: "Google Gemini", value: "Google Gemini" },
+                                                    { label: "Groq Cloud (Ultra-Fast Response)", value: "Groq Cloud" },
+                                                    { label: "OpenAI", value: "OpenAI" },
+                                                ]}
+                                                value={honeypotProvider}
+                                                onChange={setHoneypotProvider}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={useCopilotKeyForHoneypot}
+                                                    onChange={(e) => setUseCopilotKeyForHoneypot(e.target.checked)}
+                                                    className="rounded border-slate-300 dark:border-slate-700 text-purple-600 focus:ring-purple-500"
+                                                />
+                                                <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                                                    Use same API key as Copilot
+                                                </span>
+                                            </label>
+
+                                            {!useCopilotKeyForHoneypot && (
+                                                <div>
+                                                    <div className="relative">
+                                                        <input
+                                                            type={showHoneypotKey ? "text" : "password"}
+                                                            value={honeypotApiKey}
+                                                            onChange={(e) => setHoneypotApiKey(e.target.value)}
+                                                            placeholder="Dedicated Honeypot Engine Key"
+                                                            className="w-full h-9 rounded-lg bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                                                Fallback Model Chain (CSV)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={fallbackChain}
+                                                onChange={(e) => setFallbackChain(e.target.value)}
+                                                className="w-full h-9 rounded-lg bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                                            />
+                                            <span className="text-[10px] text-slate-400 mt-1 block">
+                                                Automated fallback when rate limits occur (e.g. Groq → OpenAI).
+                                            </span>
                                         </div>
                                     </div>
                                 </div>

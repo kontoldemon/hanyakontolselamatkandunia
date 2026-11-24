@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Sparkles, Send, X, Loader2, Minimize2, Maximize2 } from "lucide-react";
+import { Sparkles, Send, X, Loader2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCapturedSessions, useDashboardStats, useLiveThreatLogs, useSensorOperations } from "@/lib/liveEvents";
@@ -18,7 +18,6 @@ import AgentMessageList, { buildOfflineFallbackMessage } from "./AgentMessageLis
 
 export default function AIChatAgent() {
     const [isOpen, setIsOpen] = useState(false);
-    const [isMinimized, setIsMinimized] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const [messages, setMessages] = useState<AgentMessage[]>([
         {
@@ -97,23 +96,23 @@ export default function AIChatAgent() {
 
     useEffect(() => {
         const aiMsgCount = messages.filter((m) => m.role === "ai").length;
-        if (aiMsgCount > lastAiMsgCountRef.current && (!isOpen || isMinimized)) {
+        if (aiMsgCount > lastAiMsgCountRef.current && !isOpen) {
             setHasUnread(true);
         }
         lastAiMsgCountRef.current = aiMsgCount;
-    }, [messages, isOpen, isMinimized]);
+    }, [messages, isOpen]);
 
     useEffect(() => {
-        if (isOpen && !isMinimized) {
+        if (isOpen) {
             setHasUnread(false);
         }
-    }, [isOpen, isMinimized]);
+    }, [isOpen]);
 
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages, isLoading, isOpen, isMinimized]);
+    }, [messages, isLoading, isOpen]);
 
     const handleActionApprove = useCallback(
         async (msgIndex: number) => {
@@ -242,19 +241,13 @@ export default function AIChatAgent() {
 
     return (
         <div
-            className={cn(
-                "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] border border-slate-900/15 dark:border-white/25 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1.5px_1.5px_rgba(255,255,255,0.7)] rounded-2xl flex flex-col overflow-hidden transition-all duration-300",
-                isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"
-            )}
+            className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] border border-slate-900/15 dark:border-white/20 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.2)] rounded-2xl flex flex-col overflow-hidden transition-all duration-300 w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"
             style={{ backdropFilter: "blur(1.5px)", WebkitBackdropFilter: "blur(1.5px)" }}
         >
-            {/* Clear curved glass specular shine on top */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/35 dark:from-white/25 via-transparent to-transparent pointer-events-none rounded-2xl" />
+            {/* Subtle light specular shine on top rim */}
+            <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white/12 dark:from-white/8 to-transparent pointer-events-none rounded-t-2xl" />
 
-            <div
-                className="relative px-3.5 py-2.5 bg-slate-100/60 dark:bg-black/[0.15] border-b border-slate-200/80 dark:border-white/15 flex justify-between items-center shrink-0 cursor-pointer transition-colors hover:bg-slate-200/50 dark:hover:bg-white/[0.06]"
-                onClick={() => setIsMinimized(!isMinimized)}
-            >
+            <div className="relative px-3.5 py-2.5 bg-slate-100/60 dark:bg-black/[0.15] border-b border-slate-200/80 dark:border-white/15 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2.5">
                     <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/20 border border-blue-400/40 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]">
                         <Sparkles size={14} className="text-blue-400" />
@@ -275,38 +268,24 @@ export default function AIChatAgent() {
                 </div>
                 <div className="flex items-center gap-0.5">
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsMinimized(!isMinimized);
-                        }}
-                        className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors"
-                        aria-label={isMinimized ? "Maximize copilot" : "Minimize copilot"}
-                    >
-                        {isMinimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsOpen(false);
-                        }}
-                        className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors"
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        className="p-1.5 hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
                         aria-label="Close copilot"
                     >
-                        <X size={13} />
+                        <X size={14} />
                     </button>
                 </div>
             </div>
 
-            {!isMinimized && (
-                <>
-                    <AgentMessageList
-                        scrollRef={scrollRef}
-                        messages={messages}
-                        isLoading={isLoading}
-                        isExecuting={isExecuting}
-                        onApprove={handleActionApprove}
-                        onDeny={handleActionDeny}
-                    />
+            <AgentMessageList
+                scrollRef={scrollRef}
+                messages={messages}
+                isLoading={isLoading}
+                isExecuting={isExecuting}
+                onApprove={handleActionApprove}
+                onDeny={handleActionDeny}
+            />
 
                     <div className="relative p-2.5 bg-white/[0.06] dark:bg-black/[0.15] border-t border-white/30 dark:border-white/15 shrink-0">
                         <div className="relative flex items-center">
@@ -339,8 +318,6 @@ export default function AIChatAgent() {
                             </button>
                         </div>
                     </div>
-                </>
-            )}
         </div>
     );
 }

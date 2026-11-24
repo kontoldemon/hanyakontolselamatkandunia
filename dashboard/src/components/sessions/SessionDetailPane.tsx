@@ -1,10 +1,11 @@
 "use client";
 
 import { ArrowLeft, Ban, Check, Copy, Fingerprint, Shield, ShieldAlert, Terminal } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import type { CapturedSession } from "@/lib/liveEvents";
 import TerminalReplay from "@/components/sessions/TerminalReplay";
+import ScrollDownHint from "@/components/ui/ScrollDownHint";
 import {
     blockStateText,
     formatSeenTime,
@@ -64,6 +65,33 @@ export default function SessionDetailPane({
 }: SessionDetailPaneProps) {
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"forensics" | "mitre" | "soar">("forensics");
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [showScrollDown, setShowScrollDown] = useState(false);
+
+    const handleScroll = useCallback(() => {
+        if (!scrollRef.current) return;
+        const el = scrollRef.current;
+        const dist = el.scrollHeight - (el.scrollTop + el.clientHeight);
+        setShowScrollDown(dist > 35);
+    }, []);
+
+    const scrollToBottom = useCallback(() => {
+        if (!scrollRef.current) return;
+        scrollRef.current.scrollTo({
+            top: scrollRef.current.scrollHeight,
+            behavior: "smooth",
+        });
+        setShowScrollDown(false);
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (!scrollRef.current) return;
+            const el = scrollRef.current;
+            setShowScrollDown(el.scrollHeight - el.clientHeight > 35);
+        }, 120);
+        return () => clearTimeout(timer);
+    }, [activeTab, selectedView?.id]);
 
     const handleCopy = (fieldKey: string, text: string) => {
         if (!text) return;
@@ -195,7 +223,12 @@ export default function SessionDetailPane({
                                     </button>
                                 </div>
 
-                                <div className="flex-1 min-h-0 overflow-y-auto terminal-scrollbar pr-0.5 space-y-3">
+                                <div className="relative flex-1 min-h-0 flex flex-col">
+                                    <div
+                                        ref={scrollRef}
+                                        onScroll={handleScroll}
+                                        className="flex-1 min-h-0 overflow-y-auto terminal-scrollbar pr-0.5 space-y-3 pb-8"
+                                    >
                                     {activeTab === "forensics" && (
                                         <div className="flex flex-col gap-2.5">
                                             {/* Threat Risk Assessment Bar */}
@@ -428,6 +461,12 @@ export default function SessionDetailPane({
                                             </div>
                                         </div>
                                     )}
+                                    </div>
+                                    <ScrollDownHint
+                                        visible={showScrollDown}
+                                        onScrollDown={scrollToBottom}
+                                        label="More below"
+                                    />
                                 </div>
                             </div>
                         </div>

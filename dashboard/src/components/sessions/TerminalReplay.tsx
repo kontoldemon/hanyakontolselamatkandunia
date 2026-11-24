@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Copy, Terminal as TerminalIcon, Check, Maximize2, Minimize2, Search, X, ArrowDown } from "lucide-react";
+import { Copy, Terminal as TerminalIcon, Check, Maximize2, Minimize2, Search, X } from "lucide-react";
 import { useAgentCommand } from "@/lib/AgentContext";
 import { cn } from "@/lib/utils";
+import ScrollDownHint from "@/components/ui/ScrollDownHint";
 
 type ReplayEntry = {
     role: "attacker" | "honeypot";
@@ -206,7 +207,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                 <div
                     ref={scrollRef}
                     onScroll={handleScroll}
-                    className="h-full overflow-y-auto px-3 py-3 text-[11.5px] text-slate-800 dark:text-emerald-400 terminal-scrollbar"
+                    className="h-full overflow-y-auto px-3 py-3 text-[11.5px] text-slate-800 dark:text-slate-200 terminal-scrollbar"
                 >
                     {filteredEntries.length === 0 && (
                         <div className="text-slate-400 dark:text-slate-500 text-xs px-2 py-1">
@@ -218,7 +219,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                     {filteredEntries.map((entry, i) => {
                         const infoType = getInfoType(entry.text);
                         return (
-                            <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="group flex items-start gap-2 mb-1 leading-relaxed font-mono hover:bg-slate-50 dark:hover:bg-white/[0.02] -mx-1 px-1 py-0.5 rounded">
+                            <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="group flex items-start gap-2 mb-1 leading-relaxed font-mono hover:bg-slate-100/60 dark:hover:bg-white/[0.03] -mx-1 px-1 py-0.5 rounded transition-colors">
                                 <span className="select-none text-[10.5px] font-mono text-slate-400/60 dark:text-slate-600 w-7 text-right shrink-0 pt-[1px] tabular-nums">
                                     {i + 1}
                                 </span>
@@ -229,14 +230,30 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                                                 <span className={`select-none mr-1.5 font-semibold text-[9.5px] uppercase px-1 py-0.5 rounded border ${infoTypeClass(infoType)} inline-block shrink-0`}>
                                                     {infoType}
                                                 </span>
-                                                <span>{entry.text.replace(/^\[[A-Z]+\]\s*/i, "")}</span>
+                                                <span className={
+                                                    infoType === "AUTH"
+                                                        ? "text-amber-700 dark:text-amber-300 font-medium"
+                                                        : infoType === "VERSION"
+                                                            ? "text-violet-700 dark:text-violet-300"
+                                                            : infoType === "OPEN"
+                                                                ? "text-cyan-700 dark:text-cyan-300"
+                                                                : "text-slate-600 dark:text-slate-400"
+                                                }>
+                                                    {entry.text.replace(/^\[[A-Z]+\]\s*/i, "")}
+                                                </span>
                                             </>
                                         ) : (
                                             <>
-                                                <span className={`select-none mr-1.5 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"} shrink-0`}>
+                                                <span className={`select-none mr-1.5 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-sky-600 dark:text-sky-400"} shrink-0`}>
                                                     {entry.role === "honeypot" ? "#" : "$"}
                                                 </span>
-                                                <span>{entry.text}</span>
+                                                <span className={
+                                                    entry.role === "attacker"
+                                                        ? "text-slate-900 dark:text-slate-100 font-semibold"
+                                                        : "text-slate-600 dark:text-slate-300"
+                                                }>
+                                                    {entry.text}
+                                                </span>
                                             </>
                                         )}
                                     </div>
@@ -255,16 +272,11 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                 </div>
 
                 {/* More below / Jump to latest command button */}
-                {showScrollBottom && (
-                    <button
-                        type="button"
-                        onClick={scrollToBottom}
-                        className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-500 text-white text-[11px] font-sans font-medium shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-200 border border-white/20 cursor-pointer"
-                    >
-                        <span>Latest commands</span>
-                        <ArrowDown size={11} className="animate-bounce" />
-                    </button>
-                )}
+                <ScrollDownHint
+                    visible={showScrollBottom}
+                    onScrollDown={scrollToBottom}
+                    label="Latest commands"
+                />
             </div>
         </div>
     );
