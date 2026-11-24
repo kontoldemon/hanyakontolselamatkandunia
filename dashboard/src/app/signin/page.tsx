@@ -38,25 +38,29 @@ export default function SignInPage() {
     setLoading(true);
     setError("");
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, turnstileToken }),
-    });
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, turnstileToken }),
+      });
+      const data = await response.json().catch(() => ({}));
 
-    setLoading(false);
-    const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error || "Sign in failed");
+        return;
+      }
 
-    if (!response.ok) {
-      setError(data.error || "Sign in failed");
-      return;
-    }
-
-    if (data.requireOtp) {
-      setStep("otp");
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
-    } else {
-      finishLogin();
+      if (data.requireOtp) {
+        setStep("otp");
+        setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      } else {
+        finishLogin();
+      }
+    } catch {
+      setError("Unable to reach the server. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -71,22 +75,26 @@ export default function SignInPage() {
     setLoading(true);
     setError("");
 
-    const response = await fetch("/api/auth/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, otp: otpString }),
-    });
+    try {
+      const response = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, otp: otpString }),
+      });
+      const data = await response.json().catch(() => ({}));
 
-    setLoading(false);
-    const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(data.error || "Verification failed");
+        return;
+      }
 
-    if (!response.ok) {
-      setError(data.error || "Verification failed");
-      return;
+      setStep("success");
+      setTimeout(finishLogin, 1200);
+    } catch {
+      setError("Unable to reach the server. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setStep("success");
-    setTimeout(finishLogin, 1200);
   }
 
   function finishLogin() {
