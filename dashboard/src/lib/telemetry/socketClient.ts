@@ -163,13 +163,11 @@ async function loadRecentEvents() {
 
 function initSocket(url: string) {
   if (globalSocket) return;
-  const socketToken = process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN?.trim();
 
   globalSocket = io(url, {
     transports: ["polling", "websocket"],
     reconnection: true,
     withCredentials: false,
-    query: socketToken ? { token: socketToken } : undefined,
   });
   socketTelemetryState.socketUrl = url;
 

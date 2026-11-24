@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { LayoutDashboard, Terminal, BrainCircuit, Settings, LogOut, ChevronLeft, PanelLeftOpen, Moon, Sun } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "next-themes";
 import { useSensorOperations, useWarRoomState } from "@/lib/liveEvents";
@@ -19,7 +19,6 @@ export default function Sidebar() {
     });
     const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
     const pathname = usePathname();
-    const router = useRouter();
     const { theme, setTheme } = useTheme();
     const operations = useSensorOperations();
     const warRoom = useWarRoomState();
@@ -60,8 +59,7 @@ export default function Sidebar() {
 
     async function signOut() {
         await fetch("/api/auth/logout", { method: "POST" });
-        router.replace("/signin");
-        router.refresh();
+        window.location.assign("/signin");
     }
 
     return (
