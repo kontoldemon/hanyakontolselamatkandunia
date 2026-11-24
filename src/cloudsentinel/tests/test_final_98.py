@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 import pytest
 
 import cloudsentinel.admin_api as admin_module
+import cloudsentinel.api.queries as queries_module
 import cloudsentinel.server as server_module
 from cloudsentinel.admin_api import _load_recent_events_from_clickhouse, _load_recent_sessions_from_clickhouse
 from cloudsentinel.config import load_settings
@@ -117,7 +118,7 @@ def test_session_hassh_failures(monkeypatch) -> None:
     fallback_row[13] = ""
     fallback_row[14] = "SSH-2.0-test"
     monkeypatch.setattr(
-        admin_module,
+        queries_module,
         "fallback_hassh_from_version",
         lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("fallback")),
     )
@@ -150,8 +151,8 @@ def test_unknown_client_with_known_hassh(monkeypatch) -> None:
         0,
     )
     settings = _settings(monkeypatch, [row])
-    monkeypatch.setattr(admin_module, "infer_client_software", lambda *_a: "unknown")
-    monkeypatch.setattr(admin_module.HASSHDNA, "lookup", lambda _self, _h: {"client_software": "KnownBot"})
+    monkeypatch.setattr(queries_module, "infer_client_software", lambda *_a: "unknown")
+    monkeypatch.setattr(queries_module.HASSHDNA, "lookup", lambda _self, _h: {"client_software": "KnownBot"})
     sessions = _load_recent_sessions_from_clickhouse(settings)
     assert sessions[0]["client"] == "KnownBot"
 
