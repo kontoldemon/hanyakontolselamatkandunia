@@ -97,6 +97,43 @@ async def test_session_pipe_filters_output() -> None:
 
 
 @pytest.mark.asyncio
+async def test_session_pipe_cut_fields() -> None:
+    session = _session()
+    output = await session._execute("cat /etc/passwd | cut -d: -f1")
+    assert "root" in output
+    assert ":" not in output
+
+
+def test_cut_pipe_fields_and_ranges() -> None:
+    from cloudsentinel.commands.base import Cut
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        (["-d", ":", "-f", "1,3"], "a:b:c\n", "a:c\n"),
+        (["-d:", "-f1"], "a:b\n", "a\n"),
+        (["-f2-3"], "one\ttwo\tthree\n", "two\tthree\n"),
+        (["-f9"], "a:b\n", "\n"),
+        (["-f"], "a:b\n", ""),
+        (["-f", "x-y"], "a:b\n", ""),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Cut(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    empty = Fake("")
+    Cut(empty, "-f1").start()
+    assert empty.out == []
+
+
+@pytest.mark.asyncio
 async def test_clickhouse_forwarder_run(tmp_path) -> None:
     class FakeResult:
         def __init__(self, rows: list) -> None:

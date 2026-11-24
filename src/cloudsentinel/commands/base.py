@@ -171,7 +171,64 @@ class Grep(Command):
                 self.write(line + "\n")
 @register("/usr/bin/cut")
 class Cut(Command):
-    def call(self): self.write("")
+    def call(self):
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            return
+        delimiter = "\t"
+        fields: list[int] = []
+        args = list(self.args)
+        index = 0
+        while index < len(args):
+            arg = args[index]
+            if arg in ("-d", "--delimiter") and index + 1 < len(args):
+                delimiter = args[index + 1]
+                index += 2
+                continue
+            if arg.startswith("-d") and len(arg) > 2:
+                delimiter = arg[2:]
+                index += 1
+                continue
+            if arg in ("-f", "--fields") and index + 1 < len(args):
+                fields = self._parse_fields(args[index + 1])
+                index += 2
+                continue
+            if arg.startswith("-f") and len(arg) > 2:
+                fields = self._parse_fields(arg[2:])
+                index += 1
+                continue
+            index += 1
+        if not fields:
+            return
+        for line in stdin.splitlines():
+            parts = line.split(delimiter)
+            selected = [
+                parts[field - 1] if 0 <= field - 1 < len(parts) else ""
+                for field in fields
+            ]
+            self.write(delimiter.join(selected) + "\n")
+
+    @staticmethod
+    def _parse_fields(value: str) -> list[int]:
+        fields: list[int] = []
+        for part in value.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                start, end = part.split("-", 1)
+                try:
+                    first = int(start or "1")
+                    last = int(end or str(first))
+                except ValueError:
+                    continue
+                fields.extend(range(first, last + 1))
+            else:
+                try:
+                    fields.append(int(part))
+                except ValueError:
+                    continue
+        return fields
 @register("/usr/bin/awk")
 class Awk(Command):
     def call(self): self.write("")
