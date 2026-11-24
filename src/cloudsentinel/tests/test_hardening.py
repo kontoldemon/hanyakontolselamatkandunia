@@ -113,7 +113,10 @@ async def test_pipeline_does_not_keep_a_second_retry_copy(tmp_path, monkeypatch)
     assert len(events) == 1
 
 
-def test_load_settings_runs_cross_field_validation(tmp_path) -> None:
+def test_load_settings_runs_cross_field_validation(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("SOAR_ACTIVE_PROFILE", raising=False)
+    monkeypatch.delenv("CLICKHOUSE_ENABLED", raising=False)
+    monkeypatch.delenv("SOAR_FIREWALL_DRY_RUN", raising=False)
     config_path = tmp_path / "config.yaml"
     env_path = tmp_path / "env"
     config_path.write_text(
