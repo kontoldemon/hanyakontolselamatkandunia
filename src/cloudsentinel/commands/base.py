@@ -301,6 +301,80 @@ class Wc(Command):
         self.write(" ".join(values) + "\n")
 
 
+@register("/usr/bin/tr")
+class Tr(Command):
+    def call(self):
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            return
+        delete = False
+        squeeze = False
+        sets: list[str] = []
+        for arg in self.args:
+            if arg in ("-d", "--delete"):
+                delete = True
+            elif arg in ("-s", "--squeeze-repeats"):
+                squeeze = True
+            elif arg.startswith("-") and len(arg) > 1:
+                for flag in arg[1:]:
+                    if flag == "d":
+                        delete = True
+                    elif flag == "s":
+                        squeeze = True
+            else:
+                sets.append(arg)
+        if not sets:
+            return
+        first = self._expand_set(sets[0])
+        second = self._expand_set(sets[1]) if len(sets) > 1 else ""
+        if not delete and not squeeze and not second:
+            return
+        if second and len(second) < len(first):
+            second += second[-1] * (len(first) - len(second))
+        table = str.maketrans(first, second) if second else {}
+        squeeze_set = second if second else first
+        for line in stdin.splitlines():
+            result = line.translate(table)
+            if delete:
+                result = result.translate(str.maketrans("", "", first))
+            if squeeze:
+                collapsed: list[str] = []
+                for char in result:
+                    if not collapsed or collapsed[-1] != char or char not in squeeze_set:
+                        collapsed.append(char)
+                result = "".join(collapsed)
+            self.write(result + "\n")
+
+    @staticmethod
+    def _expand_set(value: str) -> str:
+        value = value.replace("\\t", "\t").replace("\\n", "\n").replace("\\\\", "\\")
+        classes = {
+            "lower": "abcdefghijklmnopqrstuvwxyz",
+            "upper": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            "digit": "0123456789",
+            "alpha": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            "alnum": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+            "space": " \t\n\r\v\f",
+            "punct": "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",
+        }
+        expanded: list[str] = []
+        index = 0
+        while index < len(value):
+            if value.startswith("[:", index):
+                end = value.find(":]", index + 2)
+                if end != -1:
+                    expanded.extend(classes.get(value[index + 2:end], ""))
+                    index = end + 2
+                    continue
+            if index + 2 < len(value) and value[index + 1] == "-" and value[index] <= value[index + 2]:
+                expanded.extend(chr(code) for code in range(ord(value[index]), ord(value[index + 2]) + 1))
+                index += 3
+                continue
+            expanded.append(value[index])
+            index += 1
+        return "".join(expanded)
+
+
 @register("/usr/bin/sed")
 class Sed(Command):
     def call(self):

@@ -102,6 +102,8 @@ async def test_session_pipe_filters_output() -> None:
     assert "1 root" in output
     output = await session._execute("echo foo | sed 's/foo/bar/'")
     assert output.strip() == "bar"
+    output = await session._execute("echo a:b | tr ':' ' '")
+    assert output.strip() == "a b"
 
 
 @pytest.mark.asyncio
@@ -110,6 +112,41 @@ async def test_session_pipe_cut_fields() -> None:
     output = await session._execute("cat /etc/passwd | cut -d: -f1")
     assert "root" in output
     assert ":" not in output
+
+
+def test_tr_pipe_translation_and_delete() -> None:
+    from cloudsentinel.commands.base import Tr
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        (["a-z", "A-Z"], "abc\n", "ABC\n"),
+        (["-d", ":"], "a:b\n", "ab\n"),
+        (["-d:", ":"], "a:b\n", "ab\n"),
+        (["-s", " "], "a  b\n", "a b\n"),
+        (["[:lower:]", "[:upper:]"], "abC\n", "ABC\n"),
+        (["abc", "x"], "abc\n", "xxx\n"),
+        (["-s", "a-z", "A-Z"], "aaBB\n", "AB\n"),
+        (["\\t", " "], "a\tb\n", "a b\n"),
+        (["[:space:]", " "], "a\tb\n", "a b\n"),
+        (["-d", "[:digit:]"], "a1b2\n", "ab\n"),
+        (["abc"], "abc\n", ""),
+        (["-d"], "abc\n", ""),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Tr(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    empty = Fake("")
+    Tr(empty, "a-z", "A-Z").start()
+    assert empty.out == []
 
 
 def test_sed_pipe_substitutions() -> None:
