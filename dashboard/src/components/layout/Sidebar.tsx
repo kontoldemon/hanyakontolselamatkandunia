@@ -50,6 +50,15 @@ export default function Sidebar() {
         window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? "1" : "0");
     }, [isCollapsed]);
 
+    useEffect(() => {
+        if (!showSignOutConfirm) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setShowSignOutConfirm(false);
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [showSignOutConfirm]);
+
     const links = [
         { name: "War Room", href: "/dashboard", icon: LayoutDashboard },
         { name: "Sessions", href: "/sessions", icon: Terminal },
@@ -210,6 +219,9 @@ export default function Sidebar() {
                     className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200"
                 >
                     <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="signout-title"
                         onClick={(e) => e.stopPropagation()}
                         className="relative max-w-[340px] w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-6 text-center shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-[#0c0c0e] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-200"
                     >
@@ -229,7 +241,7 @@ export default function Sidebar() {
                         </div>
 
                         {/* Title & Description */}
-                        <h3 className="font-display text-base font-bold tracking-tight text-slate-900 sm:text-lg dark:text-white">
+                        <h3 id="signout-title" className="font-display text-base font-bold tracking-tight text-slate-900 sm:text-lg dark:text-white">
                             Sign Out
                         </h3>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -240,6 +252,7 @@ export default function Sidebar() {
                         <div className="mt-6 flex items-center gap-2.5">
                             <button
                                 type="button"
+                                autoFocus
                                 onClick={() => setShowSignOutConfirm(false)}
                                 className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >
