@@ -88,6 +88,15 @@ async def test_session_strips_redirect_target() -> None:
 
 
 @pytest.mark.asyncio
+async def test_session_pipe_filters_output() -> None:
+    session = _session()
+    output = await session._execute("cat /etc/passwd | grep root")
+    assert "root" in output
+    output = await session._execute("cat /etc/passwd | grep zzz_not_present")
+    assert output == ""
+
+
+@pytest.mark.asyncio
 async def test_clickhouse_forwarder_run(tmp_path) -> None:
     class FakeResult:
         def __init__(self, rows: list) -> None:

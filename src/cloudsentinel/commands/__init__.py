@@ -83,6 +83,7 @@ class CommandAdapter:
         "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     })
     fs: Any = None
+    stdin: str = ""
     _output_chunks: list[str] = field(default_factory=list, init=False, repr=False)
 
     def write(self, data: str | bytes) -> None:

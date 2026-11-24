@@ -800,7 +800,7 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
             self._write(output.replace("\n", "\r\n") + "\r\n")
         self._prompt()
 
-    async def _execute(self, command: str) -> str:
+    async def _execute(self, command: str, stdin: str = "") -> str:
         """Execute command: command registry first, VFS agent fallback."""
         command = command.strip()[:1000]
         if not command:
@@ -811,13 +811,20 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                 self.chan.exit(0)
             return ""
 
-        if any(operator in command for operator in ("|", ";", "&&", "||")):
-            segments = re.split(r"\s*(?:\|\||&&|\||;)\s*", command)
+        if any(operator in command for operator in (";", "&&", "||")):
+            segments = re.split(r"\s*(?:\|\||&&|;)\s*", command)
             outputs = []
             for segment in segments:
                 if segment.strip():
                     outputs.append(await self._execute(segment))
             return "\n".join(part for part in outputs if part)
+
+        if "|" in command:
+            segments = [segment.strip() for segment in command.split("|") if segment.strip()]
+            output = ""
+            for segment in segments:
+                output = await self._execute(segment, stdin=output)
+            return output
 
         if ">" in command or "<" in command:
             command = command.split(">")[0].split("<")[0].strip()
@@ -884,25 +891,11 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                         starttime=self.server.started_at,
                         cwd=self._adapter_cwd(),
                         fs=self._command_fs,
+                        stdin=stdin,
                     )
                     cmd_instance = cls(adapter, *parts[1:])
                     cmd_instance.start()
                     output = adapter.flush()
-
-                    # Some registry commands can resolve but still produce no text in this
-                    # adapter flow. Fall back to VFS policy to avoid blank replay/output.
-                    if not str(output).strip():
-                        output, response_mode = await self.vfs.run_command_with_mode(command)
-                        mitre_annotation = score_command(command)
-                        asyncio.create_task(self.server._emit_event("cloudsentinel.command.output", {
-                            "input": command,
-                            "output": str(output)[:2000],
-                            "source": "vfs_agent",
-                            "response_mode": response_mode,
-                            "risk_score": mitre_annotation.get("risk_score", 0),
-                            "mitre_techniques": mitre_annotation.get("mitre_techniques", []),
-                        }))
-                        return str(output)
 
                     asyncio.create_task(self.server._emit_event("cloudsentinel.command.output", {
                         "input": command,

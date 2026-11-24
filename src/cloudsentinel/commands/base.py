@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 
 from . import Command
@@ -155,7 +156,19 @@ class Find(Command):
     def call(self): self.write("")
 @register("/usr/bin/grep")
 class Grep(Command):
-    def call(self): self.write("")
+    def call(self):
+        if not self.args:
+            return
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            return
+        try:
+            regex = re.compile(self.args[0])
+        except re.error:
+            return
+        for line in stdin.splitlines():
+            if regex.search(line):
+                self.write(line + "\n")
 @register("/usr/bin/cut")
 class Cut(Command):
     def call(self): self.write("")
