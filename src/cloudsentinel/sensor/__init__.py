@@ -1,0 +1,1 @@
+"""Attacker-facing sensor components."""

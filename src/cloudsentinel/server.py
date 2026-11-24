@@ -19,7 +19,6 @@ import re
 import signal
 import time
 import uuid
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +36,7 @@ from .hassh import HASSHDNA, calculate_hassh, fallback_hassh_from_version, infer
 from .mitre import score_command
 from .observability import setup_observability
 from .pipeline import ClickHouseForwarder, EventPipeline
+from .sensor.limits import ConnectionLimiter
 from .soar import SOAREngine
 from .stream import LiveStream
 from .tls import generate_self_signed_cert
@@ -48,57 +48,66 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 DEFAULT_STAGE1_CONFIG = str(PACKAGE_ROOT / "configs" / "usas-production.yaml")
 DEFAULT_STAGE1_ENV = str(PACKAGE_ROOT / ".env")
 
+
+def _split_unquoted(command: str, separators: tuple[str, ...]) -> list[str]:
+    parts: list[str] = []
+    start = 0
+    index = 0
+    quote: str | None = None
+    escaped = False
+    while index < len(command):
+        char = command[index]
+        if escaped:
+            escaped = False
+            index += 1
+            continue
+        if char == "\\":
+            escaped = True
+            index += 1
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in ("'", '"'):
+            quote = char
+            index += 1
+            continue
+        matched = next((sep for sep in separators if command.startswith(sep, index)), None)
+        if matched:
+            parts.append(command[start:index].strip())
+            index += len(matched)
+            start = index
+            continue
+        index += 1
+    parts.append(command[start:].strip())
+    return [part for part in parts if part]
+
+
+def _strip_unquoted_redirects(command: str) -> str:
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(command):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            continue
+        if char in ("'", '"'):
+            quote = char
+            continue
+        if char in ("<", ">"):
+            return command[:index].rstrip()
+    return command
+
+
 # ── Connection Rate Limiter ──────────────────────────────────────────
-
-
-class ConnectionLimiter:
-    """Sliding-window rate limiter: per-IP and global caps."""
-
-    def __init__(
-        self,
-        max_per_ip: int = 30,
-        max_total: int = 500,
-        window: float = 60.0,
-        max_entries: int = 10000,
-    ) -> None:
-        self.max_per_ip = max_per_ip
-        self.max_total = max_total
-        self.window = window
-        self.max_entries = max(1, max_entries)
-        self._ips: defaultdict[str, list[float]] = defaultdict(list)
-        self._total = 0
-        self._lock = asyncio.Lock()
-
-    def acquire_nowait(self, ip: str) -> bool:
-        now = time.monotonic()
-        self._ips[ip] = [t for t in self._ips[ip] if now - t < self.window]
-        if len(self._ips[ip]) >= self.max_per_ip or self._total >= self.max_total:
-            return False
-        self._ips[ip].append(now)
-        self._total += 1
-        if len(self._ips) > self.max_entries:
-            keep = sorted(
-                self._ips.items(),
-                key=lambda item: item[1][-1] if item[1] else 0.0,
-                reverse=True,
-            )[: self.max_entries]
-            self._ips = defaultdict(list, keep)
-        return True
-
-    async def acquire(self, ip: str) -> bool:
-        async with self._lock:
-            return self.acquire_nowait(ip)
-
-    def release_nowait(self, ip: str) -> None:
-        self._total = max(0, self._total - 1)
-
-    async def release(self, ip: str) -> None:
-        async with self._lock:
-            self.release_nowait(ip)
-
-    @property
-    def total(self) -> int:
-        return self._total
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -811,25 +820,23 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
                 self.chan.exit(0)
             return ""
 
-        if any(operator in command for operator in (";", "&&", "||")):
-            segments = re.split(r"\s*(?:\|\||&&|;)\s*", command)
+        chain_segments = _split_unquoted(command, ("||", "&&", ";"))
+        if chain_segments != [command]:
             outputs = []
-            for segment in segments:
-                if segment.strip():
-                    outputs.append(await self._execute(segment))
+            for segment in chain_segments:
+                outputs.append(await self._execute(segment))
             return "\n".join(part for part in outputs if part)
 
-        if "|" in command:
-            segments = [segment.strip() for segment in command.split("|") if segment.strip()]
+        pipe_segments = _split_unquoted(command, ("|",))
+        if pipe_segments != [command]:
             output = ""
-            for segment in segments:
+            for segment in pipe_segments:
                 output = await self._execute(segment, stdin=output)
             return output
 
-        if ">" in command or "<" in command:
-            command = command.split(">")[0].split("<")[0].strip()
-            if not command:
-                return ""
+        command = _strip_unquoted_redirects(command)
+        if not command:
+            return ""
 
         # Emit command input for SOAR scoring + pipeline
         asyncio.create_task(self.server._emit_event("cloudsentinel.command.input", {

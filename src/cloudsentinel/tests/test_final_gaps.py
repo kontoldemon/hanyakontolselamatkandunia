@@ -18,6 +18,8 @@ from cloudsentinel.server import (
     CloudSentinelSSHServer,
     CloudSentinelSession,
     ConnectionLimiter,
+    _split_unquoted,
+    _strip_unquoted_redirects,
 )
 from cloudsentinel.soar import SOAREngine
 from cloudsentinel.vfs_agent import VFSAgent, VFSContext
@@ -77,6 +79,31 @@ async def test_session_executes_command_chain() -> None:
     output = await session._execute("id; whoami")
     assert "uid=" in output
     assert "root" in output
+
+
+def test_quote_aware_shell_separators() -> None:
+    assert _split_unquoted("echo 'a|b' | cat", ("|",)) == ["echo 'a|b'", "cat"]
+    assert _split_unquoted('echo "a;b"; id', (";",)) == ['echo "a;b"', "id"]
+    assert _split_unquoted("echo a\\|b | cat", ("|",)) == ["echo a\\|b", "cat"]
+    assert _strip_unquoted_redirects("awk '$3 >= 0 {print $1}'") == "awk '$3 >= 0 {print $1}'"
+    assert _strip_unquoted_redirects("echo 'a>b'") == "echo 'a>b'"
+    assert _strip_unquoted_redirects("echo hi > /tmp/out") == "echo hi"
+
+
+@pytest.mark.asyncio
+async def test_honeypot_golden_transcript() -> None:
+    session = _session()
+    assert await session._execute("whoami") == "root\n"
+    assert await session._execute("id") == "uid=0(root) gid=0(root) groups=0(root)\n"
+    assert await session._execute("cat /etc/passwd | grep root | head -n 1") == (
+        "root:x:0:0:root:/root:/bin/bash\n"
+    )
+    assert await session._execute("cat /etc/passwd | awk -F: '$3 >= 0 {print $1}'") == "root\n"
+    assert await session._execute("echo 'a;b'") == "a;b\n"
+    assert await session._execute("echo 'a|b'") == "a|b\n"
+    assert await session._execute("echo 'a>b'") == "a>b\n"
+    assert await session._execute("echo hi;") == "hi\n"
+    assert await session._execute("exit") == ""
 
 
 @pytest.mark.asyncio
