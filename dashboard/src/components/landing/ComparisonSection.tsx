@@ -123,7 +123,7 @@ export default function ComparisonSection() {
               <div className="hidden sm:block sm:col-span-4 text-text-muted font-medium text-[11px]">
                 Capability
               </div>
-              <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5 min-w-0">
+              <div className="col-span-6 sm:col-span-4 flex items-center justify-start gap-1.5 min-w-0">
                 <Image
                   src="/cowrie-logo.png"
                   alt=""
@@ -138,7 +138,7 @@ export default function ComparisonSection() {
                   Passive
                 </span>
               </div>
-              <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5 min-w-0 pl-3.5 sm:pl-2.5">
+              <div className="col-span-6 sm:col-span-4 flex items-center justify-start gap-1.5 min-w-0">
                 <Image
                   src="/logo.svg"
                   alt=""
@@ -191,7 +191,7 @@ export default function ComparisonSection() {
                     </div>
 
                     {/* CloudSentinel Spec Card on Mobile / Column on Desktop */}
-                    <div className="col-span-6 sm:col-span-4 rounded-lg sm:rounded-none p-2 sm:p-0 sm:pl-2.5 bg-blue-500/[0.05] sm:bg-transparent border sm:border-0 border-blue-500/20 flex flex-col justify-start min-h-[58px] sm:min-h-0">
+                    <div className="col-span-6 sm:col-span-4 rounded-lg sm:rounded-none p-2 sm:p-0 bg-blue-500/[0.05] sm:bg-transparent border sm:border-0 border-blue-500/20 flex flex-col justify-start min-h-[58px] sm:min-h-0">
                       <div className="flex items-center gap-1.5">
                         <Check size={12} className="text-emerald-500 shrink-0 font-bold" />
                         <span className="font-mono text-[10px] sm:text-[11px] font-semibold text-blue-600 dark:text-blue-400 leading-snug">

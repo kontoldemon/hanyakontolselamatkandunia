@@ -125,9 +125,9 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
                                 <HighlightText text={session.ip} highlight={searchQuery} />
                             </h3>
                             {isNew && (
-                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center gap-1 shrink-0">
-                                    <span className="w-1 h-1 rounded-full bg-blue-500 animate-ping" />
-                                    NEW
+                                <span className="relative flex h-2 w-2 shrink-0 items-center justify-center" title="New session">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-500 dark:bg-blue-400 shadow-[0_0_6px_rgba(59,130,246,0.6)]" />
                                 </span>
                             )}
                         </div>

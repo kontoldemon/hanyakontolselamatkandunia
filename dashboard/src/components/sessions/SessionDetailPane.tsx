@@ -315,16 +315,6 @@ export default function SessionDetailPane({
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Deception Analysis Note */}
-                                            <div className="p-2.5 rounded-lg bg-indigo-500/5 border border-indigo-500/15 text-xs text-slate-600 dark:text-slate-300 font-sans leading-relaxed">
-                                                <span className="text-[10.5px] font-semibold text-indigo-600 dark:text-indigo-400 block mb-0.5">
-                                                    Deception Sensor Profile
-                                                </span>
-                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                                    Captured interactive SSH session on CloudSentinel honeypot node with full keystroke auditing.
-                                                </p>
-                                            </div>
                                         </div>
                                     )}
 
@@ -438,14 +428,6 @@ export default function SessionDetailPane({
                                             </div>
                                         </div>
                                     )}
-                                </div>
-
-                                {/* Pinned Status Footer Anchoring the Bottom */}
-                                <div className="mt-auto pt-2.5 border-t border-slate-200/60 dark:border-white/5 flex items-center text-[10px] text-slate-400 dark:text-slate-500 font-mono shrink-0">
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        CloudSentinel Sensor
-                                    </span>
                                 </div>
                             </div>
                         </div>

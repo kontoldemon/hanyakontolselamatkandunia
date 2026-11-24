@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Copy, Terminal as TerminalIcon, Check, Maximize2, Minimize2, Search, X } from "lucide-react";
+import { Copy, Terminal as TerminalIcon, Check, Maximize2, Minimize2, Search, X, ArrowDown } from "lucide-react";
 import { useAgentCommand } from "@/lib/AgentContext";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +51,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
     const [copied, setCopied] = useState(false);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [showScrollBottom, setShowScrollBottom] = useState(false);
 
     useAgentCommand("replay.fullscreen", useCallback(() => setIsFullScreen((p) => !p), []));
     useAgentCommand("replay.mode", useCallback((v: string) => onModeChange?.(v as "attacker" | "both"), [onModeChange]));
@@ -99,7 +100,14 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
         if (!scrollRef.current) return;
         const el = scrollRef.current;
         const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight);
-        stickToBottomRef.current = distanceFromBottom < 24;
+        stickToBottomRef.current = distanceFromBottom < 30;
+        setShowScrollBottom(distanceFromBottom > 70);
+    }
+
+    function scrollToBottom() {
+        if (!scrollRef.current) return;
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+        setShowScrollBottom(false);
     }
 
     function handleCopy() {
@@ -122,7 +130,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                         &bull; {searchQuery.trim() ? `${filteredEntries.length}/${visibleEntries.length}` : visibleEntries.length} {visibleEntries.length === 1 ? "line" : "lines"}
                     </span>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {/* Search filter input */}
                     <div className="relative flex items-center">
                         <Search size={11} className="text-slate-400 dark:text-slate-500 absolute left-2 pointer-events-none" />
@@ -130,8 +138,8 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Filter commands..."
-                            className="w-24 sm:w-32 focus:w-44 h-6 pl-5.5 pr-5 py-0.5 text-[10.5px] font-mono rounded-md bg-slate-200/50 dark:bg-white/[0.06] border border-slate-300/40 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all focus:border-blue-500/50"
+                            placeholder="Filter..."
+                            className="w-20 sm:w-28 focus:w-36 h-6.5 pl-5 pr-5 py-0.5 text-[11px] font-sans rounded-md bg-slate-200/50 dark:bg-white/[0.06] border border-slate-300/40 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all focus:border-blue-500/50"
                         />
                         {searchQuery && (
                             <button
@@ -144,7 +152,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                         )}
                     </div>
 
-                    <div className="inline-flex items-center p-0.5 rounded-md bg-slate-200/60 dark:bg-white/[0.06] text-[10.5px] font-sans">
+                    <div className="inline-flex h-6.5 items-center p-0.5 rounded-md bg-slate-200/60 dark:bg-white/[0.06] text-[10.5px] font-sans">
                         <button
                             type="button"
                             onClick={() => onModeChange?.("both")}
@@ -170,23 +178,27 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                             Attacker
                         </button>
                     </div>
+
                     <div className="w-[1px] h-3.5 bg-slate-300 dark:bg-white/10" />
-                    <button
-                        onClick={handleCopy}
-                        className="inline-flex h-6 w-6 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10"
-                        title="Copy replay"
-                        aria-label="Copy replay"
-                    >
-                        {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                    </button>
-                    <button
-                        onClick={() => setIsFullScreen(!isFullScreen)}
-                        className="inline-flex h-6 w-6 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10"
-                        title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
-                        aria-label={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
-                    >
-                        {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                    </button>
+
+                    <div className="flex items-center gap-0.5">
+                        <button
+                            onClick={handleCopy}
+                            className="inline-flex h-6.5 w-6.5 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10"
+                            title="Copy replay"
+                            aria-label="Copy replay"
+                        >
+                            {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        </button>
+                        <button
+                            onClick={() => setIsFullScreen(!isFullScreen)}
+                            className="inline-flex h-6.5 w-6.5 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10"
+                            title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
+                            aria-label={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
+                        >
+                            {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -210,18 +222,18 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                                 <span className="select-none text-[10.5px] font-mono text-slate-400/60 dark:text-slate-600 w-7 text-right shrink-0 pt-[1px] tabular-nums">
                                     {i + 1}
                                 </span>
-                                <div className="flex-1 min-w-0 overflow-x-auto terminal-scrollbar flex items-baseline justify-between gap-3">
-                                    <div className="whitespace-pre font-mono shrink-0">
+                                <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
+                                    <div className="font-mono break-all whitespace-pre-wrap flex-1 min-w-0">
                                         {infoType ? (
                                             <>
-                                                <span className={`select-none mr-1.5 font-semibold text-[9.5px] uppercase px-1 py-0.5 rounded border ${infoTypeClass(infoType)}`}>
+                                                <span className={`select-none mr-1.5 font-semibold text-[9.5px] uppercase px-1 py-0.5 rounded border ${infoTypeClass(infoType)} inline-block shrink-0`}>
                                                     {infoType}
                                                 </span>
                                                 <span>{entry.text.replace(/^\[[A-Z]+\]\s*/i, "")}</span>
                                             </>
                                         ) : (
                                             <>
-                                                <span className={`select-none mr-1.5 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`}>
+                                                <span className={`select-none mr-1.5 font-bold ${entry.role === "honeypot" ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"} shrink-0`}>
                                                     {entry.role === "honeypot" ? "#" : "$"}
                                                 </span>
                                                 <span>{entry.text}</span>
@@ -229,7 +241,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                                         )}
                                     </div>
                                     {entry.timestamp && (
-                                        <span className="select-none text-[9.5px] font-mono text-slate-400/80 dark:text-slate-500 shrink-0 tabular-nums ml-auto">
+                                        <span className="select-none text-[9.5px] font-mono text-slate-400/80 dark:text-slate-500 shrink-0 tabular-nums ml-auto pt-[1px]">
                                             {entry.timestamp}
                                         </span>
                                     )}
@@ -241,6 +253,18 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                         <div className="animate-pulse inline-block w-1.5 h-3.5 bg-slate-400 dark:bg-emerald-400 align-middle" />
                     </div>
                 </div>
+
+                {/* More below / Jump to latest command button */}
+                {showScrollBottom && (
+                    <button
+                        type="button"
+                        onClick={scrollToBottom}
+                        className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-500 text-white text-[11px] font-sans font-medium shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-200 border border-white/20 cursor-pointer"
+                    >
+                        <span>Latest commands</span>
+                        <ArrowDown size={11} className="animate-bounce" />
+                    </button>
+                )}
             </div>
         </div>
     );

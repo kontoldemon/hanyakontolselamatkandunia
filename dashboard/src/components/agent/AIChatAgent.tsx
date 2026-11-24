@@ -243,16 +243,16 @@ export default function AIChatAgent() {
     return (
         <div
             className={cn(
-                "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-white/[0.08] dark:bg-black/[0.25] border border-white/40 dark:border-white/25 shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1px_1.5px_rgba(255,255,255,0.35)] rounded-2xl flex flex-col overflow-hidden transition-all duration-300",
+                "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] border border-slate-900/15 dark:border-white/25 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1.5px_1.5px_rgba(255,255,255,0.7)] rounded-2xl flex flex-col overflow-hidden transition-all duration-300",
                 isMinimized ? "w-[calc(100vw-32px)] md:w-72 h-14" : "w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]"
             )}
-            style={{ backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }}
+            style={{ backdropFilter: "blur(1.5px)", WebkitBackdropFilter: "blur(1.5px)" }}
         >
-            {/* Top specular curved glass shine reflection */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent pointer-events-none rounded-2xl" />
+            {/* Clear curved glass specular shine on top */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/35 dark:from-white/25 via-transparent to-transparent pointer-events-none rounded-2xl" />
 
             <div
-                className="relative px-3.5 py-2.5 bg-white/[0.04] dark:bg-white/[0.02] border-b border-white/30 dark:border-white/10 flex justify-between items-center shrink-0 cursor-pointer transition-colors hover:bg-white/[0.08] dark:hover:bg-white/[0.04]"
+                className="relative px-3.5 py-2.5 bg-slate-100/60 dark:bg-black/[0.15] border-b border-slate-200/80 dark:border-white/15 flex justify-between items-center shrink-0 cursor-pointer transition-colors hover:bg-slate-200/50 dark:hover:bg-white/[0.06]"
                 onClick={() => setIsMinimized(!isMinimized)}
             >
                 <div className="flex items-center gap-2.5">
@@ -308,7 +308,7 @@ export default function AIChatAgent() {
                         onDeny={handleActionDeny}
                     />
 
-                    <div className="relative p-2.5 bg-white/[0.04] dark:bg-white/[0.02] border-t border-white/30 dark:border-white/10 shrink-0">
+                    <div className="relative p-2.5 bg-white/[0.06] dark:bg-black/[0.15] border-t border-white/30 dark:border-white/15 shrink-0">
                         <div className="relative flex items-center">
                             <textarea
                                 rows={1}
@@ -327,7 +327,7 @@ export default function AIChatAgent() {
                                 }}
                                 placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
                                 disabled={isExecuting}
-                                className="w-full bg-white/[0.05] dark:bg-white/[0.03] border border-white/30 dark:border-white/10 rounded-xl pl-3.5 pr-10 py-2.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left"
+                                className="w-full bg-white/40 dark:bg-black/30 border border-white/40 dark:border-white/20 rounded-xl pl-3.5 pr-10 py-2.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/60 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left backdrop-blur-sm"
                                 style={{ minHeight: "36px" }}
                             />
                             <button

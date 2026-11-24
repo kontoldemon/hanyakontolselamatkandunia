@@ -71,8 +71,8 @@ export default function AgentMessageList({
                         <div
                             className={`whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed text-left ${
                                 msg.role === "user"
-                                    ? "bg-blue-600/60 dark:bg-blue-600/50 text-white rounded-br-xs border border-blue-400/40 shadow-[0_4px_16px_rgba(37,99,235,0.25),inset_0_1px_1px_rgba(255,255,255,0.3)]"
-                                    : "bg-white/10 dark:bg-white/[0.04] border border-white/20 dark:border-white/10 text-slate-800 dark:text-slate-100 rounded-bl-xs shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]"
+                                    ? "bg-blue-600 dark:bg-blue-600 text-white rounded-br-xs shadow-[0_4px_16px_rgba(37,99,235,0.35),inset_0_1px_1px_rgba(255,255,255,0.3)] font-medium"
+                                    : "bg-white/95 dark:bg-black/50 border border-slate-300/80 dark:border-white/20 text-slate-900 dark:text-slate-100 rounded-bl-xs shadow-[0_4px_12px_rgba(15,23,42,0.08)] backdrop-blur-md"
                             }`}
                         >
                             {formatAiText(msg.content)}
@@ -83,7 +83,7 @@ export default function AgentMessageList({
                                 {msg.actions.map((action, ai) => (
                                     <div
                                         key={ai}
-                                        className="bg-white/10 dark:bg-white/[0.03] border border-white/20 dark:border-white/10 rounded-xl p-3 shadow-xs flex items-start gap-2.5 text-left"
+                                        className="bg-white/95 dark:bg-black/40 border border-slate-300/80 dark:border-white/15 rounded-xl p-3 shadow-sm backdrop-blur-md flex items-start gap-2.5 text-left"
                                     >
                                         <Zap size={14} className="text-amber-500 shrink-0 mt-0.5" />
                                         <div>
