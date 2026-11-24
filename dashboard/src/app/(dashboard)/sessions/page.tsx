@@ -10,7 +10,7 @@ import {
     SessionRow,
 } from "@/components/sessions/SessionListRow";
 import SessionDetailPane from "@/components/sessions/SessionDetailPane";
-import { useSessionsViewController } from "@/components/sessions/useSessionsViewController";
+import { useSessionsViewController, type SessionFilterStatus } from "@/components/sessions/useSessionsViewController";
 
 export default function SessionsPage() {
     const {
@@ -58,7 +58,7 @@ export default function SessionsPage() {
                                 { label: "High Risk (80+)", value: "high_risk" },
                             ]}
                             value={filterStatus}
-                            onChange={(val) => setFilterStatus(val as any)}
+                            onChange={(val) => setFilterStatus(val as SessionFilterStatus)}
                             className="w-32 lg:w-34"
                         />
                     </div>

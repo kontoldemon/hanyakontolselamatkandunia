@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+import re
 import sys
 import types
 from pathlib import Path
@@ -280,7 +281,7 @@ def test_manual_block_uses_eventgrid(monkeypatch) -> None:
 def test_bicep_mounts_sensor_disk_and_private_vault() -> None:
     main = Path("infra/main.bicep").read_text(encoding="utf-8")
     assert "sensor-cloud-init.sh" in main
-    assert "privatelink.vaultcore.azure.net" in main
+    assert re.search(r"privatelink\.vaultcore\.azure\.net", main)
     assert "publicNetworkAccess: 'Disabled'" in main
     assert Path("infra/sensor-cloud-init.sh").is_file()
 
