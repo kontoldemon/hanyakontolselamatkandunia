@@ -98,6 +98,8 @@ async def test_session_pipe_filters_output() -> None:
     assert "root" in output
     output = await session._execute("echo hello | wc -l")
     assert output.strip() == "1"
+    output = await session._execute("cat /etc/passwd | cut -d: -f1 | sort | uniq -c")
+    assert "1 root" in output
 
 
 @pytest.mark.asyncio
@@ -106,6 +108,77 @@ async def test_session_pipe_cut_fields() -> None:
     output = await session._execute("cat /etc/passwd | cut -d: -f1")
     assert "root" in output
     assert ":" not in output
+
+
+def test_sort_pipe_lines() -> None:
+    from cloudsentinel.commands.base import Sort
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        ([], "b\na\nc\n", "a\nb\nc\n"),
+        (["-r"], "b\na\nc\n", "c\nb\na\n"),
+        (["-n"], "10\n2\n1\n", "1\n2\n10\n"),
+        (["-rn"], "10\n2\n1\n", "10\n2\n1\n"),
+        (["-u"], "b\na\nb\n", "a\nb\n"),
+        (["-f"], "b\nA\na\n", "A\na\nb\n"),
+        (["-n"], "x\n1\n10\n", "x\n1\n10\n"),
+        (["-x"], "b\na\n", "a\nb\n"),
+        (["--reverse"], "a\nb\n", "b\na\n"),
+        (["--numeric-sort"], "10\n2\n", "2\n10\n"),
+        (["--unique"], "b\na\nb\n", "a\nb\n"),
+        (["--ignore-case"], "b\nA\na\n", "A\na\nb\n"),
+        (["-ru"], "b\na\nb\n", "b\na\n"),
+        (["-lf"], "B\na\n", "a\nB\n"),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Sort(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    empty = Fake("")
+    Sort(empty).start()
+    assert empty.out == []
+
+
+def test_uniq_pipe_groups() -> None:
+    from cloudsentinel.commands.base import Uniq
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        ([], "a\na\nb\n", "a\nb\n"),
+        (["-c"], "a\na\nb\n", "2 a\n1 b\n"),
+        (["-d"], "a\na\nb\n", "a\n"),
+        (["-u"], "a\na\nb\n", "b\n"),
+        (["-cd"], "a\na\nb\n", "2 a\n"),
+        (["-cu"], "a\na\nb\n", "1 b\n"),
+        (["-du"], "a\na\nb\n", ""),
+        (["-x"], "a\na\nb\n", "a\nb\n"),
+        (["--count"], "a\na\nb\n", "2 a\n1 b\n"),
+        (["--repeated"], "a\na\nb\n", "a\n"),
+        (["--unique"], "a\na\nb\n", "b\n"),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Uniq(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    empty = Fake("")
+    Uniq(empty, "-c").start()
+    assert empty.out == []
 
 
 def test_wc_pipe_counts() -> None:
@@ -126,6 +199,7 @@ def test_wc_pipe_counts() -> None:
         (["-c"], "one two\nthree\n", "14\n"),
         (["-l", "-w"], "one two\nthree\n", "2 3\n"),
         (["-lw"], "one two\nthree\n", "2 3\n"),
+        (["-lc"], "a\nb\n", "2 4\n"),
         (["--lines"], "one two\nthree\n", "2\n"),
         (["-x"], "one two\nthree\n", "2 3 14\n"),
         (["-l"], "no-newline", "0\n"),
@@ -190,7 +264,9 @@ def test_cut_pipe_fields_and_ranges() -> None:
         (["-f2-3"], "one\ttwo\tthree\n", "two\tthree\n"),
         (["-f9"], "a:b\n", "\n"),
         (["-f"], "a:b\n", ""),
+        (["-f", "x"], "a:b\n", ""),
         (["-f", "x-y"], "a:b\n", ""),
+        (["-f", "1,,2"], "a\tb\tc\n", "a\tb\n"),
     ]
     for args, stdin, expected in cases:
         proto = Fake(stdin)

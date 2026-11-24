@@ -301,6 +301,89 @@ class Wc(Command):
         self.write(" ".join(values) + "\n")
 
 
+@register("/usr/bin/sort")
+class Sort(Command):
+    def call(self):
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            return
+        reverse = False
+        numeric = False
+        unique = False
+        fold = False
+        for arg in self.args:
+            if arg in ("-r", "--reverse"):
+                reverse = True
+            elif arg in ("-n", "--numeric-sort"):
+                numeric = True
+            elif arg in ("-u", "--unique"):
+                unique = True
+            elif arg in ("-f", "--ignore-case"):
+                fold = True
+            elif arg.startswith("-") and len(arg) > 1:
+                for flag in arg[1:]:
+                    if flag == "r":
+                        reverse = True
+                    elif flag == "n":
+                        numeric = True
+                    elif flag == "u":
+                        unique = True
+                    elif flag == "f":
+                        fold = True
+        lines = stdin.splitlines()
+        if numeric:
+            def key(line: str) -> object:
+                try:
+                    return float(line.strip())
+                except ValueError:
+                    return 0.0
+        else:
+            def key(line: str) -> object:
+                return line.lower() if fold else line
+        lines.sort(key=key, reverse=reverse)
+        if unique:
+            lines = list(dict.fromkeys(lines))
+        self.write("\n".join(lines) + "\n")
+
+
+@register("/usr/bin/uniq")
+class Uniq(Command):
+    def call(self):
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            return
+        count = False
+        repeated = False
+        unique_only = False
+        for arg in self.args:
+            if arg in ("-c", "--count"):
+                count = True
+            elif arg in ("-d", "--repeated"):
+                repeated = True
+            elif arg in ("-u", "--unique"):
+                unique_only = True
+            elif arg.startswith("-") and len(arg) > 1:
+                for flag in arg[1:]:
+                    if flag == "c":
+                        count = True
+                    elif flag == "d":
+                        repeated = True
+                    elif flag == "u":
+                        unique_only = True
+        groups: list[list[object]] = []
+        for line in stdin.splitlines():
+            if groups and groups[-1][0] == line:
+                groups[-1][1] = int(groups[-1][1]) + 1
+            else:
+                groups.append([line, 1])
+        for line, occurrences in groups:
+            if repeated and occurrences < 2:
+                continue
+            if unique_only and occurrences != 1:
+                continue
+            self.write(f"{occurrences} {line}\n" if count else f"{line}\n")
+
+
 @register("/usr/bin/awk")
 class Awk(Command):
     def call(self):
