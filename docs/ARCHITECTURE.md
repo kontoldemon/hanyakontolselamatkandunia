@@ -201,7 +201,7 @@ These are real gaps, not completed features.
 10. Local auto-blocks need the host agent; Azure auto-blocks need the Event Grid subscription, the Function, and the NSG role assignment to be healthy.
 11. A manual block with a TTL is enforced by a background task in the API process. A restart before the TTL expires leaves the rule in place.
 12. The Function picks a free NSG priority in the 200-3999 range. A full NSG rejects new blocks until rules are cleaned up.
-13. The interactive shell passes piped output to `grep`, `cut`, and basic `awk` forms (`{print $N}`, `/regex/`, and simple `$N` comparisons); `awk` `BEGIN`/`END`, compound conditions, and file arguments are not supported. `;`/`&&`/`||` execute each segment independently.
+13. The interactive shell passes piped output to `grep`, `cut`, and basic `awk` forms (`{print $N}`, `/regex/`, `$N` comparisons, and `&&`/`||`/`!` conditions); `awk` `BEGIN`/`END`, parentheses grouping, and file arguments are not supported. `;`/`&&`/`||` execute each segment independently.
 
 ## 10. Configuration rule
 

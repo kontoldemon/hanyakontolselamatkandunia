@@ -477,6 +477,13 @@ def test_awk_conditions() -> None:
         (["NF == 3 {print $1}"], "a b c\n", ""),
         (["$1 == root {print}"], "root\n", "root\n"),
         (["$1 > abc {print $1}"], "a\n", ""),
+        (["-F:", "$3 >= 1000 && $1 != \"root\" {print $1}"], "root:x:1000\nadmin:y:1000\nbin:z:999\n", "admin\n"),
+        (["-F:", "$1 == \"root\" || $3 >= 1000 {print $1}"], "root:x:0\nadmin:y:1000\nbin:z:999\n", "root\nadmin\n"),
+        (["! /root/ {print $1}"], "root\nbin\n", "bin\n"),
+        (["-F:", "$1 == \"root\" && $2 == \"x\" || $3 == \"0\" {print $1}"], "root:y:9\nadmin:x:0\nbin:z:1\n", "admin\n"),
+        (["-F:", "$1 ~ /a\\/b/ {print $1}"], "a/b\nx\n", "a/b\n"),
+        (["$1 == \"a&&b\" {print $2}"], "a&&b x\n", "x\n"),
+        (["/a\\|\\|b/ {print $1}"], "a||b\nc\n", "a||b\n"),
     ]
     for args, stdin, expected in cases:
         proto = Fake(stdin)

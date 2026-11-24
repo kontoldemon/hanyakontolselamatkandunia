@@ -520,6 +520,14 @@ class Awk(Command):
     def _matches(condition: str, line: str, parts: list[str]) -> bool:
         if not condition:
             return True
+        for separator in ("||", "&&"):
+            segments = Awk._split_condition(condition, separator)
+            if len(segments) > 1:
+                if separator == "||":
+                    return any(Awk._matches(segment, line, parts) for segment in segments)
+                return all(Awk._matches(segment, line, parts) for segment in segments)
+        if condition.startswith("!"):
+            return not Awk._matches(condition[1:].strip(), line, parts)
         if condition.startswith("/") and condition.endswith("/"):
             try:
                 return bool(re.search(condition[1:-1], line))
@@ -563,6 +571,35 @@ class Awk(Command):
         if operator == ">=":
             return left_number >= right_number
         return left_number <= right_number
+
+    @staticmethod
+    def _split_condition(condition: str, separator: str) -> list[str]:
+        segments: list[str] = []
+        start = 0
+        index = 0
+        in_regex = False
+        in_quote = False
+        while index < len(condition):
+            char = condition[index]
+            if char == "\\":
+                index += 2
+                continue
+            if char == '"' and not in_regex:
+                in_quote = not in_quote
+                index += 1
+                continue
+            if char == "/" and not in_quote:
+                in_regex = not in_regex
+                index += 1
+                continue
+            if not in_regex and not in_quote and condition.startswith(separator, index):
+                segments.append(condition[start:index].strip())
+                index += len(separator)
+                start = index
+                continue
+            index += 1
+        segments.append(condition[start:].strip())
+        return segments
 
     @staticmethod
     def _field(expression: str, line: str, parts: list[str]) -> str:
