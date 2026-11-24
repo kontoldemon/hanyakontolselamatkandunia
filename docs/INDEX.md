@@ -19,6 +19,12 @@ Last reviewed: 2026-11-23.
 | `artifacts/ttp-coverage.md` | MITRE coverage evidence. | Evidence |
 | `artifacts/phase1-validation.md` | Phase 1 validation evidence. | Evidence |
 
+## Active design work
+
+| Document | Status |
+|---|---|
+| `docs/superpowers/specs/2026-11-24-honeypot-refactor-design.md` | Proposed staged refactor plan; no code changes yet. |
+
 ## FYP documents
 
 | Document | Status |
