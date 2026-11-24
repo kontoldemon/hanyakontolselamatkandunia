@@ -265,6 +265,42 @@ class Cut(Command):
                 except ValueError:
                     continue
         return fields
+@register("/usr/bin/wc")
+class Wc(Command):
+    def call(self):
+        stdin = getattr(self.protocol, "stdin", "")
+        if not stdin:
+            return
+        show_lines = False
+        show_words = False
+        show_bytes = False
+        for arg in self.args:
+            if arg in ("-l", "--lines"):
+                show_lines = True
+            elif arg in ("-w", "--words"):
+                show_words = True
+            elif arg in ("-c", "--bytes"):
+                show_bytes = True
+            elif arg.startswith("-") and len(arg) > 1:
+                for flag in arg[1:]:
+                    if flag == "l":
+                        show_lines = True
+                    elif flag == "w":
+                        show_words = True
+                    elif flag == "c":
+                        show_bytes = True
+        if not (show_lines or show_words or show_bytes):
+            show_lines = show_words = show_bytes = True
+        values: list[str] = []
+        if show_lines:
+            values.append(str(stdin.count("\n")))
+        if show_words:
+            values.append(str(len(stdin.split())))
+        if show_bytes:
+            values.append(str(len(stdin.encode("utf-8"))))
+        self.write(" ".join(values) + "\n")
+
+
 @register("/usr/bin/awk")
 class Awk(Command):
     def call(self):

@@ -96,6 +96,8 @@ async def test_session_pipe_filters_output() -> None:
     assert output == ""
     output = await session._execute("cat /etc/passwd | grep -i ROOT")
     assert "root" in output
+    output = await session._execute("echo hello | wc -l")
+    assert output.strip() == "1"
 
 
 @pytest.mark.asyncio
@@ -104,6 +106,38 @@ async def test_session_pipe_cut_fields() -> None:
     output = await session._execute("cat /etc/passwd | cut -d: -f1")
     assert "root" in output
     assert ":" not in output
+
+
+def test_wc_pipe_counts() -> None:
+    from cloudsentinel.commands.base import Wc
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        ([], "one two\nthree\n", "2 3 14\n"),
+        (["-l"], "one two\nthree\n", "2\n"),
+        (["-w"], "one two\nthree\n", "3\n"),
+        (["-c"], "one two\nthree\n", "14\n"),
+        (["-l", "-w"], "one two\nthree\n", "2 3\n"),
+        (["-lw"], "one two\nthree\n", "2 3\n"),
+        (["--lines"], "one two\nthree\n", "2\n"),
+        (["-x"], "one two\nthree\n", "2 3 14\n"),
+        (["-l"], "no-newline", "0\n"),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Wc(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+    empty = Fake("")
+    Wc(empty, "-l").start()
+    assert empty.out == []
 
 
 def test_grep_pipe_flags_and_patterns() -> None:
