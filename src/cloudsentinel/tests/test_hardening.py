@@ -19,7 +19,7 @@ from cloudsentinel.admin_api import create_admin_app
 from cloudsentinel.config import RedisSettings, load_settings
 from cloudsentinel.hassh import HASSHDNA
 from cloudsentinel.pipeline import EventEnvelope, EventPipeline
-from cloudsentinel.server import ConnectionLimiter
+from cloudsentinel.server import ConnectionLimiter, TTYLogger
 from cloudsentinel.stream import LiveStream
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -460,6 +460,13 @@ def test_anomaly_auto_trains_after_window() -> None:
         detector.score(f"echo {index}")
     assert detector.stats["total_commands_analyzed"] == 12
     assert detector.stats["model_ready"] is True
+
+
+def test_tty_logger_caps_memory() -> None:
+    logger = TTYLogger("unit", max_log_bytes=10)
+    for _ in range(5):
+        logger.record(b"x" * 4)
+    assert logger._log_bytes <= 10
 
 
 def test_validate_settings_requires_eventgrid_credentials() -> None:

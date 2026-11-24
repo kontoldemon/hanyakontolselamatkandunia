@@ -271,10 +271,12 @@ async def load_or_create_host_key(path: Path) -> asyncssh.SSHKey:
 class TTYLogger:
     """Persist full TTY session transcripts to disk (async I/O via aiofiles)."""
 
-    def __init__(self, session_id: str) -> None:
+    def __init__(self, session_id: str, max_log_bytes: int = 1_000_000) -> None:
         self.session_id = session_id
         self._dir: Path | None = None
         self._log: list[tuple[float, bytes]] = []
+        self._log_bytes = 0
+        self.max_log_bytes = max(1, max_log_bytes)
         try:
             self._dir = Path(f"var/lib/cloudsentinel/tty/{session_id}")
             self._dir.mkdir(parents=True, exist_ok=True)
@@ -282,7 +284,12 @@ class TTYLogger:
             self._dir = None
 
     def record(self, data: bytes) -> None:
+        data = bytes(data)
         self._log.append((time.time(), data))
+        self._log_bytes += len(data)
+        while self._log and self._log_bytes > self.max_log_bytes:
+            _, old = self._log.pop(0)
+            self._log_bytes -= len(old)
 
     async def save_async(self) -> None:
         """Save TTY logs using async I/O (non-blocking on event loop)."""
@@ -757,6 +764,12 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
 
             if 32 <= byte < 127:
                 self._line_buffer += b
+                if len(self._line_buffer) > 8192:
+                    self.server._fuzz_detected = True
+                    self._line_buffer = b""
+                    if self.chan is not None:
+                        self.chan.exit(1)
+                    return
                 self._write(b)
 
     def connection_lost(self, exc: Exception | None) -> None:

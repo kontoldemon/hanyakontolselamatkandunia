@@ -64,6 +64,13 @@ def _session():
     return CloudSentinelSession(fake_server)
 
 
+def test_session_caps_command_line_buffer() -> None:
+    session = _session()
+    session.data_received("a" * 9000, None)
+    assert session.server._fuzz_detected is True
+    assert session._line_buffer == b""
+
+
 @pytest.mark.asyncio
 async def test_clickhouse_forwarder_run(tmp_path) -> None:
     class FakeResult:
