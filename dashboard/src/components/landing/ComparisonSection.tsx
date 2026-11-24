@@ -90,49 +90,27 @@ export default function ComparisonSection() {
   return (
     <section
       id="comparison"
-      className="relative flex flex-col justify-center scroll-mt-14 px-4 py-8 sm:py-10 md:min-h-dvh md:py-6 md:px-6 border-t border-border-line/[0.08] bg-surface-panel/10 overflow-hidden"
+      className="relative flex flex-col justify-center scroll-mt-14 px-3.5 py-8 sm:px-4 sm:py-10 md:min-h-dvh md:py-6 md:px-6 border-t border-border-line/[0.08] bg-surface-panel/10 overflow-hidden"
     >
-      {/* Background decorative logos & ambient lighting */}
+      {/* Background decorative ambient lighting: Monochrome (Cowrie) on left, Electric Blue (CloudSentinel) on right */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 select-none overflow-hidden">
-        {/* Subtle ambient gradients */}
-        <div className="absolute top-1/4 -left-20 h-[28rem] w-[28rem] rounded-full bg-amber-500/[0.04] blur-[140px] dark:bg-amber-600/[0.06]" />
-        <div className="absolute bottom-1/4 -right-20 h-[28rem] w-[28rem] rounded-full bg-blue-500/[0.05] blur-[140px] dark:bg-blue-600/[0.08]" />
-
-        {/* Top-Left: Cowrie Shell Watermark Logo */}
-        <div className="absolute top-8 -left-6 sm:top-14 sm:left-2 lg:left-8 w-52 h-52 sm:w-72 sm:h-72 lg:w-80 lg:h-80 opacity-[0.16] dark:opacity-[0.20] dark:invert rotate-[-12deg] transition-transform duration-700">
-          <Image
-            src="/cowrie-logo.png"
-            alt=""
-            width={320}
-            height={320}
-            className="w-full h-full object-contain"
-            priority={false}
-          />
-        </div>
-
-        {/* Bottom-Right: CloudSentinel Shield Watermark Logo */}
-        <div className="absolute bottom-6 -right-6 sm:bottom-10 sm:right-2 lg:right-8 w-52 h-52 sm:w-72 sm:h-72 lg:w-80 lg:h-80 opacity-[0.14] dark:opacity-[0.18] rotate-[8deg] transition-transform duration-700">
-          <Image
-            src="/logo.svg"
-            alt=""
-            width={340}
-            height={340}
-            className="w-full h-full object-contain"
-            priority={false}
-          />
-        </div>
+        {/* Left: Cowrie Black & White / Monochrome aura */}
+        <div className="absolute top-1/2 -translate-y-1/2 -left-12 sm:-left-20 lg:-left-24 h-48 w-48 sm:h-72 sm:w-72 lg:h-[28rem] lg:w-[28rem] rounded-full bg-slate-900/[0.04] dark:bg-white/[0.05] blur-[70px] sm:blur-[100px] lg:blur-[140px] transition-all duration-500" />
+        
+        {/* Right: CloudSentinel Pure Blue aura */}
+        <div className="absolute top-1/2 -translate-y-1/2 -right-12 sm:-right-20 lg:-right-24 h-48 w-48 sm:h-72 sm:w-72 lg:h-[28rem] lg:w-[28rem] rounded-full bg-blue-600/[0.06] dark:bg-blue-500/[0.08] blur-[70px] sm:blur-[100px] lg:blur-[140px] transition-all duration-500" />
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-4xl">
         {/* Compact Header */}
-        <Reveal className="mx-auto max-w-2xl text-center mb-5 sm:mb-6">
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
+        <Reveal className="mx-auto max-w-2xl text-center mb-4 sm:mb-6">
+          <p className="font-mono text-[10px] sm:text-[10.5px] font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
             Technical Architecture
           </p>
-          <h2 className="mt-1 font-display text-xl sm:text-2xl font-bold tracking-tight text-text-primary">
+          <h2 className="mt-1 font-display text-lg sm:text-2xl font-bold tracking-tight text-text-primary">
             CloudSentinel vs. Traditional Cowrie
           </h2>
-          <p className="mt-1 text-xs text-text-muted">
+          <p className="mt-1 text-[11px] sm:text-xs text-text-muted px-2">
             Factual technical comparison based on Cowrie honeypot documentation and CloudSentinel architecture.
           </p>
         </Reveal>
@@ -141,11 +119,11 @@ export default function ComparisonSection() {
         <Reveal delay={40}>
           <div className="rounded-xl border border-border-line/[0.14] bg-surface-card/90 backdrop-blur-md shadow-xs overflow-hidden">
             {/* Table Column Headers */}
-            <div className="grid grid-cols-12 px-4 py-2.5 bg-surface-panel/40 border-b border-border-line/[0.12] text-xs font-mono items-center">
-              <div className="col-span-12 sm:col-span-4 text-text-muted font-medium text-[11px]">
+            <div className="grid grid-cols-12 px-3 sm:px-4 py-2 sm:py-2.5 bg-surface-panel/40 border-b border-border-line/[0.12] text-xs font-mono items-center gap-2">
+              <div className="hidden sm:block sm:col-span-4 text-text-muted font-medium text-[11px]">
                 Capability
               </div>
-              <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5 text-text-muted">
+              <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5 min-w-0">
                 <Image
                   src="/cowrie-logo.png"
                   alt=""
@@ -153,10 +131,14 @@ export default function ComparisonSection() {
                   height={14}
                   className="w-3.5 h-3.5 object-contain dark:invert shrink-0 opacity-80"
                 />
-                <span className="font-semibold text-slate-700 dark:text-slate-300 text-[11px]">Cowrie Honeypot</span>
-                <span className="text-[9.5px] text-text-muted/70">(Passive)</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300 text-[11px] sm:text-xs shrink-0">
+                  Cowrie
+                </span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8.5px] sm:text-[9px] bg-slate-500/10 text-slate-500 dark:text-slate-400 font-mono font-medium shrink-0">
+                  Passive
+                </span>
               </div>
-              <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5">
+              <div className="col-span-6 sm:col-span-4 flex items-center gap-1.5 min-w-0 pl-3.5 sm:pl-2.5">
                 <Image
                   src="/logo.svg"
                   alt=""
@@ -164,8 +146,12 @@ export default function ComparisonSection() {
                   height={14}
                   className="w-3.5 h-3.5 object-contain shrink-0"
                 />
-                <span className="font-bold text-blue-600 dark:text-blue-400 text-[11px]">CloudSentinel</span>
-                <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-semibold">(SOAR)</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400 text-[11px] sm:text-xs shrink-0">
+                  CloudSentinel
+                </span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8.5px] sm:text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-medium shrink-0">
+                  SOAR
+                </span>
               </div>
             </div>
 
@@ -177,12 +163,12 @@ export default function ComparisonSection() {
                   <div
                     key={row.capability}
                     className={cn(
-                      "grid grid-cols-12 px-4 py-2.5 text-xs transition-colors items-center gap-2",
-                      idx % 2 === 0 ? "bg-transparent" : "bg-surface-panel/[0.15]"
+                      "grid grid-cols-12 px-3 sm:px-4 py-2 sm:py-2.5 text-xs transition-colors items-center gap-x-2 gap-y-1.5 sm:gap-2",
+                      idx % 2 === 0 ? "bg-transparent" : "bg-surface-panel/[0.10] sm:bg-surface-panel/[0.15]"
                     )}
                   >
                     {/* Capability Title */}
-                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2 pr-2">
+                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2 pr-1 sm:pr-2">
                       <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
                         <Icon size={12} />
                       </div>
@@ -191,28 +177,28 @@ export default function ComparisonSection() {
                       </span>
                     </div>
 
-                    {/* Cowrie Spec */}
-                    <div className="col-span-6 sm:col-span-4 pr-2 flex flex-col justify-center">
+                    {/* Cowrie Spec Card on Mobile / Column on Desktop */}
+                    <div className="col-span-6 sm:col-span-4 rounded-lg sm:rounded-none p-2 sm:p-0 bg-surface-panel/20 sm:bg-transparent border sm:border-0 border-border-line/[0.08] flex flex-col justify-start min-h-[58px] sm:min-h-0">
                       <div className="flex items-center gap-1.5">
                         <X size={11} className="text-slate-400 dark:text-slate-500 shrink-0" />
-                        <span className="font-mono text-[10.5px] sm:text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                        <span className="font-mono text-[10px] sm:text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-snug">
                           {row.cowrie.badge}
                         </span>
                       </div>
-                      <p className="text-[10px] text-text-muted/75 mt-0.5 leading-snug">
+                      <p className="text-[9.5px] sm:text-[10px] text-text-muted/75 mt-0.5 leading-snug">
                         {row.cowrie.detail}
                       </p>
                     </div>
 
-                    {/* CloudSentinel Spec */}
-                    <div className="col-span-6 sm:col-span-4 flex flex-col justify-center">
+                    {/* CloudSentinel Spec Card on Mobile / Column on Desktop */}
+                    <div className="col-span-6 sm:col-span-4 rounded-lg sm:rounded-none p-2 sm:p-0 sm:pl-2.5 bg-blue-500/[0.05] sm:bg-transparent border sm:border-0 border-blue-500/20 flex flex-col justify-start min-h-[58px] sm:min-h-0">
                       <div className="flex items-center gap-1.5">
                         <Check size={12} className="text-emerald-500 shrink-0 font-bold" />
-                        <span className="font-mono text-[10.5px] sm:text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                        <span className="font-mono text-[10px] sm:text-[11px] font-semibold text-blue-600 dark:text-blue-400 leading-snug">
                           {row.cloudsentinel.badge}
                         </span>
                       </div>
-                      <p className="text-[10px] text-text-primary/80 mt-0.5 leading-snug">
+                      <p className="text-[9.5px] sm:text-[10px] text-text-primary/80 mt-0.5 leading-snug">
                         {row.cloudsentinel.detail}
                       </p>
                     </div>
@@ -222,18 +208,18 @@ export default function ComparisonSection() {
             </div>
 
             {/* Bottom Benchmark Micro-Bar - Clean 3-Column Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border-line/[0.10] bg-surface-panel/30 border-t border-border-line/[0.10] text-[11px] font-mono">
-              <div className="px-3.5 py-2.5 flex items-center justify-center gap-1.5 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border-line/[0.10] bg-surface-panel/30 border-t border-border-line/[0.10] text-[10.5px] sm:text-[11px] font-mono">
+              <div className="px-3 py-2 sm:px-3.5 sm:py-2.5 flex items-center justify-center gap-1.5 text-center">
                 <span className="text-text-muted">MTTB:</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">{"< 2ms"}</span>
                 <span className="text-text-muted/60">(vs Manual)</span>
               </div>
-              <div className="px-3.5 py-2.5 flex items-center justify-center gap-1.5 text-center">
+              <div className="px-3 py-2 sm:px-3.5 sm:py-2.5 flex items-center justify-center gap-1.5 text-center">
                 <span className="text-text-muted">MITRE TTPs:</span>
                 <span className="font-semibold text-blue-600 dark:text-blue-400">17 Mapped</span>
                 <span className="text-text-muted/60">(vs Raw Logs)</span>
               </div>
-              <div className="px-3.5 py-2.5 flex items-center justify-center gap-1.5 text-center">
+              <div className="px-3 py-2 sm:px-3.5 sm:py-2.5 flex items-center justify-center gap-1.5 text-center">
                 <span className="text-text-muted">Operations:</span>
                 <span className="font-semibold text-violet-600 dark:text-violet-400">Live War Room</span>
                 <span className="text-text-muted/60">(vs CLI)</span>
