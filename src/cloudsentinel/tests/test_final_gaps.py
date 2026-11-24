@@ -212,6 +212,42 @@ def test_awk_pipe_fields_and_expressions() -> None:
     assert empty.out == []
 
 
+def test_awk_conditions() -> None:
+    from cloudsentinel.commands.base import Awk
+
+    class Fake:
+        def __init__(self, stdin: str) -> None:
+            self.stdin = stdin
+            self.out: list[str] = []
+
+        def write(self, data: str | bytes) -> None:
+            self.out.append(data.decode() if isinstance(data, bytes) else data)
+
+    cases = [
+        (["/root/ {print $1}"], "root:x\nbin:y\n", "root:x\n"),
+        (["/[/ {print $1}"], "root\n", ""),
+        (["-F:", "$1 == \"root\" {print $3}"], "root:x:0\nbin:y:1\n", "0\n"),
+        (["$1 != \"root\" {print $1}"], "root\nbin\n", "bin\n"),
+        (["$1 ~ /^r/ {print $1}"], "root\nbin\n", "root\n"),
+        (["$1 !~ /^r/ {print $1}"], "root\nbin\n", "bin\n"),
+        (["$1 ~ \"root\" {print $1}"], "root\n", ""),
+        (["-F:", "$3 >= 1000 {print $1}"], "a:x:1000\nb:y:999\n", "a\n"),
+        (["-F:", "$3 < 1000 {print $1}"], "a:x:1000\nb:y:999\n", "b\n"),
+        (["-F:", "$3 <= 999 {print $1}"], "a:x:1000\nb:y:999\n", "b\n"),
+        (["-F:", "$3 > 999 {print $1}"], "a:x:1000\nb:y:999\n", "a\n"),
+        (["-F:", "$NF == \"bash\" {print $1}"], "root:x:0:bash\nbin:y:1:sh\n", "root\n"),
+        (["-F:", "$0 ~ /root/ {print $2}"], "root:x\n", "x\n"),
+        (["$9 == \"\" {print $1}"], "a b\n", "a\n"),
+        (["NF == 3 {print $1}"], "a b c\n", ""),
+        (["$1 == root {print}"], "root\n", "root\n"),
+        (["$1 > abc {print $1}"], "a\n", ""),
+    ]
+    for args, stdin, expected in cases:
+        proto = Fake(stdin)
+        Awk(proto, *args).start()
+        assert "".join(proto.out) == expected
+
+
 @pytest.mark.asyncio
 async def test_clickhouse_forwarder_run(tmp_path) -> None:
     class FakeResult:

@@ -286,14 +286,64 @@ class Awk(Command):
             if not program:
                 program = arg
             index += 1
-        match = re.fullmatch(r"\s*\{\s*print\s*(.*?)\s*;?\s*\}\s*", program)
+        match = re.fullmatch(r"\s*(.*?)\s*\{\s*print\s*(.*?)\s*;?\s*\}\s*", program)
         if not stdin or not match:
             return
-        expression = match.group(1).strip()
+        condition = match.group(1).strip()
+        expression = match.group(2).strip()
         fields = [part.strip() for part in expression.split(",")] if expression else ["$0"]
         for line in stdin.splitlines():
             parts = line.split(delimiter) if delimiter else line.split()
-            self.write(" ".join(self._field(field, line, parts) for field in fields) + "\n")
+            if self._matches(condition, line, parts):
+                self.write(" ".join(self._field(field, line, parts) for field in fields) + "\n")
+
+    @staticmethod
+    def _matches(condition: str, line: str, parts: list[str]) -> bool:
+        if not condition:
+            return True
+        if condition.startswith("/") and condition.endswith("/"):
+            try:
+                return bool(re.search(condition[1:-1], line))
+            except re.error:
+                return False
+        match = re.fullmatch(r"\$(\d+|NF)\s*(==|!=|~|!~|>=|<=|>|<)\s*(.+)", condition)
+        if not match:
+            return False
+        field, operator, right = match.groups()
+        if field == "NF":
+            value = parts[-1] if parts else ""
+        elif field == "0":
+            value = line
+        else:
+            position = int(field)
+            value = parts[position - 1] if 0 < position <= len(parts) else ""
+        if operator in ("~", "!~"):
+            if not (len(right) >= 2 and right[0] == right[-1] == "/"):
+                return False
+            try:
+                found = bool(re.search(right[1:-1], value))
+            except re.error:
+                return False
+            return not found if operator == "!~" else found
+        right = right.strip()
+        if len(right) >= 2 and right[0] == right[-1] == '"':
+            right = right[1:-1]
+        if operator in ("==", "!="):
+            equal = value == right
+            return equal if operator == "==" else not equal
+        try:
+            left_number = float(value)
+            right_number = float(right)
+        except ValueError:
+            left_number = value
+            right_number = right
+        if operator == ">":
+            return left_number > right_number
+        if operator == "<":
+            return left_number < right_number
+        if operator == ">=":
+            return left_number >= right_number
+        return left_number <= right_number
 
     @staticmethod
     def _field(expression: str, line: str, parts: list[str]) -> str:
