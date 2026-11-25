@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 import cloudsentinel.admin_api as admin_module
+import cloudsentinel.api.queries as queries_module
 from cloudsentinel.admin_api import create_admin_app
 from cloudsentinel.config import load_settings
 from cloudsentinel.pipeline import EventPipeline
@@ -66,7 +67,7 @@ def test_cached_endpoints(monkeypatch) -> None:
     assert client.get("/sessions", headers=headers).status_code == 200
 
     monkeypatch.setattr(
-        admin_module,
+        queries_module,
         "_load_truth_summary_from_clickhouse",
         lambda _settings: {
             "total_events": 1,

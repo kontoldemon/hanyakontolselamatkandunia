@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 import cloudsentinel.admin_api as admin_module
+import cloudsentinel.api.queries as queries_module
 from cloudsentinel.admin_api import _trim_replay_entries, create_admin_app
 from cloudsentinel.config import load_settings
 from cloudsentinel.pipeline import EventPipeline
@@ -86,7 +87,7 @@ def test_synthetic_session_skips(monkeypatch) -> None:
 def test_hot_cache_set_failure(monkeypatch) -> None:
     client, _settings = _client(monkeypatch, redis=FailingRedis())
     monkeypatch.setattr(
-        admin_module,
+        queries_module,
         "_load_truth_summary_from_clickhouse",
         lambda _settings: {
             "total_events": 1,

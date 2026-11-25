@@ -23,6 +23,7 @@ from .config import Settings, secret_to_str
 from .eventgrid import publish_block
 from .geoip import is_public_ip
 from .pipeline import EventPipeline
+from .api.routers.events import build_events_router
 from .api.routers.health import build_health_router
 from .api.queries import (
     ACTIVE_FRESHNESS_WINDOW_SECONDS,
@@ -872,6 +873,16 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     app.include_router(
         build_health_router(settings, pipeline, require_auth, _clickhouse_health)
     )
+    app.include_router(
+        build_events_router(
+            settings,
+            require_auth,
+            _compute_war_room_state,
+            _hot_cache_get,
+            _hot_cache_set,
+            HOT_CACHE_TTL_SUMMARY_SECONDS,
+        )
+    )
 
     @app.get("/stats", dependencies=[Depends(require_auth)])
     async def stats() -> dict[str, Any]:
@@ -974,45 +985,6 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         }
         if strict_truth:
             await _hot_cache_set("sessions:strict", payload, HOT_CACHE_TTL_SESSIONS_SECONDS)
-        await _compute_war_room_state(force=False)
-        return payload
-
-    @app.get("/events", dependencies=[Depends(require_auth)])
-    async def events(limit: int = 100) -> dict[str, Any]:
-        payload = {
-            "events": _load_recent_events_from_clickhouse(settings, limit=limit),
-            "source": "clickhouse",
-            "authoritative": True,
-            "sourceBreakdown": {"events": "clickhouse"},
-        }
-        await _compute_war_room_state(force=False)
-        return payload
-
-    @app.get("/truth-summary", dependencies=[Depends(require_auth)])
-    async def truth_summary() -> dict[str, Any]:
-        cached_payload, _ = await _hot_cache_get("truth-summary")
-        if isinstance(cached_payload, dict) and isinstance(cached_payload.get("metrics"), dict):
-            await _compute_war_room_state(force=False)
-            return cached_payload
-        summary = _load_truth_summary_from_clickhouse(settings)
-        if summary is None:
-            payload = {
-                "ok": False,
-                "source": "runtime",
-                "authoritative": False,
-                "metrics": {},
-                "sourceBreakdown": {"metrics": "runtime"},
-            }
-            await _compute_war_room_state(force=False)
-            return payload
-        payload = {
-            "ok": True,
-            "source": "clickhouse",
-            "authoritative": True,
-            "metrics": summary,
-            "sourceBreakdown": {"metrics": "clickhouse"},
-        }
-        await _hot_cache_set("truth-summary", payload, HOT_CACHE_TTL_SUMMARY_SECONDS)
         await _compute_war_room_state(force=False)
         return payload
 
