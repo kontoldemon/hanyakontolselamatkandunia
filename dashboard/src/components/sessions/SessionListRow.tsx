@@ -105,7 +105,14 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
     const session = sessions[index];
     const isSelected = selectedSessionId === session.id;
     const isFocused = !!focusIp && session.ip === focusIp;
-    const isNew = viewedSessionIds ? !viewedSessionIds.has(session.id) : false;
+    const isBrandNew = Boolean(
+        nowMs &&
+        nowMs > 0 &&
+        (
+            (session.startedAtEpochMs && nowMs - session.startedAtEpochMs < 3500) ||
+            (session.firstSeenEpochMs && nowMs - session.firstSeenEpochMs < 3500)
+        )
+    );
     const attackCount = session.input?.length ?? 0;
 
     return (
@@ -113,8 +120,12 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
             <div
                 onClick={() => onSelect(session)}
                 className={cn(
-                    "cursor-pointer p-2.5 rounded-xl border transition-all shadow-sm h-full flex flex-col justify-between",
-                    isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" : "bg-white dark:bg-[#0a0a0a] border-slate-100 dark:border-white/5 hover:border-blue-300 dark:hover:border-blue-500/30",
+                    "cursor-pointer p-2.5 rounded-xl border transition-all duration-500 shadow-sm h-full flex flex-col justify-between",
+                    isSelected
+                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                        : isBrandNew
+                            ? "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/[0.08] shadow-[0_0_12px_rgba(16,185,129,0.14)] animate-in fade-in duration-200"
+                            : "bg-white dark:bg-[#0a0a0a] border-slate-100 dark:border-white/5 hover:border-blue-300 dark:hover:border-blue-500/30",
                     isFocused && !isSelected && "ring-1 ring-blue-500",
                 )}
             >
@@ -124,12 +135,6 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
                             <h3 className="font-semibold text-slate-900 dark:text-white font-mono text-xs truncate">
                                 <HighlightText text={session.ip} highlight={searchQuery} />
                             </h3>
-                            {isNew && (
-                                <span
-                                    className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 dark:bg-blue-400 shrink-0"
-                                    title="New session"
-                                />
-                            )}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                             <span className="text-[9.5px] leading-none px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 font-mono font-medium">

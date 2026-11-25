@@ -119,29 +119,43 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
     }
 
     return (
-        <div className={isFullScreen ? "fixed inset-4 z-[200] bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden font-mono text-xs shadow-2xl flex flex-col" : isSeamless ? "w-full overflow-hidden font-mono text-xs flex flex-col h-full min-h-0 bg-transparent" : "w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-xs shadow-sm flex flex-col h-full min-h-[280px]"}>
-            {isFullScreen && <div className="fixed inset-0 z-[-1] bg-black/60 backdrop-blur-sm" onClick={() => setIsFullScreen(false)} />}
-            <div className="bg-slate-50/80 dark:bg-white/[0.02] px-3.5 py-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/5 shrink-0 flex-wrap">
-                <div className="flex items-center gap-2 min-w-0">
-                    <TerminalIcon size={13} className="text-blue-500 shrink-0" />
-                    <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        Terminal Output
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                        &bull; {searchQuery.trim() ? `${filteredEntries.length}/${visibleEntries.length}` : visibleEntries.length} {visibleEntries.length === 1 ? "line" : "lines"}
-                    </span>
-                </div>
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {/* Search filter input */}
-                    <div className="relative flex items-center">
-                        <Search size={11} className="text-slate-400 dark:text-slate-500 absolute left-2 pointer-events-none" />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Filter..."
-                            className="w-20 sm:w-28 focus:w-36 h-6.5 pl-5 pr-5 py-0.5 text-[11px] font-sans rounded-md bg-slate-200/50 dark:bg-white/[0.06] border border-slate-300/40 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all focus:border-blue-500/50"
-                        />
+        <>
+            {isFullScreen && (
+                <div
+                    className="fixed inset-0 z-[190] bg-black/50 backdrop-blur-xs transition-opacity duration-200"
+                    onClick={() => setIsFullScreen(false)}
+                />
+            )}
+            <div
+                className={
+                    isFullScreen
+                        ? "fixed inset-3 md:inset-6 z-[200] bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-200/90 dark:border-white/10 overflow-hidden font-mono text-xs shadow-2xl flex flex-col transition-all"
+                        : isSeamless
+                            ? "w-full overflow-hidden font-mono text-xs flex flex-col h-full min-h-0 bg-transparent"
+                            : "w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-xs shadow-sm flex flex-col h-full min-h-[280px]"
+                }
+            >
+                <div className="bg-slate-50/80 dark:bg-white/[0.02] px-3.5 py-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/5 shrink-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <TerminalIcon size={13} className="text-blue-500 shrink-0" />
+                        <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            Terminal Output
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 shrink-0 hidden sm:inline">
+                            &bull; {searchQuery.trim() ? `${filteredEntries.length}/${visibleEntries.length}` : visibleEntries.length} {visibleEntries.length === 1 ? "line" : "lines"}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Search filter input */}
+                        <div className="relative flex items-center">
+                            <Search size={11} className="text-slate-400 dark:text-slate-500 absolute left-2 pointer-events-none" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Filter..."
+                                className="w-18 sm:w-24 focus:w-32 h-6.5 pl-5 pr-5 py-0.5 text-[11px] font-sans rounded-md bg-slate-200/50 dark:bg-white/[0.06] border border-slate-300/40 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all focus:border-blue-500/50"
+                            />
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery("")}
@@ -203,11 +217,11 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                 </div>
             </div>
 
-            <div className="relative flex-1 min-h-0">
+            <div className="relative flex-1 min-h-0 bg-white dark:bg-[#0a0a0a]">
                 <div
                     ref={scrollRef}
                     onScroll={handleScroll}
-                    className="h-full overflow-y-auto px-3 py-3 text-[11.5px] text-slate-800 dark:text-slate-200 terminal-scrollbar"
+                    className="h-full overflow-y-auto px-3 py-3 text-[11.5px] text-slate-800 dark:text-slate-200 terminal-scrollbar bg-white dark:bg-[#0a0a0a]"
                 >
                     {filteredEntries.length === 0 && (
                         <div className="text-slate-400 dark:text-slate-500 text-xs px-2 py-1">
@@ -280,5 +294,6 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                 />
             </div>
         </div>
+        </>
     );
 }

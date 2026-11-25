@@ -28,6 +28,7 @@ export type RowData = {
     blockingIp: string | null;
     onBlock: (ip: string) => void;
     onOpenSession: (ip: string) => void;
+    nowMs?: number;
 };
 
 export const COUNTRY_MAP: Record<string, string> = {
@@ -42,8 +43,8 @@ export const COUNTRY_MAP: Record<string, string> = {
     India: "IN",
 };
 
-export const ROW_HEIGHT = 112;
-export const ROW_GAP = 8;
+export const ROW_HEIGHT = 92;
+export const ROW_GAP = 6;
 
 function normalizePreview(payload: string, type: string) {
     const original = (payload || "").trim();
@@ -71,11 +72,12 @@ function normalizePreview(payload: string, type: string) {
     return { text: original, tag: "" };
 }
 
-export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, onBlock, onOpenSession }: RowComponentProps<RowData>) {
+export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, onBlock, onOpenSession, nowMs }: RowComponentProps<RowData>) {
     const log = logs[index];
     const target = selectedRegion ? (COUNTRY_MAP[selectedRegion] || selectedRegion) : null;
     const isSelected = !!target && (log.country === target || log.ip === target);
     const isDimmed = !!target && log.country !== target && log.ip !== target;
+    const isBrandNew = Boolean(nowMs && nowMs > 0 && log.latestEpochMs && (nowMs - log.latestEpochMs < 3500));
     const preview = normalizePreview(log.latestPayload, log.latestType);
     const compactPreviewText = (preview.text || "").replace(/\s+/g, " ").trim();
 
@@ -99,26 +101,30 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                     }
                 }}
                 className={clsx(
-                    "relative overflow-hidden h-full w-full min-w-0 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer group flex flex-col justify-between",
+                    "relative overflow-hidden h-full w-full min-w-0 px-3 py-2 rounded-xl transition-all duration-500 cursor-pointer group flex flex-col justify-between",
                     isSelected
                         ? "border border-blue-500/70 bg-blue-50/60 dark:bg-blue-500/10 shadow-[0_0_16px_rgba(37,99,235,0.12)]"
-                        : "border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/15 hover:bg-slate-50/70 dark:hover:bg-white/[0.04]",
+                        : isBrandNew
+                            ? "border border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/[0.08] shadow-[0_0_12px_rgba(16,185,129,0.14)] animate-in fade-in duration-200"
+                            : "border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/15 hover:bg-slate-50/70 dark:hover:bg-white/[0.04]",
                     isDimmed ? "opacity-30 grayscale" : "opacity-100",
                 )}
             >
                 {/* Row 1: IP + Status Dot + Timestamp + Action */}
                 <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
                         <span className={clsx("h-1.5 w-1.5 rounded-full shrink-0", typeAccent.dot)} />
-                        <span className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
-                            {log.ip}
-                        </span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate hidden sm:inline">
-                            {log.countryName ?? log.country}
-                        </span>
+                        <div className="flex items-baseline gap-1.5 min-w-0">
+                            <span className="font-mono text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100 truncate">
+                                {log.ip}
+                            </span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate hidden sm:inline">
+                                {log.countryName ?? log.country}
+                            </span>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                         {log.blocked && (
                             <span
                                 className="inline-flex items-center gap-1 text-[10px] font-mono font-medium leading-none text-rose-600 dark:text-rose-400"
@@ -139,15 +145,15 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                                 event.stopPropagation();
                                 onBlock(log.ip);
                             }}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
+                            className="inline-flex h-5 w-5 items-center justify-center rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
                         >
-                            <Ban size={12} />
+                            <Ban size={11} />
                         </button>
                     </div>
                 </div>
 
                 {/* Row 2: Clean Inline Metadata Strip (no pill clutter) */}
-                <div className="flex items-center justify-between gap-2 text-[10.5px] text-slate-500 dark:text-slate-400">
+                <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500 dark:text-slate-400">
                     <div className="flex items-center gap-1.5 min-w-0 truncate font-mono">
                         <span>{log.eventCount} {log.eventCount === 1 ? "event" : "events"}</span>
                         {log.latestMitreId && (
@@ -169,7 +175,7 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                 </div>
 
                 {/* Row 3: Minimalist Single-Line Command Preview */}
-                <div className="w-full rounded-md bg-slate-50 dark:bg-black/35 px-2 py-1 border border-slate-200/50 dark:border-white/[0.04] flex items-center gap-1.5 overflow-hidden">
+                <div className="w-full rounded-md bg-slate-50 dark:bg-black/35 px-2 py-0.5 border border-slate-200/50 dark:border-white/[0.04] flex items-center gap-1.5 overflow-hidden">
                     {preview.tag ? (
                         <span className="shrink-0 font-mono text-[9px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                             {preview.tag}

@@ -32,6 +32,13 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
     const [searchQuery, setSearchQuery] = useState("");
     const [blockingIp, setBlockingIp] = useState<string | null>(null);
     const [confirmBlockIp, setConfirmBlockIp] = useState<string | null>(null);
+    const [nowMs, setNowMs] = useState(0);
+
+    useEffect(() => {
+        setNowMs(Date.now());
+        const timer = setInterval(() => setNowMs(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
     const listRef = useListRef(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [listHeight, setListHeight] = useState(480);
@@ -150,6 +157,7 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
         blockingIp,
         onBlock: setConfirmBlockIp,
         onOpenSession: (ip: string) => router.push(`/sessions?focusIp=${encodeURIComponent(ip)}`),
+        nowMs,
     };
 
     return (

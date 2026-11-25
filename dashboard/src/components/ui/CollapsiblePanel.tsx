@@ -38,7 +38,7 @@ export default function CollapsiblePanel({
             <button
                 type="button"
                 onClick={isFullscreen ? undefined : onToggle}
-                className={`w-full px-4 py-3 flex items-center justify-between gap-2 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${isFullscreen ? 'cursor-default' : 'cursor-pointer'}`}
+                className={`w-full px-3.5 py-2.5 flex items-center justify-between gap-2 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${isFullscreen ? 'cursor-default' : 'cursor-pointer'}`}
             >
                 <div className="flex items-center gap-2 min-w-0">
                     <Icon size={15} className={`${iconColor} shrink-0`} />

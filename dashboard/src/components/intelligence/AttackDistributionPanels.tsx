@@ -35,7 +35,7 @@ export default function AttackDistributionPanels({
   const [hoveredMitre, setHoveredMitre] = useState<HoverTooltip | null>(null);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
       <CollapsiblePanel
         expanded={attackTypesExpanded}
         onToggle={onToggleAttackTypes}

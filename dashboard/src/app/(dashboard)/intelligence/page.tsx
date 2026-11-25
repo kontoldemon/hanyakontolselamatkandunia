@@ -115,7 +115,7 @@ export default function IntelligencePage() {
     }, [downloadIntelligenceReport]);
 
     return (
-        <div className="h-full flex flex-col gap-4 overflow-hidden pt-1">
+        <div className="h-full flex flex-col gap-3 overflow-hidden pt-1">
             <div className="flex justify-end items-center gap-2 shrink-0 px-1 pt-0.5">
                 <CustomDropdown
                     options={TIMELINE_OPTIONS}
@@ -152,7 +152,7 @@ export default function IntelligencePage() {
                 blockRate={kpiValues.blockRate}
             />
 
-            <div className="flex-1 overflow-y-auto terminal-scrollbar min-h-0 pb-6 pr-2 space-y-4">
+            <div className="flex-1 overflow-y-auto terminal-scrollbar min-h-0 pb-6 pr-2 space-y-2.5">
                 <AttackDistributionPanels
                     attackTypesExpanded={panels.attackTypes}
                     mitreExpanded={panels.mitre}
@@ -163,12 +163,12 @@ export default function IntelligencePage() {
                     mitreData={mitreData}
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
                     <CountryStatsPanel expanded={panels.countries} onToggle={() => togglePanel("countries")} countries={stats.countries} />
                     <TimingHeatmapPanel expanded={panels.timing} onToggle={() => togglePanel("timing")} heatmap={stats.heatmap} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
                     <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
                     <FingerprintsPanel expanded={panels.fingerprints} onToggle={() => togglePanel("fingerprints")} fingerprints={fingerprints} />
                 </div>
@@ -193,12 +193,12 @@ export default function IntelligencePage() {
                     maxPasswordCount={maxPasswordCount}
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
                     <RiskScorePanel expanded={panels.risk} onToggle={() => togglePanel("risk")} risk={stats.risk} />
                     <SoarBreakdownPanel expanded={panels.soar} onToggle={() => togglePanel("soar")} soar={stats.soar} />
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 items-start">
+                <div className="grid grid-cols-1 gap-2.5 items-start">
                     <TimeSeriesPanel
                         expanded={panels.timeSeries}
                         onToggle={() => togglePanel("timeSeries")}
@@ -206,7 +206,7 @@ export default function IntelligencePage() {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
                     <SessionDepthPanel
                         expanded={panels.sessionDepth}
                         onToggle={() => togglePanel("sessionDepth")}

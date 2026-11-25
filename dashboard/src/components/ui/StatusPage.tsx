@@ -33,7 +33,7 @@ export default function StatusPage({
           href="/"
           className="group inline-flex items-center gap-2 transition opacity-85 hover:opacity-100"
         >
-          <Image src="/logo.svg" alt="CloudSentinel" width={18} height={18} className="h-4.5 w-4.5" />
+          <Image src="/logo.svg" alt="CloudSentinel" width={18} height={18} className="h-[18px] w-[18px]" />
           <span className="font-display text-xs sm:text-sm font-bold tracking-tight text-text-primary">
             Cloud<span className="text-blue-600 dark:text-blue-400">Sentinel</span>
           </span>

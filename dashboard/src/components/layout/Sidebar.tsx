@@ -17,8 +17,27 @@ export default function Sidebar() {
         return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
     });
     const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+    const [isClosingSignOut, setIsClosingSignOut] = useState(false);
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
+
+    const closeSignOutModal = useCallback(() => {
+        if (isClosingSignOut) return;
+        setIsClosingSignOut(true);
+        setTimeout(() => {
+            setShowSignOutConfirm(false);
+            setIsClosingSignOut(false);
+        }, 180);
+    }, [isClosingSignOut]);
+
+    useEffect(() => {
+        if (!showSignOutConfirm) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") closeSignOutModal();
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [showSignOutConfirm, closeSignOutModal]);
 
     useAgentCommand("sidebar.toggle", useCallback((v: string) => {
         if (v === "collapse") setIsCollapsed(true);
@@ -51,21 +70,21 @@ export default function Sidebar() {
         <>
             <aside
                 className={clsx(
-                    "hidden md:flex flex-col bg-white/50 dark:bg-[#050505] border-r border-slate-200 dark:border-white/10 transition-[width] duration-200 ease-in-out backdrop-blur-md h-screen sticky top-0",
+                    "hidden md:flex flex-col bg-white/70 dark:bg-[#050505]/90 border-r border-slate-200 dark:border-white/10 transition-[width] duration-200 ease-in-out backdrop-blur-md h-screen sticky top-0 will-change-[width] z-30",
                     isCollapsed ? "w-16" : "w-44"
                 )}
             >
-                <div className="h-14 px-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-                    <div className={clsx("flex items-center gap-2 overflow-hidden transition-all", isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
-                        <Link href="/dashboard" className="group flex items-center gap-2 text-left focus-visible:outline-none">
+                <div className="h-14 px-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between overflow-hidden">
+                    <div className={clsx("flex items-center overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out", isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-32 opacity-100")}>
+                        <Link href="/dashboard" className="group flex items-center gap-2 text-left focus-visible:outline-none whitespace-nowrap">
                             <Image
                                 src="/logo.svg"
                                 alt="CloudSentinel"
-                                width={16}
-                                height={16}
-                                className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-105"
+                                width={18}
+                                height={18}
+                                className="h-[18px] w-[18px] shrink-0 -translate-y-[1.5px] transition-transform duration-200 group-hover:scale-105"
                             />
-                            <span className="font-display text-xs font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
+                            <span className="font-display text-sm font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap leading-none">
                                 Cloud<span className="text-blue-600 dark:text-blue-400">Sentinel</span>
                             </span>
                         </Link>
@@ -73,7 +92,10 @@ export default function Sidebar() {
 
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="group/expand relative flex h-7 w-7 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors mx-auto"
+                        className={clsx(
+                            "group/expand relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors",
+                            isCollapsed && "mx-auto"
+                        )}
                         title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                         aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                     >
@@ -84,7 +106,7 @@ export default function Sidebar() {
                                     alt="CloudSentinel"
                                     width={18}
                                     height={18}
-                                    className="h-4.5 w-4.5 transition-all duration-200 group-hover/expand:opacity-0 group-hover/expand:scale-75"
+                                    className="h-[18px] w-[18px] transition-all duration-200 group-hover/expand:opacity-0 group-hover/expand:scale-75"
                                 />
                                 <PanelLeftOpen
                                     size={18}
@@ -108,15 +130,21 @@ export default function Sidebar() {
                                 href={link.href}
                                 title={isCollapsed ? link.name : ""}
                                 className={clsx(
-                                    "flex items-center px-2.5 py-2 rounded-lg transition-all text-xs font-medium whitespace-nowrap",
+                                    "flex items-center h-9 px-2.5 rounded-lg text-xs font-medium transition-colors duration-150 whitespace-nowrap",
                                     isActive
                                         ? "bg-blue-50 text-blue-600 dark:bg-white/5 dark:text-blue-400 font-semibold"
-                                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200",
-                                    isCollapsed ? "justify-center py-2.5" : "gap-2.5"
+                                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200"
                                 )}
                             >
-                                <Icon size={16} className={clsx("shrink-0", isActive ? "text-blue-600 dark:text-blue-400" : "opacity-70")} />
-                                <span className={clsx("transition-all duration-300", isCollapsed ? "w-0 opacity-0 overflow-hidden" : "w-auto opacity-100")}>
+                                <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                                    <Icon size={16} className={clsx("shrink-0", isActive ? "text-blue-600 dark:text-blue-400" : "opacity-70")} />
+                                </div>
+                                <span
+                                    className={clsx(
+                                        "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-in-out ml-2",
+                                        isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-28 opacity-100"
+                                    )}
+                                >
                                     {link.name}
                                 </span>
                             </Link>
@@ -124,24 +152,44 @@ export default function Sidebar() {
                     })}
                 </nav>
 
-                <div className="p-2 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2">
-                    <div className={clsx("flex items-center transition-all", isCollapsed ? "justify-center flex-col gap-3" : "justify-between gap-1.5")}>
-                        <button onClick={() => setShowSignOutConfirm(true)} className={clsx(
-                            "flex items-center text-slate-500 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-md transition-colors text-xs font-medium",
-                            isCollapsed ? "p-2 justify-center" : "px-2.5 py-1.5 gap-2 flex-1"
-                        )} title="Sign Out">
-                            <LogOut size={16} />
-                            <span className={clsx("transition-all duration-300", isCollapsed ? "w-0 opacity-0 overflow-hidden hidden" : "w-auto opacity-100")}>Sign Out</span>
-                        </button>
-
-                        <button
-                            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                            className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors"
-                            title={theme === "dark" ? "Light Mode" : "Dark Mode"}
-                        >
+                <div className="p-2 border-t border-slate-200 dark:border-white/10 flex flex-col gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                        className="flex items-center h-8.5 px-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200 transition-colors duration-150 text-xs font-medium whitespace-nowrap"
+                        title={theme === "dark" ? "Light Mode" : "Dark Mode"}
+                    >
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center">
                             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-                        </button>
-                    </div>
+                        </div>
+                        <span
+                            className={clsx(
+                                "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-in-out ml-2",
+                                isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-28 opacity-100"
+                            )}
+                        >
+                            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowSignOutConfirm(true)}
+                        className="flex items-center h-8.5 px-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-colors duration-150 text-xs font-medium whitespace-nowrap"
+                        title="Sign Out"
+                    >
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                            <LogOut size={16} />
+                        </div>
+                        <span
+                            className={clsx(
+                                "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-in-out ml-2",
+                                isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-28 opacity-100"
+                            )}
+                        >
+                            Sign Out
+                        </span>
+                    </button>
                 </div>
             </aside>
             <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[90] bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-white/10 flex items-center justify-around pb-safe overflow-hidden">
@@ -166,17 +214,23 @@ export default function Sidebar() {
 
             {showSignOutConfirm && (
                 <div
-                    onClick={() => setShowSignOutConfirm(false)}
-                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200"
+                    onClick={closeSignOutModal}
+                    className={clsx(
+                        "fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4",
+                        isClosingSignOut ? "animate-overlay-out" : "animate-overlay-in"
+                    )}
                 >
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="relative max-w-[340px] w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-6 text-center shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-[#0c0c0e] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-200"
+                        className={clsx(
+                            "relative max-w-[320px] w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-6 text-center shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-[#0c0c0e] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)]",
+                            isClosingSignOut ? "animate-modal-out" : "animate-modal-in"
+                        )}
                     >
                         {/* Dismiss Button */}
                         <button
                             type="button"
-                            onClick={() => setShowSignOutConfirm(false)}
+                            onClick={closeSignOutModal}
                             className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                             aria-label="Close"
                         >
@@ -193,14 +247,14 @@ export default function Sidebar() {
                             Sign Out
                         </h3>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                            Are you sure you want to sign out? You will need to sign in again to access the War Room.
+                            You will need to sign in again to access the War Room.
                         </p>
 
                         {/* Action Buttons */}
-                        <div className="mt-6 flex items-center gap-2.5">
+                        <div className="mt-5 flex items-center gap-2.5">
                             <button
                                 type="button"
-                                onClick={() => setShowSignOutConfirm(false)}
+                                onClick={closeSignOutModal}
                                 className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >
                                 Cancel

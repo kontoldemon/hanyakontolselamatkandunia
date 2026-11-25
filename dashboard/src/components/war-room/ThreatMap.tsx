@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { MouseEvent, useEffect, useMemo, useState, useCallback } from "react";
+import { MouseEvent, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { geoEqualEarth, geoGraticule, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
@@ -109,7 +109,12 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     const [isExpanded, setIsExpanded] = useState(false);
     const [tooltipContent, setTooltipContent] = useState<TooltipState | null>(null);
     const [countries, setCountries] = useState<CountryFeature[]>([]);
-    const [nowMs, setNowMs] = useState(() => Date.now());
+    const [nowMs, setNowMs] = useState<number>(() => Date.now());
+    const mounted = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false,
+    );
     const liveLogs = useLiveThreatLogs(!externalLogs);
     const threatLogs = externalLogs ?? liveLogs;
 
@@ -512,22 +517,28 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                     </svg>
 
                     {/* Minimalist Compact Global DEFCON Pill */}
-                    <div
-                        className={`absolute left-3 z-[60] pointer-events-none inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/65 px-2.5 py-1 backdrop-blur-md shadow-sm ${isExpanded ? "top-4 left-4" : "top-3"}`}
-                    >
-                        <span className="relative flex h-1.5 w-1.5">
-                            {underAttack && (
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
-                            )}
-                            <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${underAttack ? "bg-rose-500" : "bg-emerald-500"}`} />
-                        </span>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            DEFCON
-                        </span>
-                        <span className={`text-[10.5px] font-mono font-bold tracking-wider ${underAttack ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                            {underAttack ? "UNDER ATTACK" : "MONITORING"}
-                        </span>
-                    </div>
+                    {(() => {
+                        const isAttackActive = mounted && underAttack;
+                        return (
+                            <div
+                                suppressHydrationWarning
+                                className={`absolute left-3 z-[60] pointer-events-none inline-flex items-center gap-2 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-black/65 px-2.5 py-1 backdrop-blur-md shadow-sm ${isExpanded ? "top-4 left-4" : "top-3"}`}
+                            >
+                                <span className="relative flex h-1.5 w-1.5" suppressHydrationWarning>
+                                    {isAttackActive && (
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                                    )}
+                                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isAttackActive ? "bg-rose-500" : "bg-emerald-500"}`} />
+                                </span>
+                                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    DEFCON
+                                </span>
+                                <span suppressHydrationWarning className={`text-[10.5px] font-mono font-bold tracking-wider ${isAttackActive ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                                    {isAttackActive ? "UNDER ATTACK" : "MONITORING"}
+                                </span>
+                            </div>
+                        );
+                    })()}
 
                     {/* Custom Glassmorphic Country & Node Tooltip */}
                     {tooltipContent && clampedTooltipStyle && (
@@ -585,12 +596,6 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                 </div>
                 {!isExpanded && (
                     <div className="relative border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#050505] overflow-hidden text-[11px] shrink-0 z-[40] w-full flex items-center h-9">
-                        <style>{`
-                            @keyframes marquee {
-                                0% { transform: translateX(0); }
-                                100% { transform: translateX(-50%); }
-                            }
-                        `}</style>
                         <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center pl-3 pr-8 bg-gradient-to-r from-white via-white to-transparent dark:from-[#050505] dark:via-[#050505] dark:to-transparent">
                             <span className="font-display text-[10.5px] font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />

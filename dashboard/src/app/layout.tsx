@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import ServiceWorkerRegister from "@/components/ui/ServiceWorkerRegister";
+import ConsoleBanner from "@/components/ui/ConsoleBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,6 +49,7 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem
         >
+          <ConsoleBanner />
           <ServiceWorkerRegister />
           {children}
           <Analytics />

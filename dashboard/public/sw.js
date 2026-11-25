@@ -1,4 +1,4 @@
-const CACHE_NAME = "cloudsentinel-offline-v2";
+const CACHE_NAME = "cloudsentinel-offline-v3";
 
 const OFFLINE_HTML = `<!doctype html>
 <html lang="en">
@@ -90,6 +90,19 @@ const OFFLINE_HTML = `<!doctype html>
       -webkit-backdrop-filter: blur(20px);
       text-align: center;
     }
+    .icon-wrap {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      border: 1px solid rgba(244, 63, 94, 0.25);
+      background: rgba(244, 63, 94, 0.08);
+      color: #f43f5e;
+      box-shadow: 0 0 24px -4px rgba(244, 63, 94, 0.2);
+    }
     .code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: clamp(38px, 10vw, 48px);
@@ -178,7 +191,17 @@ const OFFLINE_HTML = `<!doctype html>
   <div class="bg-grid"></div>
 
   <main class="card">
-    <div class="code">OFFLINE</div>
+    <div class="icon-wrap" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h.01"/>
+        <path d="M8.5 16.429a5 5 0 0 1 7 0"/>
+        <path d="M5 12.859a10 10 0 0 1 5.17-2.69"/>
+        <path d="M19 12.859a10 10 0 0 0-2.007-1.523"/>
+        <path d="M2 8.82a15 15 0 0 1 4.177-2.643"/>
+        <path d="M22 8.82a15 15 0 0 0-11.288-3.764"/>
+        <line x1="2" y1="2" x2="22" y2="22"/>
+      </svg>
+    </div>
     <h1 class="title">No connection</h1>
     <p class="message">You appear to be offline. Reconnect to internet or VPN and retry.</p>
     <div class="actions">

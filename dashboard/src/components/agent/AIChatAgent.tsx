@@ -55,9 +55,14 @@ export default function AIChatAgent() {
 
     const [focusIp, setFocusIp] = useState("");
     useEffect(() => {
+        let timer: ReturnType<typeof setTimeout> | null = null;
         const updateFocusIp = () => {
-            const params = new URLSearchParams(window.location.search);
-            setFocusIp(params.get("focusIp")?.trim() ?? "");
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                const params = new URLSearchParams(window.location.search);
+                const next = params.get("focusIp")?.trim() ?? "";
+                setFocusIp((prev) => (prev === next ? prev : next));
+            }, 0);
         };
         const patchHistoryForLocationChange = () => {
             const historyAny = window.history as History & { __cloudsentinelPatched?: boolean };
@@ -66,7 +71,9 @@ export default function AIChatAgent() {
                 const original = window.history[method];
                 window.history[method] = function (...args: Parameters<History[typeof method]>) {
                     const result = original.apply(this, args);
-                    window.dispatchEvent(new Event("locationchange"));
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event("locationchange"));
+                    }, 0);
                     return result;
                 };
             };
@@ -80,6 +87,7 @@ export default function AIChatAgent() {
         window.addEventListener("hashchange", updateFocusIp);
         window.addEventListener("locationchange", updateFocusIp);
         return () => {
+            if (timer) clearTimeout(timer);
             window.removeEventListener("popstate", updateFocusIp);
             window.removeEventListener("hashchange", updateFocusIp);
             window.removeEventListener("locationchange", updateFocusIp);

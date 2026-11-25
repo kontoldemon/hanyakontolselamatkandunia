@@ -169,7 +169,7 @@ export default function SignInPage() {
                 alt="CloudSentinel"
                 width={18}
                 height={18}
-                className="h-4.5 w-4.5"
+                className="h-[18px] w-[18px]"
               />
             </div>
             <h1 className="font-display text-base font-bold tracking-tight text-slate-900 sm:text-lg dark:text-white">

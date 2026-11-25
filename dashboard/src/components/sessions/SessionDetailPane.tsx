@@ -449,8 +449,7 @@ export default function SessionDetailPane({
                                             </div>
 
                                             <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/15 text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
-                                                <p className="font-semibold text-blue-600 dark:text-blue-400 mb-0.5 flex items-center gap-1.5">
-                                                    <Shield size={12} />
+                                                <p className="font-semibold text-blue-600 dark:text-blue-400 mb-0.5">
                                                     SOAR Security Response
                                                 </p>
                                                 <p className="text-[11px] text-slate-500 dark:text-slate-400">

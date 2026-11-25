@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WifiOff } from "lucide-react";
 import StatusPage from "@/components/ui/StatusPage";
 
 export const metadata: Metadata = {
@@ -11,9 +12,9 @@ export const metadata: Metadata = {
 export default function OfflinePage() {
   return (
     <StatusPage
-      code="OFFLINE"
+      icon={<WifiOff size={28} className="text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.4)]" strokeWidth={2.2} />}
       title="No connection"
-      message="You are currently offline. Check your internet connection or VPN and retry."
+      message="You appear to be offline. Reconnect to internet or VPN and retry."
       primaryHref="/"
       primaryLabel="Dashboard"
       secondaryAction="reload"

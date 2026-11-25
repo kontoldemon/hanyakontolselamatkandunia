@@ -89,6 +89,67 @@ body {
   animation: fadeUp 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes overlayEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-modal-in {
+  animation: modalEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-overlay-in {
+  animation: overlayEnter 0.2s ease-out forwards;
+}
+
+@keyframes modalExit {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+}
+
+@keyframes overlayExit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-modal-out {
+  animation: modalExit 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-overlay-out {
+  animation: overlayExit 0.18s ease-in forwards;
+}
+
 @keyframes themeIconPop {
   from {
     opacity: 0;
