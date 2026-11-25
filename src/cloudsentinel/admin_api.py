@@ -23,6 +23,7 @@ from .config import Settings, secret_to_str
 from .eventgrid import publish_block
 from .geoip import is_public_ip
 from .pipeline import EventPipeline
+from .api.routers.health import build_health_router
 from .api.queries import (
     ACTIVE_FRESHNESS_WINDOW_SECONDS,
     SYNTHETIC_ACTIVE_WINDOW_SECONDS,
@@ -868,64 +869,9 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
                 pass
             war_room_direct_redis = None
 
-    @app.get("/healthz")
-    async def healthz() -> dict[str, Any]:
-        return {
-            "ok": True,
-            "hostname": settings.honeypot.hostname,
-            "redis_connected": pipeline.connected,
-            "pending_events": pipeline.pending_count,
-        }
-
-    @app.get("/readiness", dependencies=[Depends(require_auth)])
-    async def readiness() -> dict[str, Any]:
-        clickhouse_enabled = bool(getattr(settings.clickhouse, "enabled", False))
-        clickhouse_ok = await _clickhouse_health(settings)
-        return {
-            "ok": pipeline.connected or pipeline.pending_count >= 0,
-            "redis_connected": pipeline.connected,
-            "pending_events": pipeline.pending_count,
-            "clickhouse_enabled": clickhouse_enabled,
-            "clickhouse_ok": clickhouse_ok,
-            "stream_enabled": bool(settings.stream.enabled),
-        }
-
-    @app.get("/metrics")
-    async def metrics_endpoint():
-        from fastapi import Response
-
-        try:
-            from .metrics import get_metrics
-
-            metrics = get_metrics()
-            return Response(content=metrics.render(), media_type=metrics.content_type)
-        except Exception:
-            return Response(
-                content="# CloudSentinel metrics unavailable\n",
-                media_type="text/plain",
-            )
-
-    @app.get("/metrics/json", dependencies=[Depends(require_auth)])
-    async def metrics_json() -> dict[str, Any]:
-        try:
-            from .metrics import get_metrics
-
-            metrics = get_metrics()
-            mttb_value = metrics.mttb_ms or _latest_mttb_from_clickhouse(settings)
-            return {
-                "active_sessions": metrics.active_sessions,
-                "mttb_ms": mttb_value,
-                "total_connections": metrics.total_connections,
-                "total_auth_failures": metrics.total_auth_failures,
-                "total_auth_successes": metrics.total_auth_successes,
-                "total_commands": metrics.total_commands,
-                "total_blocks": metrics.total_blocks,
-                "total_blocks_iptables": metrics.total_blocks_iptables,
-                "blocked_ips_current": len(metrics.blocked_ips),
-                "uptime_seconds": time.time() - metrics.start_time,
-            }
-        except Exception:
-            return {"error": "metrics unavailable"}
+    app.include_router(
+        build_health_router(settings, pipeline, require_auth, _clickhouse_health)
+    )
 
     @app.get("/stats", dependencies=[Depends(require_auth)])
     async def stats() -> dict[str, Any]:
