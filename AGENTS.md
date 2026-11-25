@@ -1,13 +1,13 @@
 # CloudSentinel Agent Handoff
 
-Last updated: 2026-11-23. Read this first in a new session.
+Last updated: 2026-11-25. Read this first in a new session.
 
 ## Repository
 
 - Path: `C:\Users\RADZ\project io\FYP`
 - Branch: `main`
 - Push target: `kontoldemon/hanyakontolselamatkandunia` (personal repo). Use the `kontoldemon` remote / active GitHub account when needed.
-- Latest pushed commit: `09e5960` (DigitalOcean exposure provider removed).
+- Latest pushed commit: `37d98d4` (Azure readiness guard tests).
 
 ## Current status
 
@@ -16,17 +16,17 @@ Last updated: 2026-11-23. Read this first in a new session.
   - Event Grid -> Azure Function -> NSG deny rule with TTL.
   - Private ClickHouse VM, Key Vault private endpoint, Bicep, custom least-privilege NSG role.
   - Host firewall agent remains as the local/non-Azure fallback.
-- Python suite: **520 passed, 2 skipped, coverage 99.01%**. GitHub CI: 522 passed, 99.32%.
+- Python suite: **522 passed, 2 skipped, coverage 99.02%**. GitHub CI is green; Azure readiness tests enforce NSG priority and private Key Vault/Blob settings.
 - Dashboard: `npm run build` passes. `npm run lint` is very slow (timed out at 5 minutes with no error output).
 - This Windows machine has no `az`, `bicep`, `func`, `docker`, or `bash`; Bicep, Function, and shell scripts are untested here.
 
 ## Outstanding work
 
-1. **Dependency security:** GitHub Dependabot reports **55 vulnerabilities** on the default branch after the push (5 critical, 29 high, 19 moderate, 2 low). Next loop should audit and upgrade dependencies and update `SECURITY.md`, which still says 0.
-2. **Azure deployment:** run `az bicep build --file infra/main.bicep`, deploy, publish the Function, create the Event Grid subscription, and test a real NSG block.
+1. **Dependency security:** Dependabot has **0 open alerts**; 55 historical alerts are fixed. `npm audit` and `pip-audit` are clean.
+2. **Azure deployment:** run `az bicep build --file infra/main.bicep`, deploy, publish the Function, create the Event Grid subscription, and test a real NSG block. Block rules now use priority 100-199, before static allows at 200-230.
 3. **Evidence:** MTTB is sensor-side, not full NSG enforcement time.
-4. **Next code audit:** `shell.py` pipe/redirect behavior and VFS command handling.
-5. Keep the redesigned dashboard component folders; they are committed in `d662aa6`.
+4. **Next code audit:** mobile pairing state/rate limits, remaining `admin_api.py` helper extraction, or the uncommitted dashboard settings refactor.
+5. Dashboard WIP is uncommitted: settings/telemetry refactor. Build it before committing.
 
 ## Verification commands
 
@@ -41,4 +41,4 @@ Never commit `.env` or secrets. `.env` is ignored. Local demo credentials are lo
 
 ## Recent work
 
-The last sessions performed a series of audit/fix loops: admin auth fail-closed, host-agent blocking, stream password redaction, SSH/port exposure, TTL handling, OTP fail-closed, Vault path fix, backup auth/retention, NATS/Redis/ClickHouse auth, memory caps, ClickHouse dedup, and anomaly-model training. See `git log --oneline -25`.
+Recent loops extracted the sensor session/server, HTTP/admin bootstrap, TTY/fingerprint/limits, API routers (health, events, sessions, analytics, blocks, LLM, auth, exposure), read-model queries, firewall helpers, mobile companion security (token-gated pairing, rate limits, shared state, real sensor dispatch), and fixed Azure NSG priority ordering so blocks precede allows. See `git log --oneline -25`.

@@ -2,7 +2,7 @@
 
 This file is the single source of truth for the system architecture. If a report, slide, or README disagrees with this file, this file wins.
 
-Last reviewed: 2026-11-23.
+Last reviewed: 2026-11-25.
 
 ## 1. Purpose
 
