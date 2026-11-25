@@ -20,5 +20,4 @@ def test_login_auth_disabled(monkeypatch) -> None:
     settings.clickhouse.enabled = False
     client = TestClient(create_admin_app(settings, EventPipeline(settings.redis)))
     response = client.post("/auth/login", json={})
-    assert response.status_code == 200
-    assert response.json()["token"] == "dev-mode"
+    assert response.status_code == 503

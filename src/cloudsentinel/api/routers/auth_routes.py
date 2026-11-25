@@ -19,7 +19,7 @@ def build_auth_router() -> APIRouter:
 
             auth = get_auth()
             if not auth.config.enabled:
-                return {"message": "Auth not enabled", "token": "dev-mode"}
+                raise HTTPException(status_code=503, detail="Admin authentication is not configured")
             username = body.get("username", "")
             password = body.get("password", "")
             expected_user = os.getenv("CLOUDSENTINEL_ADMIN_USER", "admin")
@@ -33,7 +33,7 @@ def build_auth_router() -> APIRouter:
             return auth.create_login_token(username)
         except HTTPException:
             raise
-        except Exception:
-            return {"message": "Auth module unavailable", "token": "dev-mode"}
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Admin authentication is unavailable") from exc
 
     return router

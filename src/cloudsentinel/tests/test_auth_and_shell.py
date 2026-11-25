@@ -237,5 +237,4 @@ def test_admin_readiness_llm_and_login(monkeypatch: pytest.MonkeyPatch) -> None:
     assert llm.status_code == 200
     assert "features" in llm.json()
     login = client.post("/auth/login", json={"username": "admin", "password": ""})
-    assert login.status_code == 200
-    assert "token" in login.json()
+    assert login.status_code == 503

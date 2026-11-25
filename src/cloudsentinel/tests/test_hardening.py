@@ -597,3 +597,16 @@ def test_manual_unblock_helper_is_scheduled(monkeypatch) -> None:
     helper = getattr(admin_api, "_schedule_manual_unblock")
     asyncio.run(helper("203.0.113.10", "unit", 0, "/sbin/iptables"))
     assert calls[-1][:2] == ["/sbin/iptables", "-D"]
+
+def test_dashboard_security_headers_are_strict() -> None:
+    root = Path(__file__).resolve().parents[3]
+    proxy = (root / "dashboard" / "src" / "proxy.ts").read_text(encoding="utf-8")
+    config = (root / "dashboard" / "next.config.ts").read_text(encoding="utf-8")
+    assert "default-src 'self'" in proxy
+    assert "object-src 'none'" in proxy
+    assert "frame-ancestors 'none'" in proxy
+    assert "Cross-Origin-Opener-Policy" in proxy
+    assert "Cross-Origin-Resource-Policy" in proxy
+    assert "X-Permitted-Cross-Domain-Policies" in proxy
+    assert "challenges.cloudflare.com" in proxy
+    assert "poweredByHeader: false" in config

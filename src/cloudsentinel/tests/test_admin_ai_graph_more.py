@@ -72,8 +72,7 @@ def test_admin_ai_error_branches(monkeypatch) -> None:
 
     monkeypatch.setattr(auth_module, "get_auth", fail_auth)
     login = client.post("/auth/login", json={"username": "x", "password": "y"})
-    assert login.status_code == 200
-    assert login.json()["token"] == "dev-mode"
+    assert login.status_code == 503
 
 
 def test_llm_config_endpoint_updates_runtime(monkeypatch) -> None:
