@@ -27,6 +27,7 @@ def test_event_grid_subscription_targets_block_function() -> None:
 def test_key_vault_and_blob_are_private() -> None:
     bicep = (ROOT / "infra" / "main.bicep").read_text(encoding="utf-8")
     assert "publicNetworkAccess: 'Disabled'" in bicep
+    assert "enablePurgeProtection: true" in bicep
     assert "allowBlobPublicAccess: false" in bicep
     assert "privatelink.vaultcore.azure.net" in bicep
 
