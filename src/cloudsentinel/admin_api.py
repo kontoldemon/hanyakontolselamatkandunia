@@ -27,6 +27,8 @@ from .api.routers.events import build_events_router
 from .api.routers.analytics import build_analytics_router
 from .api.routers.sessions import build_sessions_router
 from .api.routers.health import build_health_router
+from .api.routers.mobile import build_mobile_router
+from .mobile_push import MobilePushService
 from .api.queries import (
     ACTIVE_FRESHNESS_WINDOW_SECONDS,
     SYNTHETIC_ACTIVE_WINDOW_SECONDS,
@@ -1247,5 +1249,16 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             raise
         except Exception:
             return {"message": "Auth module unavailable", "token": "dev-mode"}
+
+    mobile_push_service = MobilePushService()
+    app.state.mobile_push_service = mobile_push_service
+    app.include_router(
+        build_mobile_router(
+            settings=settings,
+            require_auth=require_auth,
+            mobile_service=mobile_push_service,
+            block_ip_handler=manual_block_ip,
+        )
+    )
 
     return app

@@ -12,7 +12,7 @@ export default function CapabilitiesSection() {
       <div className="mx-auto w-full max-w-4xl">
         <SectionHeader
           title="What CloudSentinel Does"
-          sub="An autonomous SSH deception system that traps intruders, fingerprints threats, and executes instant mitigation."
+          sub="Autonomous SSH deception, real-time threat fingerprinting, and automated mitigation."
         />
 
         <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">

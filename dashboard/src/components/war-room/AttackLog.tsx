@@ -119,13 +119,21 @@ export default function AttackLog({ selectedRegion, underAttack = false, threatL
         return () => observer.disconnect();
     }, []);
 
+    const lastScrolledRegionRef = useRef<string | null>(null);
+
     useEffect(() => {
         if (!selectedRegion) {
+            lastScrolledRegionRef.current = null;
+            return;
+        }
+        // Only auto-scroll when selectedRegion changes to a new target, not on every live log update
+        if (lastScrolledRegionRef.current === selectedRegion) {
             return;
         }
         const target = COUNTRY_MAP[selectedRegion] || selectedRegion;
         const index = filteredLogs.findIndex((log) => log.country === target || log.ip === target);
         if (index >= 0) {
+            lastScrolledRegionRef.current = selectedRegion;
             listRef.current?.scrollToRow({ index, align: "center", behavior: "smooth" });
         }
     }, [selectedRegion, filteredLogs, listRef]);

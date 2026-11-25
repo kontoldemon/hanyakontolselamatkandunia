@@ -120,7 +120,7 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
             <div
                 onClick={() => onSelect(session)}
                 className={cn(
-                    "cursor-pointer p-2.5 rounded-xl border transition-all duration-500 shadow-sm h-full flex flex-col justify-between",
+                    "cursor-pointer p-2.5 rounded-xl border transition-[border-color,background-color,box-shadow] duration-300 shadow-sm h-full flex flex-col justify-between",
                     isSelected
                         ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
                         : isBrandNew

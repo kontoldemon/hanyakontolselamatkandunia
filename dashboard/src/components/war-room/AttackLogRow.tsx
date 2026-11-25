@@ -101,7 +101,7 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                     }
                 }}
                 className={clsx(
-                    "relative overflow-hidden h-full w-full min-w-0 px-3 py-2 rounded-xl transition-all duration-500 cursor-pointer group flex flex-col justify-between",
+                    "relative overflow-hidden h-full w-full min-w-0 px-3 py-2 rounded-xl transition-[border-color,background-color,box-shadow] duration-300 cursor-pointer group flex flex-col justify-between",
                     isSelected
                         ? "border border-blue-500/70 bg-blue-50/60 dark:bg-blue-500/10 shadow-[0_0_16px_rgba(37,99,235,0.12)]"
                         : isBrandNew

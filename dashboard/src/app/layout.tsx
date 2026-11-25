@@ -48,6 +48,7 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="dark"
           enableSystem
+          disableTransitionOnChange
         >
           <ConsoleBanner />
           <ServiceWorkerRegister />

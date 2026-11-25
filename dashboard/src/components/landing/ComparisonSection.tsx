@@ -104,7 +104,7 @@ export default function ComparisonSection() {
       <div className="relative z-10 mx-auto w-full max-w-4xl">
         <SectionHeader
           title="CloudSentinel vs. Traditional Cowrie"
-          sub="Factual technical comparison based on Cowrie honeypot documentation and CloudSentinel architecture."
+          sub="Technical feature comparison based on official Cowrie honeypot documentation."
         />
 
         {/* Minimalist Unified Comparison Matrix */}

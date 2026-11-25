@@ -12,6 +12,12 @@ const sessionLastSeenMs = (session: CapturedSession) =>
     session.startedAtEpochMs ??
     0;
 
+const sessionCreatedMs = (session: CapturedSession) =>
+    session.startedAtEpochMs ??
+    session.firstSeenEpochMs ??
+    session.lastSeenEpochMs ??
+    0;
+
 export type SessionFilterStatus = "all" | "active" | "most_attacks" | "least_attacks" | "high_risk";
 
 export function useSessionsViewController() {
@@ -137,7 +143,11 @@ export function useSessionsViewController() {
             return result.sort((a, b) => (a.input?.length ?? 0) - (b.input?.length ?? 0));
         }
 
-        return result.sort((a, b) => sessionLastSeenMs(b) - sessionLastSeenMs(a));
+        return result.sort((a, b) => {
+            const timeDiff = sessionCreatedMs(b) - sessionCreatedMs(a);
+            if (timeDiff !== 0) return timeDiff;
+            return a.ip.localeCompare(b.ip);
+        });
     }, [sessions, searchQuery, filterStatus]);
 
     useEffect(() => {
@@ -326,18 +336,26 @@ export function useSessionsViewController() {
         setSearchQuery(focusIp);
     }, [focusIp]);
 
+    const hasScrolledFocusRef = useRef(false);
+
     useEffect(() => {
-        if (!focusIp || displayedSessions.length === 0) {
+        if (!focusIp || displayedSessions.length === 0 || hasScrolledFocusRef.current) {
             return;
         }
         const index = displayedSessions.findIndex((session) => session.ip === focusIp);
         if (index >= 0) {
+            hasScrolledFocusRef.current = true;
             const targetPage = Math.floor(index / PAGE_SIZE) + 1;
             setCurrentPage(targetPage);
             selectSession(displayedSessions[index]);
             const pageRowIndex = index % PAGE_SIZE;
             listRef.current?.scrollToRow({ index: pageRowIndex, align: "center", behavior: "smooth" });
             setFocusIp("");
+            if (typeof window !== "undefined" && window.location.search.includes("focusIp")) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("focusIp");
+                window.history.replaceState({}, "", url.pathname + (url.search ? `?${url.searchParams.toString()}` : ""));
+            }
         }
     }, [focusIp, displayedSessions, selectSession, listRef]);
 

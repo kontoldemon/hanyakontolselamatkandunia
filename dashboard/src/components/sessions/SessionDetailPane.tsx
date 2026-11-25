@@ -229,237 +229,237 @@ export default function SessionDetailPane({
                                         onScroll={handleScroll}
                                         className="flex-1 min-h-0 overflow-y-auto terminal-scrollbar pr-0.5 space-y-3 pb-8"
                                     >
-                                    {activeTab === "forensics" && (
-                                        <div className="flex flex-col gap-2.5">
-                                            {/* Threat Risk Assessment Bar */}
-                                            <div className="bg-white dark:bg-[#0c0d10] py-1.5 px-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-200">Threat Assessment</span>
-                                                    <span className={cn(
-                                                        "text-[9.5px] font-mono px-1.5 py-0.5 rounded font-bold border",
-                                                        riskScore >= 80
-                                                            ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
-                                                            : riskScore >= 50
-                                                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                                                                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                                    )}>
-                                                        Risk {riskScore}/100
-                                                    </span>
-                                                </div>
-                                                <div className="w-full h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={cn(
-                                                            "h-full rounded-full transition-all",
-                                                            riskScore >= 80 ? "bg-red-500" : riskScore >= 50 ? "bg-amber-500" : "bg-emerald-500"
-                                                        )}
-                                                        style={{ width: `${Math.min(100, Math.max(5, riskScore))}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Forensics Fields (Full Width Clean Rows) */}
-                                            <div className="flex flex-col gap-2 text-xs font-mono">
-                                                <div
-                                                    onClick={() => handleCopy("network", selectedView.org || selectedView.isp || selectedView.asn || "")}
-                                                    className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
-                                                    title="Click to copy network"
-                                                >
-                                                    <div className="flex items-center justify-between mb-0.5">
-                                                        <span className="text-[10px] text-slate-400 font-sans">Network / ASN</span>
-                                                        {copiedField === "network" ? (
-                                                            <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
-                                                        ) : (
-                                                            <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                        )}
+                                        {activeTab === "forensics" && (
+                                            <div className="flex flex-col gap-2.5">
+                                                {/* Threat Risk Assessment Bar */}
+                                                <div className="bg-white dark:bg-[#0c0d10] py-1.5 px-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-200">Threat Assessment</span>
+                                                        <span className={cn(
+                                                            "text-[9.5px] font-mono px-1.5 py-0.5 rounded font-bold border",
+                                                            riskScore >= 80
+                                                                ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
+                                                                : riskScore >= 50
+                                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                                                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                                        )}>
+                                                            Risk {riskScore}/100
+                                                        </span>
                                                     </div>
-                                                    <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium leading-snug break-words">
-                                                        {selectedView.org || selectedView.isp || selectedView.asn || "Unknown"}
-                                                    </span>
-                                                </div>
-
-                                                <div
-                                                    onClick={() => handleCopy("hassh", selectedView.fingerprint || "")}
-                                                    className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
-                                                    title="Click to copy full HASSH"
-                                                >
-                                                    <div className="flex items-center justify-between mb-0.5">
-                                                        <span className="text-[10px] text-slate-400 font-sans">HASSH Fingerprint</span>
-                                                        {copiedField === "hassh" ? (
-                                                            <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
-                                                        ) : (
-                                                            <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                        )}
-                                                    </div>
-                                                    <span className="text-slate-900 dark:text-slate-200 text-xs font-medium block truncate">
-                                                        {selectedView.fingerprint || "N/A"}
-                                                    </span>
-                                                </div>
-
-                                                <div
-                                                    onClick={() => handleCopy("client", selectedView.client || "")}
-                                                    className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
-                                                    title="Click to copy SSH banner"
-                                                >
-                                                    <div className="flex items-center justify-between mb-0.5">
-                                                        <span className="text-[10px] text-slate-400 font-sans">SSH Client Banner</span>
-                                                        {copiedField === "client" ? (
-                                                            <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
-                                                        ) : (
-                                                            <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                        )}
-                                                    </div>
-                                                    <span className="text-slate-900 dark:text-slate-200 text-xs break-all block font-medium leading-snug">
-                                                        {selectedView.client || "OpenSSH"}
-                                                    </span>
-                                                </div>
-
-                                                <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                    <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Origin Location</span>
-                                                    <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium leading-snug">
-                                                        {selectedView.city ? `${selectedView.city}, ` : ""}{selectedView.countryName || selectedView.country || "Unknown"}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Session Activity Metrics */}
-                                            <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-white/5">
-                                                    <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                                        Session Metrics
-                                                    </span>
-                                                    <span className="text-[10px] font-mono text-slate-400">Telemetry</span>
-                                                </div>
-                                                <div className="flex flex-col gap-1.5 text-[11px]">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-sans text-slate-500 dark:text-slate-400">Duration</span>
-                                                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{selectedView.duration || "N/A"}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-sans text-slate-500 dark:text-slate-400">Commands Run</span>
-                                                        <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{selectedView.input?.length ?? 0}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-sans text-slate-500 dark:text-slate-400">First Seen</span>
-                                                        <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatSeenTime(selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-sans text-slate-500 dark:text-slate-400">Last Active</span>
-                                                        <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatSeenTime(selectedView.lastSeenEpochMs ?? selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === "mitre" && (
-                                        <div className="flex flex-col gap-2.5">
-                                            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-white/5">
-                                                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Adversary TTPs</span>
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                                                    {selectedView.mitreTechniques?.length ?? 0} Detected
-                                                </span>
-                                            </div>
-
-                                            {selectedView.mitreTechniques && selectedView.mitreTechniques.length > 0 ? (
-                                                <div className="flex flex-col gap-1.5 font-mono">
-                                                    {selectedView.mitreTechniques.map((technique) => (
+                                                    <div className="w-full h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                                                         <div
-                                                            key={technique}
-                                                            className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-red-500/[0.06] border border-red-500/15 text-xs hover:bg-red-500/10 transition-colors gap-2"
-                                                        >
-                                                            <div className="flex flex-col min-w-0">
-                                                                <span className="text-red-600 dark:text-red-300 font-semibold tracking-tight">{technique}</span>
-                                                                {MITRE_NAMES[technique] && (
-                                                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-sans truncate">
-                                                                        {MITRE_NAMES[technique]}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <span className="text-[9.5px] font-mono text-red-500 font-bold px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 shrink-0">
-                                                                HIT
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500 font-mono bg-white dark:bg-[#0c0d10] rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                    No MITRE ATT&amp;CK techniques mapped for this session yet.
-                                                </div>
-                                            )}
-
-                                            <div className="p-2.5 rounded-lg bg-red-500/5 border border-red-500/15 text-xs text-slate-600 dark:text-slate-300 font-sans leading-relaxed">
-                                                <span className="text-[10.5px] font-semibold text-red-600 dark:text-red-400 block mb-0.5">
-                                                    Framework Mapping
-                                                </span>
-                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                                    Techniques are correlated in real time based on captured attacker command lines and payloads.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === "soar" && (
-                                        <div className="flex flex-col gap-2.5">
-                                            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-white/5">
-                                                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Enforcement Status</span>
-                                                <span className={cn("text-[10px] font-mono px-2 py-0.5 rounded font-semibold border", selectedBlocked ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20")}>
-                                                    {blockStateText(selectedView.soarAction, selectedView.blockEffective)}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex flex-col gap-2 text-xs font-mono">
-                                                <div
-                                                    onClick={() => handleCopy("action", selectedAction)}
-                                                    className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
-                                                    title="Click to copy full action name"
-                                                >
-                                                    <div className="flex items-center justify-between mb-0.5">
-                                                        <span className="text-[10px] text-slate-400 font-sans">SOAR Action</span>
-                                                        {copiedField === "action" ? (
-                                                            <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
-                                                        ) : (
-                                                            <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                        )}
+                                                            className={cn(
+                                                                "h-full rounded-full transition-all",
+                                                                riskScore >= 80 ? "bg-red-500" : riskScore >= 50 ? "bg-amber-500" : "bg-emerald-500"
+                                                            )}
+                                                            style={{ width: `${Math.min(100, Math.max(5, riskScore))}%` }}
+                                                        />
                                                     </div>
-                                                    <span className="text-slate-900 dark:text-slate-200 font-semibold text-xs break-all block leading-snug">
-                                                        {selectedAction}
-                                                    </span>
                                                 </div>
 
-                                                <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                    <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Mean Time to Block</span>
-                                                    <span className="text-slate-900 dark:text-slate-200 font-semibold text-xs block">
-                                                        {(selectedView.mttbMs ?? 0) > 0 ? `${(selectedView.mttbMs ?? 0).toFixed(2)}ms` : "1.08ms"}
-                                                    </span>
+                                                {/* Forensics Fields (Full Width Clean Rows) */}
+                                                <div className="flex flex-col gap-2 text-xs font-mono">
+                                                    <div
+                                                        onClick={() => handleCopy("network", selectedView.org || selectedView.isp || selectedView.asn || "")}
+                                                        className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
+                                                        title="Click to copy network"
+                                                    >
+                                                        <div className="flex items-center justify-between mb-0.5">
+                                                            <span className="text-[10px] text-slate-400 font-sans">Network / ASN</span>
+                                                            {copiedField === "network" ? (
+                                                                <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
+                                                            ) : (
+                                                                <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            )}
+                                                        </div>
+                                                        <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium leading-snug break-words">
+                                                            {selectedView.org || selectedView.isp || selectedView.asn || "Unknown"}
+                                                        </span>
+                                                    </div>
+
+                                                    <div
+                                                        onClick={() => handleCopy("hassh", selectedView.fingerprint || "")}
+                                                        className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
+                                                        title="Click to copy full HASSH"
+                                                    >
+                                                        <div className="flex items-center justify-between mb-0.5">
+                                                            <span className="text-[10px] text-slate-400 font-sans">HASSH Fingerprint</span>
+                                                            {copiedField === "hassh" ? (
+                                                                <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
+                                                            ) : (
+                                                                <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            )}
+                                                        </div>
+                                                        <span className="text-slate-900 dark:text-slate-200 text-xs font-medium block truncate">
+                                                            {selectedView.fingerprint || "N/A"}
+                                                        </span>
+                                                    </div>
+
+                                                    <div
+                                                        onClick={() => handleCopy("client", selectedView.client || "")}
+                                                        className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
+                                                        title="Click to copy SSH banner"
+                                                    >
+                                                        <div className="flex items-center justify-between mb-0.5">
+                                                            <span className="text-[10px] text-slate-400 font-sans">SSH Client Banner</span>
+                                                            {copiedField === "client" ? (
+                                                                <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
+                                                            ) : (
+                                                                <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            )}
+                                                        </div>
+                                                        <span className="text-slate-900 dark:text-slate-200 text-xs break-all block font-medium leading-snug">
+                                                            {selectedView.client || "OpenSSH"}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                        <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Origin Location</span>
+                                                        <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium leading-snug">
+                                                            {selectedView.city ? `${selectedView.city}, ` : ""}{selectedView.countryName || selectedView.country || "Unknown"}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
+                                                {/* Session Activity Metrics */}
                                                 <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                    <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Enforcement Layer</span>
-                                                    <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium">
-                                                        {selectedBlocked ? "Linux Netfilter / iptables" : "Simulated Deception Node"}
-                                                    </span>
-                                                </div>
-
-                                                <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
-                                                    <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Response Pipeline</span>
-                                                    <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium">
-                                                        Automated Event Trigger
-                                                    </span>
+                                                    <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-white/5">
+                                                        <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                                            Session Metrics
+                                                        </span>
+                                                        <span className="text-[10px] font-mono text-slate-400">Telemetry</span>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1.5 text-[11px]">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-sans text-slate-500 dark:text-slate-400">Duration</span>
+                                                            <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{selectedView.duration || "N/A"}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-sans text-slate-500 dark:text-slate-400">Commands Run</span>
+                                                            <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{selectedView.input?.length ?? 0}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-sans text-slate-500 dark:text-slate-400">First Seen</span>
+                                                            <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatSeenTime(selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-sans text-slate-500 dark:text-slate-400">Last Active</span>
+                                                            <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{formatSeenTime(selectedView.lastSeenEpochMs ?? selectedView.firstSeenEpochMs ?? selectedView.startedAtEpochMs)}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+                                        )}
 
-                                            <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/15 text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
-                                                <p className="font-semibold text-blue-600 dark:text-blue-400 mb-0.5">
-                                                    SOAR Security Response
-                                                </p>
-                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                                    {selectedBlocked
-                                                        ? `Attacker ${selectedView.ip} was automatically contained after matching active threat signatures.`
-                                                        : `Attacker ${selectedView.ip} is currently sandboxed in an interactive deception container.`}
-                                                </p>
+                                        {activeTab === "mitre" && (
+                                            <div className="flex flex-col gap-2.5">
+                                                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+                                                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Adversary TTPs</span>
+                                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                                        {selectedView.mitreTechniques?.length ?? 0} Detected
+                                                    </span>
+                                                </div>
+
+                                                {selectedView.mitreTechniques && selectedView.mitreTechniques.length > 0 ? (
+                                                    <div className="flex flex-col gap-1.5 font-mono">
+                                                        {selectedView.mitreTechniques.map((technique) => (
+                                                            <div
+                                                                key={technique}
+                                                                className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-red-500/[0.06] border border-red-500/15 text-xs hover:bg-red-500/10 transition-colors gap-2"
+                                                            >
+                                                                <div className="flex flex-col min-w-0">
+                                                                    <span className="text-red-600 dark:text-red-300 font-semibold tracking-tight">{technique}</span>
+                                                                    {MITRE_NAMES[technique] && (
+                                                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-sans truncate">
+                                                                            {MITRE_NAMES[technique]}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[9.5px] font-mono text-red-500 font-bold px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 shrink-0">
+                                                                    HIT
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-6 text-center text-xs text-slate-400 dark:text-slate-500 font-mono bg-white dark:bg-[#0c0d10] rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                        No MITRE ATT&amp;CK techniques mapped for this session yet.
+                                                    </div>
+                                                )}
+
+                                                <div className="p-2.5 rounded-lg bg-red-500/5 border border-red-500/15 text-xs text-slate-600 dark:text-slate-300 font-sans leading-relaxed">
+                                                    <span className="text-[10.5px] font-semibold text-red-600 dark:text-red-400 block mb-0.5">
+                                                        Framework Mapping
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                        Techniques are correlated in real time based on captured attacker command lines and payloads.
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
+
+                                        {activeTab === "soar" && (
+                                            <div className="flex flex-col gap-2.5">
+                                                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-white/5">
+                                                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Enforcement Status</span>
+                                                    <span className={cn("text-[10px] font-mono px-2 py-0.5 rounded font-semibold border", selectedBlocked ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20")}>
+                                                        {blockStateText(selectedView.soarAction, selectedView.blockEffective)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex flex-col gap-2 text-xs font-mono">
+                                                    <div
+                                                        onClick={() => handleCopy("action", selectedAction)}
+                                                        className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5 cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-colors group relative"
+                                                        title="Click to copy full action name"
+                                                    >
+                                                        <div className="flex items-center justify-between mb-0.5">
+                                                            <span className="text-[10px] text-slate-400 font-sans">SOAR Action</span>
+                                                            {copiedField === "action" ? (
+                                                                <span className="text-[9px] text-emerald-500 font-semibold flex items-center gap-0.5"><Check size={10} /> Copied!</span>
+                                                            ) : (
+                                                                <Copy size={10} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            )}
+                                                        </div>
+                                                        <span className="text-slate-900 dark:text-slate-200 font-semibold text-xs break-all block leading-snug">
+                                                            {selectedAction}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                        <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Mean Time to Block</span>
+                                                        <span className="text-slate-900 dark:text-slate-200 font-semibold text-xs block">
+                                                            {(selectedView.mttbMs ?? 0) > 0 ? `${(selectedView.mttbMs ?? 0).toFixed(2)}ms` : "1.08ms"}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                        <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Enforcement Layer</span>
+                                                        <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium">
+                                                            {selectedBlocked ? "Linux Netfilter / iptables" : "Simulated Deception Node"}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
+                                                        <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Response Pipeline</span>
+                                                        <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium">
+                                                            Automated Event Trigger
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/15 text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
+                                                    <p className="font-semibold text-blue-600 dark:text-blue-400 mb-0.5">
+                                                        SOAR Security Response
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                        {selectedBlocked
+                                                            ? `Attacker ${selectedView.ip} was automatically contained after matching active threat signatures.`
+                                                            : `Attacker ${selectedView.ip} is currently sandboxed in an interactive deception container.`}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <ScrollDownHint
                                         visible={showScrollDown}
