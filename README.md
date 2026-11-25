@@ -8,7 +8,6 @@ CloudSentinel is an SSH honeypot and automated response platform. It records att
 - The legacy DigitalOcean Phase 1 deployment is retired and is no longer a supported target.
 - The dashboard runs on Vercel.
 - For a zero-cost demo, run the full stack locally with Docker. See [docs/LOCAL_DEMO.md](docs/LOCAL_DEMO.md).
-- Phase 2 is the Azure target: a sensor VM, a private ClickHouse VM, Event Grid, an Azure Function that writes NSG block rules, Key Vault, Blob backups, and the existing Vercel dashboard. The Bicep is in [infra/main.bicep](infra/main.bicep). It is not deployed yet.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writing the report. Azure is the only supported deployment target.
 

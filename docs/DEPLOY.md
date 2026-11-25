@@ -91,7 +91,9 @@ SSH login uses port `22`; after `deploy.sh`, management SSH moves to `22222`.
 ```bash
 ssh azureuser@<sensor-public-ip>
 sudo CLICKHOUSE_HOST="<clickhouse-private-ip>" CLICKHOUSE_INSTALL=false \
-    CLICKHOUSE_PASSWORD="${CH_PASSWORD}" ADMIN_IP="<your-public-ip>" ./deploy.sh
+    CLICKHOUSE_PASSWORD="${CH_PASSWORD}" ADMIN_IP="<your-public-ip>" \
+    PUBLIC_TLS_HOST="<sensorFqdn>" \
+    VERCEL_DASHBOARD_ORIGIN="https://<dashboard-domain>" ./deploy.sh
 ```
 
 The Bicep creates the Event Grid secrets, the ClickHouse password, and the LLM
@@ -108,6 +110,18 @@ sudo KEY_VAULT_NAME="<vault-name>" /opt/cloudsentinel/load_secrets.sh
 `load_secrets.sh` copies the Event Grid endpoint/key and the ClickHouse
 password, and enables `EVENTGRID_ENABLED=true` when the Event Grid values are
 present. Restart `cloudsentinel` after the script runs.
+
+### Dashboard wiring
+
+Caddy terminates TLS on port 443 and proxies both the admin API and Socket.io. Set these in the Vercel project:
+
+```text
+NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL=https://<sensorFqdn>
+CLOUDSENTINEL_ADMIN_API_URL=https://<sensorFqdn>
+CLOUDSENTINEL_ADMIN_TOKEN=<contents of /root/cloudsentinel-admin-token>
+```
+
+`VERCEL_DASHBOARD_ORIGIN` in the installer must match the dashboard origin so the stream CORS policy accepts it.
 
 ### Step 2: Deploy the Function and Event Grid subscription
 
@@ -159,7 +173,7 @@ private, loopback, link-local, multicast, and allowlisted IPs.
 3. Trigger a high-risk event and confirm Event Grid delivers it to the `block_ip` Function.
 4. Confirm the Function creates a `cs-block-*` NSG deny rule and that it is deleted after the TTL.
 5. Confirm the Function identity has the custom NSG rule operator role on the sensor NSG.
-6. Confirm Redis, ClickHouse, and the admin API are not publicly reachable, and that Redis/ClickHouse require the generated passwords.
+6. Confirm Redis and ClickHouse are not publicly reachable; the admin API is reachable only through Caddy on port 443 and requires the admin token.
 7. Confirm ClickHouse rows and dashboard totals match the truth window.
 8. Run the MTTB benchmark and record the result. Note that this is the sensor-side publish time, not the full NSG write time.
 
