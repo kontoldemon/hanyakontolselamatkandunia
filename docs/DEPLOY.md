@@ -1,120 +1,16 @@
 # CloudSentinel Deployment Guide
 
-> Status: the droplet used for Phase 1 validation is now offline. This guide remains for redeployment. For a zero-cost local demo, see `docs/LOCAL_DEMO.md`.
+> Status: the legacy Phase 1 droplet is offline and retired. Deploy on Azure only. For a zero-cost local demo, see `docs/LOCAL_DEMO.md`.
 
-## Phase 1: DigitalOcean Dev/MVP
+## Legacy Phase 1 (retired)
 
-Status snapshot from 2026-05-26:
+Phase 1 ran on a DigitalOcean droplet and was validated on 2026-05-26. That droplet is offline. DigitalOcean deployment is retired and is not supported for new deployments.
 
-- Dashboard production URL: `https://dashboard-l7529dwmb-zis3cs-projects.vercel.app`
-- Vercel alias: `https://dashboard-six-mu-20.vercel.app`
-- Validation target: `188.166.184.42`
-- Current validation: see `artifacts/phase1-validation.md` for the recorded result. The snapshot in this guide may be stale.
+Use the Azure deployment below. For a zero-cost local demo, see `docs/LOCAL_DEMO.md`.
 
-### Prerequisites
+## Azure deployment
 
-- DigitalOcean account (free $200 credits via GitHub Student Pack)
-- Domain name (optional, for TLS)
-- SSH key pair for server access
-
-### Step 1: Provision Droplet
-
-```bash
-# Using doctl (DigitalOcean CLI)
-doctl compute droplet create cloudsentinel-sensor \
-  --image ubuntu-24-04-x64 \
-  --size s-1vcpu-1gb \
-  --region sgp1 \
-  --ssh-keys <your-key-id> \
-  --tag-name cloudsentinel
-
-# Or via the DO web dashboard:
-# Create > Droplets > Ubuntu 24.04 LTS > Basic > $4/mo (1 vCPU / 1 GB)
-```
-
-### Step 2: Initial Server Setup
-
-```bash
-ssh root@<droplet-ip>
-
-# Update system
-apt update && apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-usermod -aG docker $USER
-
-# Install Docker Compose
-apt install -y docker-compose-plugin
-
-# Create cloudsentinel user
-useradd -r -s /bin/false -d /opt/cloudsentinel cloudsentinel
-mkdir -p /opt/cloudsentinel
-```
-
-### Step 3: Deploy CloudSentinel
-
-```bash
-# Copy the local project or clone repository, then deploy sensor package
-cd /opt/cloudsentinel/src/cloudsentinel
-
-# Recommended Phase 1 installer
-sudo ADMIN_IP=<your-public-admin-ip> ./deploy.sh
-
-# Verify on droplet
-sudo systemctl status cloudsentinel
-sudo journalctl -u cloudsentinel -n 100 --no-pager
-curl http://127.0.0.1:8080/healthz
-```
-
-### Step 4: Expose Port 22
-
-```bash
-# The honeypot runs on port 2222 inside Docker.
-# Redirect port 22 to 2222 using iptables:
-iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
-iptables-save > /etc/iptables/rules.v4
-
-# Or change docker-compose.yml ports mapping:
-#   ports:
-#     - "22:2222"
-```
-
-### Step 5: Install Systemd Service (without Docker)
-
-```bash
-cp deploy/cloudsentinel.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable cloudsentinel
-systemctl start cloudsentinel
-systemctl status cloudsentinel
-```
-
-### Step 6: Deploy Dashboard to Vercel
-
-```bash
-cd dashboard
-
-# Local verification
-npm install
-npm run lint
-npm run build
-
-# Production deploy
-vercel deploy --prod --yes
-
-# Set environment variables in Vercel dashboard:
-# NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL=http://<droplet-ip>:3001
-# CLOUDSENTINEL_ADMIN_API_URL=http://<droplet-ip>:8080
-# CLOUDSENTINEL_ADMIN_TOKEN=<optional-admin-token>
-# DASHBOARD_USERNAME=<dashboard-user>
-# DASHBOARD_PASSWORD=<dashboard-password>
-# DASHBOARD_AUTH_SECRET=<random-64-byte-secret>
-```
-
-## Phase 2: Azure Production Migration
-
-> This is a planning section. Phase 2 is not deployed. Phase 1 deployment is historical and the droplet is offline.
+> This is the Azure target. The legacy Phase 1 DigitalOcean deployment is retired and must not be used.
 
 ### Architecture
 
@@ -140,7 +36,7 @@ Internet
 
 | Service | Phase 1 | Phase 2 Azure target |
 |---|---|---|
-| Sensor | DigitalOcean droplet | Azure VM `Standard_B2ats_v2`, Ubuntu 24.04 |
+| Sensor | Azure VM `Standard_B2ats_v2`, Ubuntu 24.04 |
 | Event bus | Local Python call | Event Grid custom topic |
 | SOAR blocking | iptables subprocess | Azure Function + NSG deny rule with TTL |
 | Intelligence | Python dict | Same core; optional Microsoft Defender for Cloud posture |

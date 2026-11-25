@@ -1,6 +1,6 @@
 """
 CloudSentinel - Event-Driven Automation and Identity-Centric Deception
-Phase 1: Dev/MVP on DigitalOcean
+Azure target; legacy DigitalOcean Phase 1 is retired
 Async-native SSH honeypot sensor with SOAR pipeline.
 
 Author: Radzi bin Zamri (I24107504)

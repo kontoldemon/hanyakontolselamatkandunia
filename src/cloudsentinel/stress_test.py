@@ -2,7 +2,7 @@
 """
 CloudSentinel Stress Test - Concurrent SSH Connection Simulator.
 Validates that the sensor handles 500+ concurrent connections with
-MTTB < 0.1s (Phase 1: DigitalOcean).
+MTTB < 0.1s on the Azure sensor VM.
 
 Usage:
     python stress_test.py --host 127.0.0.1 --port 2222 --connections 500

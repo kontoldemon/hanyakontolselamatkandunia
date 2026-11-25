@@ -6,7 +6,7 @@
 > Faculty: FPTM, Universiti Sultan Azlan Shah (USAS)
 > Type: Final Year Project (FYP)
 > Last Updated: 2026-06-01
-> Current Delivery State: Phase 1 deployed and validated on 2026-05-26; droplet now offline. Phase 2 prepared for Azure migration.
+> Current Delivery State: Azure is the supported target. The legacy DigitalOcean Phase 1 is retired and must not be redeployed.
 >
 > Phase 2 note (2026-11-22): the implemented path is the Event Grid custom topic -> Azure Function -> NSG rule flow, with a private ClickHouse VM. The host firewall agent remains for local/non-Azure installs.
 
@@ -19,10 +19,10 @@
 | System Name | CloudSentinel |
 | Domain | Cybersecurity, Honeypot, Active Deception, SOAR |
 | Primary Threat Focus | SSH botnet campaigns on port 22 |
-| Deployment Strategy | Two-phase: DigitalOcean (Dev and MVP) then Azure (Production-ready) |
+| Deployment Strategy | Azure only. Legacy DigitalOcean Phase 1 is retired. |
 | Architecture | Event-driven, service-boundary, cloud-agnostic core logic |
 | Frontend | Next.js 16, React 19, TypeScript, TailwindCSS 4 |
-| Phase 1 Host | DigitalOcean Droplet (sensor + SOAR + stream + ClickHouse) |
+| Legacy Phase 1 Host | Retired (historical evidence only) |
 | Phase 1 Dashboard | Vercel |
 | Phase 2 Target Host | Azure VM sensor + Event Grid + Azure Function + NSG + private ClickHouse VM + Vercel |
 | Key Performance Metric | MTTB measured; local dry-run median 0.962 ms |
@@ -36,7 +36,7 @@ CloudSentinel is built to stop high-speed automated SSH attacks where manual blo
 The system captures attacker behavior, fingerprints client identity using HASSH, maps behavior to MITRE ATT&CK, and auto-contains attacker IP with SOAR.
 
 Current direction:
-- Keep the local demo pipeline stable; the Phase 1 droplet is offline.
+- Keep the local demo pipeline stable; Azure is the deployment target.
 - Ensure telemetry truth from ClickHouse to dashboard.
 - Measure MTTB under realistic load and report the actual value.
 
@@ -60,7 +60,7 @@ Phase 2 direction:
 
 ### 4.1 Phase 1 Deployment (validated 2026-05-26, now offline)
 
-The droplet is offline. These are historical facts from the project artifacts:
+The legacy droplet is offline. These are historical facts and not a deployment target:
 - Phase 1 validation overall: PASS
 - SSH honeypot: PASS
 - Management SSH: PASS
@@ -85,7 +85,7 @@ The droplet is offline. These are historical facts from the project artifacts:
 
 ## 5. Updated Two-Phase Architecture
 
-### Phase 1 (validated, now offline): DigitalOcean
+### Legacy Phase 1 (retired): DigitalOcean
 - Internet -> SSH Sensor -> HASSH + MITRE + Risk -> Local SOAR block -> ClickHouse -> Socket.io -> Vercel dashboard
 
 ### Phase 2 (Target): Azure

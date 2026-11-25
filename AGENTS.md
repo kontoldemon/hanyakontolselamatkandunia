@@ -6,18 +6,17 @@ Last updated: 2026-11-23. Read this first in a new session.
 
 - Path: `C:\Users\RADZ\project io\FYP`
 - Branch: `main`
-- Push: `git push origin main` (origin = `zis3c/CloudSentinel`).
-- The default `git push` tracks `kontoldemon/main` and returns 403 for the current credentials. Use the explicit origin push or change the upstream.
-- Latest UI commit: `d662aa6` (dashboard redesign + telemetry).
+- Push target: `kontoldemon/hanyakontolselamatkandunia` (personal repo). Use the `kontoldemon` remote / active GitHub account when needed.
+- Latest pushed commit: `09e5960` (DigitalOcean exposure provider removed).
 
 ## Current status
 
-- Phase 1 (DigitalOcean) was validated on 2026-05-26; the droplet is offline.
+- Azure is the supported deployment target. The legacy DigitalOcean Phase 1 is retired and must not be used for new deployments.
 - Phase 2 Azure code is implemented but **not deployed or tested**:
   - Event Grid -> Azure Function -> NSG deny rule with TTL.
   - Private ClickHouse VM, Key Vault private endpoint, Bicep, custom least-privilege NSG role.
   - Host firewall agent remains as the local/non-Azure fallback.
-- Python suite: **494 passed, 2 skipped, coverage ~99.24%**.
+- Python suite: **520 passed, 2 skipped, coverage 99.01%**. GitHub CI: 522 passed, 99.32%.
 - Dashboard: `npm run build` passes. `npm run lint` is very slow (timed out at 5 minutes with no error output).
 - This Windows machine has no `az`, `bicep`, `func`, `docker`, or `bash`; Bicep, Function, and shell scripts are untested here.
 

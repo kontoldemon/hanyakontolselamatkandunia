@@ -13,35 +13,16 @@ CloudSentinel is a cloud-hosted SSH honeypot with automated containment. It does
 3. Score the risk and block high-risk source IPs with a firewall rule.
 4. Store the events and show them on a dashboard.
 
-## 2. Two phases
+## 2. Deployment status
 
-| Phase | Status | Host |
-|---|---|---|
-| Phase 1 | Deployed and validated 2026-05-26; currently offline | DigitalOcean droplet, Vercel dashboard |
-| Phase 2 | Target, not deployed | Azure VM sensor, Event Grid, Azure Function + NSG rules, private ClickHouse VM, Vercel dashboard |
+| Target | Status |
+|---|---|
+| Azure | Supported deployment target: sensor VM, Event Grid, Azure Function + NSG rules, private ClickHouse VM, Vercel dashboard |
+| Legacy DigitalOcean Phase 1 | Retired and no longer supported; do not deploy new instances |
 
-The detection logic is the same in both phases. Only the cloud adapters change.
+## 3. Runtime flow
 
-## 3. Phase 1 (deployed, now offline)
-
-The Phase 1 stack was validated on 2026-05-26. The droplet is now offline. The same stack can run locally with Docker; see `docs/LOCAL_DEMO.md`.
-
-### Components
-
-| Component | Runs on | Job |
-|---|---|---|
-| SSH sensor (`server.py`) | DigitalOcean droplet | AsyncSSH honeypot on port `2222`; public `22` is redirected to it |
-| Session shell | Sensor process | Fake command registry plus VFS and optional LLM-backed output |
-| Fingerprinting | Sensor process | HASSH, JA4S-style profile, client version, GeoIP |
-| MITRE and risk | Sensor process | Command to technique mapping, session risk score |
-| SOAR | Sensor process | Applies the firewall block when risk passes the threshold |
-| Firewall | Droplet kernel | iptables or nftables dynamic block |
-| Event pipeline | Droplet | Redis Streams, optional NATS, local WAL fallback |
-| ClickHouse | Droplet | Event storage and dashboard queries |
-| Stream server | Droplet, port `3001` | Socket.io live feed |
-| Admin API | Droplet, port `8080` | Health, stats, sessions, events, block, exposure |
-| Dashboard | Vercel | War room, threat map, session replay, AI panel |
-| Management SSH | Droplet, separate port | Operator access, not the honeypot |
+The runtime can also run locally with Docker; see `docs/LOCAL_DEMO.md`.
 
 ### Data flow
 
@@ -71,7 +52,7 @@ If Redis is down, events go to the local WAL and memory queue. The WAL is flushe
 | 8443 | HTTP honeypot | Disabled by default |
 | 53/udp | DNS honeypot | Disabled by default |
 
-## 4. Phase 2 (Azure target)
+## 4. Azure target
 
 ```text
 Internet

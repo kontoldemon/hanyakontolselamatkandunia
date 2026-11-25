@@ -4,31 +4,32 @@ CloudSentinel is an SSH honeypot and automated response platform. It records att
 
 ## Current status
 
-- Phase 1 was deployed on a DigitalOcean droplet and validated on 2026-05-26. The droplet is now offline.
+- The Azure migration is the supported target: sensor VM, private ClickHouse VM, Event Grid, Azure Function + NSG rules, Key Vault, Blob backups, and the Vercel dashboard.
+- The legacy DigitalOcean Phase 1 deployment is retired and is no longer a supported target.
 - The dashboard runs on Vercel.
 - For a zero-cost demo, run the full stack locally with Docker. See [docs/LOCAL_DEMO.md](docs/LOCAL_DEMO.md).
 - Phase 2 is the Azure target: a sensor VM, a private ClickHouse VM, Event Grid, an Azure Function that writes NSG block rules, Key Vault, Blob backups, and the existing Vercel dashboard. The Bicep is in [infra/main.bicep](infra/main.bicep). It is not deployed yet.
 
-Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writing the report.
+Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writing the report. Azure is the only supported deployment target.
 
 ## Tech stack
 
-| Layer | Phase 1 (actual) | Phase 2 (Azure target, not deployed) |
+| Layer | Azure target |
 |---|---|---|
-| Sensor compute | DigitalOcean droplet, Ubuntu 24.04 | Azure VM `Standard_B2ats_v2`, Ubuntu 24.04 |
-| SSH honeypot | AsyncSSH on port 2222 | Same, public port 22 redirected to 2222 |
-| Fingerprinting | HASSH, JA4S-style profile, GeoIP | Same |
-| Detection and scoring | MITRE ATT&CK mapping, anomaly and risk scoring | Same |
-| SOAR | Local iptables block | Event Grid custom topic -> Azure Function -> NSG deny rule with TTL |
-| Event buffer | Self-hosted Redis Streams | Self-hosted Redis on the sensor VM |
-| Analytics database | Self-hosted ClickHouse | Self-hosted ClickHouse on a private `Standard_B2s` VM |
-| Backups | Local daily backup script | Azure Blob Storage target |
-| Live stream | Local Socket.io server | Same Socket.io server on the sensor VM |
-| Admin API | FastAPI on the sensor | Same FastAPI service, token/JWT protected |
-| Dashboard | Next.js 16 on Vercel | Existing Vercel deployment; Azure Static Web Apps is optional later |
-| Secrets | `.env`, Vault, or Infisical | Azure Key Vault with private endpoint and managed identity |
-| Infrastructure as code | Manual droplet setup | Bicep |
-| Observability | Prometheus metrics, structured logs | Application Insights + Log Analytics for the Function; Prometheus on the VM |
+| Sensor compute | Azure VM `Standard_B2ats_v2`, Ubuntu 24.04 |
+| SSH honeypot | AsyncSSH on port 2222; public port 22 redirected to 2222 |
+| Fingerprinting | HASSH, JA4S-style profile, GeoIP |
+| Detection and scoring | MITRE ATT&CK mapping, anomaly and risk scoring |
+| SOAR | Event Grid custom topic -> Azure Function -> NSG deny rule with TTL; local iptables fallback on the VM |
+| Event buffer | Self-hosted Redis Streams on the sensor VM |
+| Analytics database | Self-hosted ClickHouse on a private `Standard_B2s` VM |
+| Backups | Azure Blob Storage target |
+| Live stream | Socket.io server on the sensor VM |
+| Admin API | FastAPI service, token/JWT protected |
+| Dashboard | Next.js 16 on Vercel |
+| Secrets | Azure Key Vault with private endpoint and managed identity |
+| Infrastructure as code | Bicep |
+| Observability | Application Insights + Log Analytics for the Function; Prometheus on the VM |
 
 The Azure plan deliberately avoids AKS, Azure Cache for Redis, Azure Data Explorer, managed Kafka, and managed ClickHouse. They add cost and are not needed for the FYP load.
 

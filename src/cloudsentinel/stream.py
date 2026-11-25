@@ -1,11 +1,10 @@
 """
 CloudSentinel Socket.io Live Streaming Module.
-Phase 1: Self-hosted on DO Droplet alongside sensor.
+Runs alongside the sensor on the Azure VM.
 Provides real-time event push to the War Room Dashboard via WebSocket.
 
 Uses: python-socketio + aiohttp (async-native, matches our stack).
-Phase 1 (DO): JWT-secured WebSocket with CORS whitelist.
-Phase 2 (AWS): Migrate to App Runner with IAM auth.
+JWT-secured WebSocket with CORS whitelist.
 """
 
 from __future__ import annotations
