@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import hmac
-import ipaddress
 import json
 import os
-import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -33,6 +31,14 @@ from .api.routers.sessions import build_sessions_router
 from .api.routers.health import build_health_router
 from .api.routers.mobile import build_mobile_router
 from .mobile_push import MobilePushService
+from .api.firewall import (
+    _exposure_firewall_paths,
+    _is_allowlisted,
+    _manual_block_args,
+    _run_command,
+    _schedule_manual_unblock,
+    _spawn_manual_unblock,
+)
 from .api.queries import (
     ACTIVE_FRESHNESS_WINDOW_SECONDS,
     SYNTHETIC_ACTIVE_WINDOW_SECONDS,
@@ -169,18 +175,6 @@ async def _clickhouse_health(settings: Settings) -> bool | None:
 
 
 
-def _is_allowlisted(ip: str, allowlist: list[str]) -> bool:
-    try:
-        addr = ipaddress.ip_address(ip)
-    except ValueError:
-        return False
-    for value in allowlist:
-        try:
-            if addr in ipaddress.ip_network(str(value).strip(), strict=False):
-                return True
-        except ValueError:
-            continue
-    return False
 
 
 
@@ -197,77 +191,17 @@ def _is_allowlisted(ip: str, allowlist: list[str]) -> bool:
 
 
 
-async def _run_command(args: list[str], timeout: float = 5.0) -> tuple[int, str, str]:
-    def run() -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            args,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-
-    result = await asyncio.to_thread(run)
-    return (
-        int(result.returncode),
-        result.stdout or "",
-        result.stderr or "",
-    )
 
 
 _MANUAL_UNBLOCK_TASKS: set[asyncio.Task[None]] = set()
 
 
-def _manual_block_args(firewall_path: str, action: str, ip: str, reason: str) -> list[str]:
-    return [
-        firewall_path,
-        action,
-        "INPUT",
-        "-s",
-        ip,
-        "-m",
-        "comment",
-        "--comment",
-        f"cloudsentinel-manual:{reason}",
-        "-j",
-        "DROP",
-    ]
 
 
-async def _schedule_manual_unblock(
-    ip: str,
-    reason: str,
-    ttl: int,
-    firewall_path: str,
-) -> None:
-    await asyncio.sleep(max(0, ttl))
-    await _run_command(_manual_block_args(firewall_path, "-D", ip, reason))
 
 
-def _spawn_manual_unblock(ip: str, reason: str, ttl: int, firewall_path: str) -> None:
-    task = asyncio.create_task(_schedule_manual_unblock(ip, reason, ttl, firewall_path))
-    _MANUAL_UNBLOCK_TASKS.add(task)
-    task.add_done_callback(_MANUAL_UNBLOCK_TASKS.discard)
 
 
-def _exposure_firewall_paths(settings: Settings) -> list[str]:
-    ordered = [
-        str(settings.soar.firewall_path or "/sbin/iptables"),
-        "/usr/sbin/iptables-legacy",
-        "/usr/sbin/iptables",
-        "/usr/sbin/iptables-nft",
-        "/sbin/iptables-legacy",
-        "/sbin/iptables",
-    ]
-    seen: set[str] = set()
-    out: list[str] = []
-    for item in ordered:
-        value = item.strip()
-        if not value or value in seen:
-            continue
-        seen.add(value)
-        out.append(value)
-    return out
 
 
 async def _http_json(

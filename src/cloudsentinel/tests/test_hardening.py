@@ -593,7 +593,7 @@ def test_manual_unblock_helper_is_scheduled(monkeypatch) -> None:
         calls.append(args)
         return (0, "", "")
 
-    monkeypatch.setattr(admin_api, "_run_command", fake_run)
+    monkeypatch.setattr("cloudsentinel.api.firewall._run_command", fake_run)
     helper = getattr(admin_api, "_schedule_manual_unblock")
     asyncio.run(helper("203.0.113.10", "unit", 0, "/sbin/iptables"))
     assert calls[-1][:2] == ["/sbin/iptables", "-D"]
