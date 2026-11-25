@@ -13,7 +13,7 @@ import {
     Smartphone,
     Trash2,
     Radio,
-    Clock,
+    Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +68,7 @@ export default function MobileAlertsPanel({
     const [challenge, setChallenge] = useState<PairingChallenge | null>(null);
     const [remainingSec, setRemainingSec] = useState(0);
     const [copiedCode, setCopiedCode] = useState(false);
+    const [copiedToken, setCopiedToken] = useState(false);
     const [loadingPair, setLoadingPair] = useState(false);
     const [sendingTest, setSendingTest] = useState(false);
     const [savingPolicy, setSavingPolicy] = useState(false);
@@ -145,6 +146,17 @@ export default function MobileAlertsPanel({
         }
     };
 
+    const handleCopyToken = async () => {
+        if (!challenge) return;
+        try {
+            await navigator.clipboard.writeText(challenge.pairingToken);
+            setCopiedToken(true);
+            setTimeout(() => setCopiedToken(false), 1800);
+        } catch {
+            // Ignore clipboard errors
+        }
+    };
+
     const handleSavePolicy = async () => {
         setSavingPolicy(true);
         try {
@@ -206,11 +218,11 @@ export default function MobileAlertsPanel({
     };
 
     return (
-        <div className="space-y-4 animate-in fade-in duration-200">
+        <div className="h-full flex flex-col gap-3.5 min-h-0 animate-in fade-in duration-200">
             {/* Top Grid: 2 balanced cards */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5 shrink-0">
                 {/* Left Card: QR Pairing & Endpoint */}
-                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col justify-between">
+                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4">
                     <div>
                         <div className="pb-3 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
                             <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-blue-500">
@@ -253,15 +265,27 @@ export default function MobileAlertsPanel({
                                 </button>
 
                                 {challenge && (
-                                    <button
-                                        type="button"
-                                        onClick={handleCopyCode}
-                                        className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-mono font-bold tracking-wider transition-colors cursor-pointer"
-                                        title="Click to copy pairing code"
-                                    >
-                                        <span>Code: {challenge.pairingCode}</span>
-                                        {copiedCode ? <Check size={12} /> : <Copy size={12} />}
-                                    </button>
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyCode}
+                                            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-mono font-bold tracking-wider transition-colors cursor-pointer"
+                                            title="Click to copy pairing code"
+                                        >
+                                            <span>Code: {challenge.pairingCode}</span>
+                                            {copiedCode ? <Check size={12} /> : <Copy size={12} />}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyToken}
+                                            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-purple-500/30 bg-purple-50/60 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs font-mono font-bold transition-colors cursor-pointer"
+                                            title="Click to copy pairing token"
+                                        >
+                                            <Key size={11} />
+                                            <span>Token: {challenge.pairingToken.slice(0, 8)}?</span>
+                                            {copiedToken ? <Check size={12} /> : <Copy size={12} />}
+                                        </button>
+                                    </>
                                 )}
                             </div>
 
@@ -296,7 +320,7 @@ export default function MobileAlertsPanel({
                 </div>
 
                 {/* Right Card: Policy Thresholds */}
-                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex flex-col justify-between">
+                <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4">
                     <div>
                         <div className="pb-3 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
                             <h4 className="font-display font-semibold text-[13px] tracking-tight flex items-center gap-2 text-amber-500">
@@ -413,8 +437,8 @@ export default function MobileAlertsPanel({
             </div>
 
             {/* Bottom Full-Width Card: Paired Devices & Dispatch Stream */}
-            <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4">
-                <div className="pb-3 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+            <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm p-4 flex-1 min-h-0 flex flex-col">
+                <div className="pb-3 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
                         <ShieldAlert size={15} className="text-emerald-500" />
                         <h4 className="font-display font-semibold text-[13px] tracking-tight text-slate-900 dark:text-white">
@@ -432,7 +456,7 @@ export default function MobileAlertsPanel({
                     </div>
                 </div>
 
-                <div className="mt-3">
+                <div className="mt-3 flex-1 min-h-0 overflow-y-auto terminal-scrollbar pr-1">
                     {devices.length === 0 ? (
                         <div className="rounded-lg border border-dashed border-slate-200 dark:border-white/10 p-4 text-center">
                             <Smartphone size={24} className="mx-auto text-slate-400 dark:text-slate-600 mb-1" />
