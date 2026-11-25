@@ -48,3 +48,42 @@ def test_commands_do_not_execute_host_commands() -> None:
         assert "fastapi" not in names, path
         assert "admin_api" not in names, path
         assert not _calls_os_system(path), path
+
+
+def test_admin_routes_keep_auth_dependencies() -> None:
+    from fastapi.routing import APIRoute
+
+    from cloudsentinel.admin_api import create_admin_app
+    from cloudsentinel.config import Settings
+    from cloudsentinel.pipeline import EventPipeline
+
+    app = create_admin_app(Settings(), EventPipeline(Settings().redis))
+    public = {"/healthz", "/metrics", "/auth/login", "/mobile/pair"}
+    protected_prefixes = (
+        "/admin",
+        "/sessions",
+        "/events",
+        "/truth-summary",
+        "/war-room-state",
+        "/stats",
+        "/attack-distribution",
+        "/attack-graph",
+        "/anomaly-stats",
+        "/llm",
+        "/readiness",
+        "/metrics/json",
+        "/mobile/config",
+        "/mobile/pairing-token",
+        "/mobile/test-alert",
+        "/mobile/devices",
+    )
+    for route in app.routes:
+        if not isinstance(route, APIRoute) or not route.path.startswith(protected_prefixes):
+            continue
+        if route.path in public:
+            continue
+        dependency_names = {
+            getattr(dependency.dependency, "__name__", "")
+            for dependency in route.dependencies
+        }
+        assert "require_auth" in dependency_names, route.path
