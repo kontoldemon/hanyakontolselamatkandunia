@@ -107,9 +107,10 @@ curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 sudo KEY_VAULT_NAME="<vault-name>" /opt/cloudsentinel/load_secrets.sh
 ```
 
-`load_secrets.sh` copies the Event Grid endpoint/key and the ClickHouse
-password, and enables `EVENTGRID_ENABLED=true` when the Event Grid values are
-present. Restart `cloudsentinel` after the script runs.
+`load_secrets.sh` copies the Event Grid endpoint/key, the ClickHouse
+password, the storage account, and the backup container (`backups`). It enables
+`EVENTGRID_ENABLED=true` when the Event Grid values are present. Restart
+`cloudsentinel` after the script runs.
 
 ### Dashboard wiring
 

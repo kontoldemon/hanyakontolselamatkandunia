@@ -627,6 +627,22 @@ resource clickHousePasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01'
   }
 }
 
+resource storageAccountSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'storage-account-name'
+  properties: {
+    value: storage.name
+  }
+}
+
+resource backupContainerSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'backup-container-name'
+  properties: {
+    value: backupContainerName
+  }
+}
+
 resource vaultPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: 'privatelink.vaultcore.azure.net'
   location: 'global'

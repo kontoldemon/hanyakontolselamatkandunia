@@ -47,3 +47,11 @@ def test_deploy_script_exposes_only_caddy_and_redirects_honeypot() -> None:
     assert "reverse_proxy 127.0.0.1:3001" in deploy
     assert "REDIRECT --to-ports ${SSH_PORT}" in deploy
     assert "ufw allow 443/tcp" in deploy
+
+
+def test_backup_storage_secrets_match_container() -> None:
+    bicep = (ROOT / "infra" / "main.bicep").read_text(encoding="utf-8")
+    assert "name: 'storage-account-name'" in bicep
+    assert "name: 'backup-container-name'" in bicep
+    backup = (ROOT / "deploy" / "backup.sh").read_text(encoding="utf-8")
+    assert 'AZURE_STORAGE_CONTAINER="${AZURE_STORAGE_CONTAINER:-backups}"' in backup

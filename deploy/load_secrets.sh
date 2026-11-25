@@ -10,7 +10,7 @@ set -euo pipefail
 : "${KEY_VAULT_NAME:?Set KEY_VAULT_NAME to the Key Vault name}"
 ENV_FILE="${ENV_FILE:-/opt/cloudsentinel/.env}"
 SENSOR_USER="${SENSOR_USER:-cloudsentinel}"
-SECRETS="${SECRETS:-admin-token:ADMIN_TOKEN llm-api-key:LLM_API_KEY clickhouse-password:CLICKHOUSE_PASSWORD auth-secret:CLOUDSENTINEL_AUTH_SECRET admin-pass:CLOUDSENTINEL_ADMIN_PASS eventgrid-topic-endpoint:EVENTGRID_TOPIC_ENDPOINT eventgrid-topic-key:EVENTGRID_TOPIC_KEY}"
+SECRETS="${SECRETS:-admin-token:ADMIN_TOKEN llm-api-key:LLM_API_KEY clickhouse-password:CLICKHOUSE_PASSWORD auth-secret:CLOUDSENTINEL_AUTH_SECRET admin-pass:CLOUDSENTINEL_ADMIN_PASS eventgrid-topic-endpoint:EVENTGRID_TOPIC_ENDPOINT eventgrid-topic-key:EVENTGRID_TOPIC_KEY storage-account-name:AZURE_STORAGE_ACCOUNT backup-container-name:AZURE_STORAGE_CONTAINER}"
 
 if ! command -v az >/dev/null 2>&1; then
     echo "Azure CLI (az) is required." >&2
