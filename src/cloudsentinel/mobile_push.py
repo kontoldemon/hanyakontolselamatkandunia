@@ -157,6 +157,33 @@ class MobilePushService:
                     last_seen_at_ms=int(item.get("last_seen_at_ms", 0)),
                 )
                 self._devices[device.device_id] = device
+            for item in raw.get("challenges", []):
+                if not isinstance(item, dict) or not item.get("code"):
+                    continue
+                challenge = PairingChallenge(
+                    code=str(item["code"]),
+                    token=str(item.get("token", "")),
+                    server_url=str(item.get("server_url", "")),
+                    created_at_ms=int(item.get("created_at_ms", 0)),
+                    expires_at_ms=int(item.get("expires_at_ms", 0)),
+                )
+                self._challenges[challenge.code] = challenge
+            for item in raw.get("recent_alerts", []):
+                if not isinstance(item, dict) or not item.get("id"):
+                    continue
+                self._recent_alerts.append(
+                    MobileAlertRecord(
+                        id=str(item["id"]),
+                        ip=str(item.get("ip", "")),
+                        country=str(item.get("country", "Unknown")),
+                        risk_score=int(item.get("risk_score", 0)),
+                        event_type=str(item.get("event_type", "THREAT_DETECTED")),
+                        summary=str(item.get("summary", "")),
+                        mitre_id=str(item.get("mitre_id", "")),
+                        blocked=bool(item.get("blocked", False)),
+                        timestamp_ms=int(item.get("timestamp_ms", 0)),
+                    )
+                )
         except Exception as exc:
             logger.warning("mobile_push_load_failed", error=str(exc))
 
@@ -166,10 +193,24 @@ class MobilePushService:
             payload = {
                 "policy": asdict(self._policy),
                 "devices": [asdict(dev) for dev in self._devices.values()],
+                "challenges": [asdict(ch) for ch in self._challenges.values()],
+                "recent_alerts": [alert.to_dict() for alert in self._recent_alerts],
             }
             self._storage_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            try:
+                self._storage_path.chmod(0o600)
+            except OSError:
+                pass
         except Exception as exc:
             logger.warning("mobile_push_save_failed", error=str(exc))
+
+    def refresh(self) -> None:
+        """Reload shared state written by another process."""
+        self._devices.clear()
+        self._policy = MobileAlertPolicy()
+        self._challenges.clear()
+        self._recent_alerts.clear()
+        self._load_state()
 
     def _prune_challenges(self) -> None:
         now_ms = int(time.time() * 1000)
@@ -220,6 +261,7 @@ class MobilePushService:
             expires_at_ms=expires_ms,
         )
         self._challenges[code] = challenge
+        self._save_state()
         qr_payload = json.dumps(
             {"v": 1, "serverUrl": clean_url, "pairingCode": code, "pairingToken": token},
             separators=(",", ":"),
@@ -239,13 +281,18 @@ class MobilePushService:
         device_name: str,
         fcm_token: str = "",
         platform: str = "android",
+        pairing_token: str = "",
     ) -> dict[str, Any] | None:
         """Consume a valid pairing code and register the Android device."""
+        self.refresh()
         self._prune_challenges()
         normalized_code = pairing_code.strip()
-        challenge = self._challenges.pop(normalized_code, None)
+        challenge = self._challenges.get(normalized_code)
         if challenge is None:
             return None
+        if pairing_token and not hmac.compare_digest(challenge.token, pairing_token):
+            return None
+        self._challenges.pop(normalized_code, None)
 
         if len(self._devices) >= MAX_PAIRED_DEVICES:
             oldest_id = min(self._devices.values(), key=lambda d: d.paired_at_ms).device_id
@@ -308,6 +355,7 @@ class MobilePushService:
         return True
 
     def get_recent_alerts(self, limit: int = 50) -> list[dict[str, Any]]:
+        self.refresh()
         safe_limit = max(1, min(MAX_RECENT_ALERTS, limit))
         return [item.to_dict() for item in list(self._recent_alerts)[:safe_limit]]
 
@@ -359,6 +407,7 @@ class MobilePushService:
             blocked=blocked,
         )
         self._recent_alerts.appendleft(record)
+        self._save_state()
 
         devices = list(self._devices.values())
         if not devices:

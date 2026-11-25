@@ -13,6 +13,7 @@ data class QrPairingPayload(
 @Serializable
 data class PairDeviceRequest(
     val pairingCode: String,
+    val pairingToken: String = "",
     val deviceName: String,
     val fcmToken: String = "",
     val platform: String = "android"

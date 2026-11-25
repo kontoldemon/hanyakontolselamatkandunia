@@ -27,6 +27,7 @@ class AlertRepository(private val sessionStore: SecureSessionStore) {
     suspend fun pairWithCode(
         serverUrl: String,
         pairingCode: String,
+        pairingToken: String,
         fcmToken: String = ""
     ): Result<PairedSession> = runCatching {
         val api = ApiClient.create(serverUrl)
@@ -34,6 +35,7 @@ class AlertRepository(private val sessionStore: SecureSessionStore) {
         val response = api.pairDevice(
             PairDeviceRequest(
                 pairingCode = pairingCode.trim(),
+                pairingToken = pairingToken.trim(),
                 deviceName = deviceModel.ifBlank { "Android Companion" },
                 fcmToken = fcmToken
             )

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import time
+from collections import deque
 from typing import Any, Callable
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ...config import Settings
@@ -21,6 +23,9 @@ def build_mobile_router(
 ) -> APIRouter:
     """Create FastAPI router for Android companion pairing and alert delivery."""
     router = APIRouter(prefix="/mobile", tags=["mobile"])
+    pair_attempts: dict[str, deque[float]] = {}
+    pair_window_seconds = 60.0
+    pair_max_attempts = 10
 
     async def require_device_auth(
         credentials: HTTPAuthorizationCredentials | None = Depends(mobile_security),
@@ -52,24 +57,46 @@ def build_mobile_router(
     @router.post("/pairing-token", dependencies=[Depends(require_auth)])
     async def create_pairing_token(body: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = body or {}
-        default_url = f"http://{settings.admin.host}:{settings.admin.port}"
+        host = settings.honeypot.hostname or settings.admin.host
+        scheme = "https" if settings.tls.enabled else "http"
+        default_url = (
+            f"{scheme}://{host}:{settings.admin.port}"
+            if host and host not in {"0.0.0.0", "::", "[::]"}
+            else ""
+        )
         server_url = str(payload.get("serverUrl") or default_url).strip()
+        if not server_url:
+            raise HTTPException(
+                status_code=400,
+                detail="serverUrl is required when the admin API binds to a wildcard address",
+            )
         challenge = mobile_service.create_pairing_challenge(server_url=server_url)
         return {"ok": True, **challenge}
 
     @router.post("/pair")
-    async def pair_android_device(body: dict[str, Any]) -> dict[str, Any]:
+    async def pair_android_device(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        attempts = pair_attempts.setdefault(client_ip, deque())
+        while attempts and now - attempts[0] > pair_window_seconds:
+            attempts.popleft()
+        if len(attempts) >= pair_max_attempts:
+            raise HTTPException(status_code=429, detail="too many pairing attempts")
+        attempts.append(now)
+
         code = str(body.get("pairingCode") or body.get("pairing_code") or "").strip()
         device_name = str(body.get("deviceName") or body.get("device_name") or "Android Device").strip()
         fcm_token = str(body.get("fcmToken") or body.get("fcm_token") or "").strip()
+        pairing_token = str(body.get("pairingToken") or body.get("pairing_token") or "").strip()
         platform = str(body.get("platform") or "android").strip()
-        if not code:
-            raise HTTPException(status_code=400, detail="pairingCode is required")
+        if not code or not pairing_token:
+            raise HTTPException(status_code=400, detail="pairingCode and pairingToken are required")
         paired = mobile_service.pair_device(
             pairing_code=code,
             device_name=device_name,
             fcm_token=fcm_token,
             platform=platform,
+            pairing_token=pairing_token,
         )
         if paired is None:
             raise HTTPException(status_code=401, detail="Invalid or expired pairing code")

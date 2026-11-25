@@ -55,10 +55,11 @@ import com.cloudsentinel.mobile.core.theme.RoseCritical
 fun PairingScreen(
     isPairing: Boolean,
     errorMessage: String?,
-    onPairSubmit: (serverUrl: String, pairingCode: String) -> Unit
+    onPairSubmit: (serverUrl: String, pairingCode: String, pairingToken: String) -> Unit
 ) {
-    var serverUrl by remember { mutableStateOf("http://192.168.1.10:8080") }
+    var serverUrl by remember { mutableStateOf("https://192.168.1.10:8080") }
     var pairingCode by remember { mutableStateOf("") }
+    var pairingToken by remember { mutableStateOf("") }
     var showScanner by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -135,8 +136,9 @@ fun PairingScreen(
                                 val parsed = ApiClient.json.decodeFromString<QrPairingPayload>(raw)
                                 serverUrl = parsed.serverUrl
                                 pairingCode = parsed.pairingCode
+                                pairingToken = parsed.pairingToken
                                 showScanner = false
-                                onPairSubmit(parsed.serverUrl, parsed.pairingCode)
+                                onPairSubmit(parsed.serverUrl, parsed.pairingCode, parsed.pairingToken)
                             }
                         }
                     )
@@ -189,11 +191,22 @@ fun PairingScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = pairingToken,
+                    onValueChange = { pairingToken = it.trim() },
+                    label = { Text("Pairing Token (from QR)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.labelSmall
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { onPairSubmit(serverUrl, pairingCode) },
-                    enabled = !isPairing && serverUrl.isNotBlank() && pairingCode.length == 6,
+                    onClick = { onPairSubmit(serverUrl, pairingCode, pairingToken) },
+                    enabled = !isPairing && serverUrl.isNotBlank() && pairingCode.length == 6 && pairingToken.isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),

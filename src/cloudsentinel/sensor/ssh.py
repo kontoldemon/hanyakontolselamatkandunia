@@ -14,6 +14,7 @@ from ..anomaly import CommandAnomalyDetector
 from ..config import Settings
 from ..geoip import enrich as geo_enrich
 from ..hassh import HASSHDNA, fallback_hassh_from_version, infer_client_software
+from ..mobile_push import MobilePushService
 from ..pipeline import EventPipeline
 from ..soar import SOAREngine
 from ..stream import LiveStream
@@ -23,6 +24,25 @@ from .session import CloudSentinelSession
 from .tty import TTYLogger
 
 logger = structlog.get_logger("cloudsentinel.sensor.ssh")
+_mobile_service: MobilePushService | None = None
+
+
+def _mobile_alert_service() -> MobilePushService:
+    global _mobile_service
+    if _mobile_service is None:
+        _mobile_service = MobilePushService()
+    return _mobile_service
+
+
+async def _dispatch_mobile_alert(event: dict) -> None:
+    try:
+        service = _mobile_alert_service()
+        service.refresh()
+        if not service.list_devices():
+            return
+        await service.dispatch_alert(event)
+    except Exception as exc:
+        logger.debug("mobile_alert_dispatch_failed", error=str(exc))
 
 
 class CloudSentinelSSHServer(asyncssh.SSHServer):
@@ -313,3 +333,5 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
                 self.stream.emit(soar_result)
         except Exception as exc:
             logger.debug("Live stream emit failed: %s", exc)
+
+        asyncio.create_task(_dispatch_mobile_alert(soar_result))

@@ -114,11 +114,17 @@ def test_mobile_router_endpoints_end_to_end(tmp_path: Path, monkeypatch) -> None
     )
     assert pair_tok.status_code == 200
     code = pair_tok.json()["pairingCode"]
+    pairing_token = pair_tok.json()["pairingToken"]
 
-    # Android pairs using code
+    # Android pairs using code + token
     pair_resp = client.post(
         "/mobile/pair",
-        json={"pairingCode": code, "deviceName": "OnePlus 12", "fcmToken": "fcm_xyz"},
+        json={
+            "pairingCode": code,
+            "pairingToken": pairing_token,
+            "deviceName": "OnePlus 12",
+            "fcmToken": "fcm_xyz",
+        },
     )
     assert pair_resp.status_code == 200
     device_token = pair_resp.json()["deviceToken"]
@@ -160,14 +166,21 @@ def test_mobile_router_error_paths(tmp_path: Path, monkeypatch) -> None:
     assert client.get("/mobile/alerts").status_code == 401
     assert client.get("/mobile/alerts", headers={"Authorization": "Bearer bad"}).status_code == 401
     assert client.post("/mobile/pair", json={}).status_code == 400
-    assert client.post("/mobile/pair", json={"pairingCode": "000000"}).status_code == 401
+    assert client.post("/mobile/pair", json={"pairingCode": "000000"}).status_code == 400
+    assert client.post(
+        "/mobile/pair", json={"pairingCode": "000000", "pairingToken": "bad"}
+    ).status_code == 401
     assert client.delete("/mobile/devices/missing", headers=admin_headers).status_code == 404
 
     pairing = client.post("/mobile/pairing-token", headers=admin_headers, json={})
     assert pairing.status_code == 200
     paired = client.post(
         "/mobile/pair",
-        json={"pairingCode": pairing.json()["pairingCode"], "deviceName": "Test"},
+        json={
+            "pairingCode": pairing.json()["pairingCode"],
+            "pairingToken": pairing.json()["pairingToken"],
+            "deviceName": "Test",
+        },
     )
     device_headers = {"Authorization": f"Bearer {paired.json()['deviceToken']}"}
     assert client.post("/mobile/fcm-token", headers=device_headers, json={}).status_code == 400
@@ -300,3 +313,76 @@ def test_mobile_router_block_ip_endpoint(tmp_path: Path) -> None:
     )
     assert response.status_code == 200
     assert response.json()["blocked"] == "8.8.8.8"
+
+
+def test_mobile_pairing_requires_token_and_rate_limits(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CLOUDSENTINEL_MOBILE_STATE_PATH", str(tmp_path / "pair-rate.json"))
+    settings = Settings()
+    settings.admin.enabled = True
+    settings.admin.token = "test-admin-secret"
+    settings.honeypot.hostname = ""
+    settings.admin.host = "0.0.0.0"
+    client = TestClient(create_admin_app(settings, EventPipeline(settings)))
+    headers = {"Authorization": "Bearer test-admin-secret"}
+
+    no_url = client.post("/mobile/pairing-token", headers=headers, json={})
+    assert no_url.status_code == 400
+
+    generated = client.post(
+        "/mobile/pairing-token",
+        headers=headers,
+        json={"serverUrl": "https://soc.example.com"},
+    )
+    assert generated.status_code == 200
+    code = generated.json()["pairingCode"]
+    token = generated.json()["pairingToken"]
+    assert client.post("/mobile/pair", json={"pairingCode": code}).status_code == 400
+
+    for _ in range(9):
+        response = client.post(
+            "/mobile/pair",
+            json={"pairingCode": "000000", "pairingToken": "wrong"},
+        )
+        assert response.status_code == 401
+    limited = client.post(
+        "/mobile/pair",
+        json={"pairingCode": "000000", "pairingToken": "wrong"},
+    )
+    assert limited.status_code == 429
+
+
+def test_mobile_state_is_shared_between_processes(tmp_path: Path, monkeypatch) -> None:
+    state = tmp_path / "shared.json"
+    first = MobilePushService(storage_path=state)
+    challenge = first.create_pairing_challenge("https://soc.example.com")
+    paired = first.pair_device(
+        challenge["pairingCode"],
+        "Shared Device",
+        pairing_token=challenge["pairingToken"],
+    )
+    assert paired is not None
+
+    second = MobilePushService(storage_path=state)
+    assert len(second.list_devices()) == 1
+    asyncio.run(second.dispatch_alert({"ip": "9.9.9.9", "risk_score": 91}, force=True))
+
+    third = MobilePushService(storage_path=state)
+    alerts = third.get_recent_alerts()
+    assert alerts and alerts[0]["ip"] == "9.9.9.9"
+
+
+def test_sensor_dispatches_to_paired_mobile(tmp_path: Path, monkeypatch) -> None:
+    import cloudsentinel.sensor.ssh as sensor_ssh
+
+    state = tmp_path / "sensor-shared.json"
+    monkeypatch.setenv("CLOUDSENTINEL_MOBILE_STATE_PATH", str(state))
+    service = MobilePushService(storage_path=state)
+    challenge = service.create_pairing_challenge("https://soc.example.com")
+    assert service.pair_device(
+        challenge["pairingCode"],
+        "Sensor Device",
+        pairing_token=challenge["pairingToken"],
+    )
+    monkeypatch.setattr(sensor_ssh, "_mobile_service", service)
+    asyncio.run(sensor_ssh._dispatch_mobile_alert({"ip": "7.7.7.7", "risk_score": 92}))
+    assert any(alert["ip"] == "7.7.7.7" for alert in service.get_recent_alerts())

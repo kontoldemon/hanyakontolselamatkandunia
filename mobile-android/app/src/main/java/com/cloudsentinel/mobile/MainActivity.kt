@@ -71,11 +71,11 @@ class MainActivity : ComponentActivity() {
                         PairingScreen(
                             isPairing = isPairing,
                             errorMessage = pairError,
-                            onPairSubmit = { serverUrl, code ->
+                            onPairSubmit = { serverUrl, code, token ->
                                 scope.launch {
                                     isPairing = true
                                     pairError = null
-                                    repo.pairWithCode(serverUrl, code, fcmToken)
+                                    repo.pairWithCode(serverUrl, code, token, fcmToken)
                                         .onSuccess { paired ->
                                             session = paired
                                             repo.syncAlerts()

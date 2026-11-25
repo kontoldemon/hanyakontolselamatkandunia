@@ -64,7 +64,7 @@ export default function MobileAlertsPanel({
         notifySoarBlock: true,
     });
     const [devices, setDevices] = useState<PairedDevice[]>([]);
-    const [serverUrl, setServerUrl] = useState("http://192.168.1.10:8080");
+    const [serverUrl, setServerUrl] = useState("https://192.168.1.10:8080");
     const [challenge, setChallenge] = useState<PairingChallenge | null>(null);
     const [remainingSec, setRemainingSec] = useState(0);
     const [copiedCode, setCopiedCode] = useState(false);
@@ -88,7 +88,7 @@ export default function MobileAlertsPanel({
     useEffect(() => {
         if (typeof window !== "undefined") {
             const host = window.location.hostname || "127.0.0.1";
-            setServerUrl(`http://${host}:8080`);
+            setServerUrl(`https://${host}:8080`);
         }
         void loadMobileState();
     }, [loadMobileState]);
@@ -236,7 +236,7 @@ export default function MobileAlertsPanel({
                                     type="text"
                                     value={serverUrl}
                                     onChange={(e) => setServerUrl(e.target.value)}
-                                    placeholder="http://192.168.1.10:8080"
+                                    placeholder="https://192.168.1.10:8080"
                                     className="w-full h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-2.5 text-xs font-mono text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                                 />
                             </div>
