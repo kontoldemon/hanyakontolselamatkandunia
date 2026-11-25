@@ -76,7 +76,7 @@ def test_synthetic_session_skips(monkeypatch) -> None:
     )
     settings.clickhouse.enabled = True
     monkeypatch.setattr(
-        admin_module,
+        queries_module,
         "_load_recent_sessions_from_clickhouse",
         lambda _settings: [{"ip": "8.8.8.8"}],
     )

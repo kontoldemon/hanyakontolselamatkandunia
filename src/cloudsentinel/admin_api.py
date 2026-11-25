@@ -24,6 +24,7 @@ from .eventgrid import publish_block
 from .geoip import is_public_ip
 from .pipeline import EventPipeline
 from .api.routers.events import build_events_router
+from .api.routers.sessions import build_sessions_router
 from .api.routers.health import build_health_router
 from .api.queries import (
     ACTIVE_FRESHNESS_WINDOW_SECONDS,
@@ -883,6 +884,17 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             HOT_CACHE_TTL_SUMMARY_SECONDS,
         )
     )
+    app.include_router(
+        build_sessions_router(
+            settings,
+            require_auth,
+            _compute_war_room_state,
+            _hot_cache_get,
+            _hot_cache_set,
+            soar,
+            HOT_CACHE_TTL_SESSIONS_SECONDS,
+        )
+    )
 
     @app.get("/stats", dependencies=[Depends(require_auth)])
     async def stats() -> dict[str, Any]:
@@ -912,85 +924,6 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         except Exception:
             pass
         return data
-
-    @app.get("/sessions", dependencies=[Depends(require_auth)])
-    async def sessions() -> dict[str, Any]:
-        strict_truth = _strict_truth_mode_enabled()
-        if strict_truth:
-            cached_payload, _ = await _hot_cache_get("sessions:strict")
-            if isinstance(cached_payload, dict) and isinstance(cached_payload.get("sessions"), list):
-                await _compute_war_room_state(force=False)
-                return cached_payload
-        sessions_list = _load_recent_sessions_from_clickhouse(settings)
-        existing = {str(item.get("ip", "")) for item in sessions_list}
-        if not strict_truth and soar is not None:
-            now_ts = time.time()
-            for ip, session_ids in getattr(soar, "_mem_ip_sessions", {}).items():
-                if ip in existing:
-                    continue
-                profile = soar.get_ip_profile(ip) if hasattr(soar, "get_ip_profile") else {}
-                last_seen = float(profile.get("last_seen") or profile.get("first_seen") or 0.0)
-                # Avoid stale synthetic "active" rows with no recent evidence.
-                if last_seen <= 0 or (now_ts - last_seen) > SYNTHETIC_ACTIVE_WINDOW_SECONDS:
-                    continue
-                first_seen = float(profile.get("first_seen") or last_seen or now_ts)
-                duration_sec = max(0, int(now_ts - first_seen))
-                enriched = _enrichment_for_ip(ip, "XX", "Unknown")
-                sessions_list.append(
-                    {
-                        "id": f"sess-{ip}",
-                        "ip": ip,
-                        "country": _display_country(enriched),
-                        "countryCode": enriched.get("country_code", "XX"),
-                        "countryName": enriched.get("country_name", "Unknown"),
-                        "asn": enriched.get("asn", ""),
-                        "isp": enriched.get("isp", ""),
-                        "org": enriched.get("org", ""),
-                        "services": enriched.get("services", ""),
-                        "region": enriched.get("region", "Unknown"),
-                        "city": enriched.get("city", "Unknown"),
-                        "latitude": enriched.get("latitude", "0"),
-                        "longitude": enriched.get("longitude", "0"),
-                        "timezone": enriched.get("timezone", "UTC"),
-                        "startTime": time.strftime(
-                            "%H:%M:%S",
-                            time.localtime(first_seen),
-                        ),
-                        "duration": f"{duration_sec // 60}m {duration_sec % 60}s",
-                        "startedAtEpochMs": int(first_seen * 1000),
-                        "firstSeenEpochMs": int(first_seen * 1000),
-                        "lastSeenEpochMs": int(last_seen * 1000),
-                        "client": "unknown",
-                        "fingerprint": "",
-                        "input": [],
-                        "status": "Active",
-                        "sessionCount": len(session_ids),
-                        "riskScore": profile.get("cumulative_risk", 0),
-                        "soarAction": "none",
-                        "mttbMs": 0.0,
-                        "blockEffective": False,
-                        "mitreTechniques": profile.get("techniques", []),
-                        "replay": [],
-                        "source": "memory",
-                    }
-                )
-        payload = {
-            "sessions": sessions_list,
-            "source": "clickhouse" if strict_truth else ("mixed" if any(s.get("source") == "memory" for s in sessions_list) else "clickhouse"),
-            "authoritative": strict_truth,
-            "sourceBreakdown": {
-                "sessions": "clickhouse",
-                "memory_fallback_enabled": not strict_truth,
-            },
-        }
-        if strict_truth:
-            await _hot_cache_set("sessions:strict", payload, HOT_CACHE_TTL_SESSIONS_SECONDS)
-        await _compute_war_room_state(force=False)
-        return payload
-
-    @app.get("/war-room-state", dependencies=[Depends(require_auth)])
-    async def war_room_state() -> dict[str, Any]:
-        return await _compute_war_room_state(force=True)
 
     @app.post("/admin/block-ip", dependencies=[Depends(require_auth)])
     async def manual_block_ip(body: dict[str, Any]) -> dict[str, Any]:

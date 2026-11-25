@@ -1151,9 +1151,9 @@ def test_admin_api_sessions_fallback_enriches_ip(monkeypatch: pytest.MonkeyPatch
         def get_ip_profile(_: str) -> dict[str, object]:
             return {"first_seen": time.time() - 30, "cumulative_risk": 70, "techniques": ["T1110"]}
 
-    monkeypatch.setattr("cloudsentinel.admin_api._load_recent_sessions_from_clickhouse", lambda _settings: [])
+    monkeypatch.setattr("cloudsentinel.api.queries._load_recent_sessions_from_clickhouse", lambda _settings: [])
     monkeypatch.setattr(
-        "cloudsentinel.admin_api._enrichment_for_ip",
+        "cloudsentinel.api.queries._enrichment_for_ip",
         lambda _ip, _country_code="", _country_name="": {
             "country_code": "US",
             "country_name": "United States",
