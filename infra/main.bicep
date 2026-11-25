@@ -68,7 +68,7 @@ resource sensorNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
       {
         name: 'Allow-Honeypot-SSH'
         properties: {
-          priority: 100
+          priority: 200
           direction: 'Inbound'
           access: 'Allow'
           protocol: 'Tcp'
@@ -81,7 +81,7 @@ resource sensorNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
       {
         name: 'Allow-HTTPS'
         properties: {
-          priority: 110
+          priority: 210
           direction: 'Inbound'
           access: 'Allow'
           protocol: 'Tcp'
@@ -94,7 +94,7 @@ resource sensorNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
       {
         name: 'Allow-HTTP-ACME'
         properties: {
-          priority: 120
+          priority: 220
           direction: 'Inbound'
           access: 'Allow'
           protocol: 'Tcp'
@@ -107,7 +107,7 @@ resource sensorNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
       {
         name: 'Allow-Management-SSH'
         properties: {
-          priority: 130
+          priority: 230
           direction: 'Inbound'
           access: 'Allow'
           protocol: 'Tcp'

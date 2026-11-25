@@ -54,6 +54,8 @@ If Redis is down, events go to the local WAL and memory queue. The WAL is flushe
 
 ## 4. Azure target
 
+Azure NSG block rules use priority 100-199 so they are evaluated before the static allow rules at 200-230. Lower priority numbers are evaluated first; a block rule above an allow rule would never match the attacker traffic.
+
 ```text
 Internet
   -> Azure sensor VM (Standard_B2ats_v2, public IP + NSG)

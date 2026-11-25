@@ -130,6 +130,8 @@ az deployment group create \
       functionAppName="<functionAppName>"
 ```
 
+Azure NSG block rules use priority 100-199; the static allow rules use 200-230. This ordering matters: Azure evaluates the lowest priority number first, so a block rule above an allow rule would never match.
+
 The Function App settings from Bicep already include `NSG_RESOURCE_GROUP`,
 `NSG_NAME`, `AZURE_SUBSCRIPTION_ID`, `UNBLOCK_QUEUE`, and
 `CLOUDSENTINEL_ALLOWLIST`. The Function also runs `cleanup_expired` every five

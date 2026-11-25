@@ -180,7 +180,7 @@ def test_block_ip_creates_rule_and_queue_message(monkeypatch) -> None:
     module = _load_function_app(monkeypatch)
     FakeNetworkClient.instances.clear()
     FakeQueueClient.instances.clear()
-    FakeNetworkClient.rules = [FakeExistingRule("Allow-Honeypot-SSH", 100)]
+    FakeNetworkClient.rules = [FakeExistingRule("Allow-Honeypot-SSH", 200)]
 
     module.block_ip(FakeEventGridEvent({"ip": "8.8.8.8", "ttl": 60, "reason": "unit"}))
 
@@ -188,7 +188,7 @@ def test_block_ip_creates_rule_and_queue_message(monkeypatch) -> None:
     assert client.created
     name, rule = client.created[0]
     assert name.startswith("cs-block-")
-    assert rule.priority == 200
+    assert rule.priority == 100
     assert rule.source_address_prefix == "8.8.8.8"
     assert rule.access == "Deny"
     queue = FakeQueueClient.instances[-1]

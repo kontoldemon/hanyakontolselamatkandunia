@@ -70,3 +70,18 @@ def test_rule_name_and_priority() -> None:
     full = set(range(logic.BLOCK_PRIORITY_MIN, logic.BLOCK_PRIORITY_MAX + 1))
     with pytest.raises(RuntimeError):
         logic.choose_priority(full)
+
+
+def test_block_priorities_precede_allow_rules() -> None:
+    logic = _load_logic()
+    assert logic.BLOCK_PRIORITY_MAX < 200
+
+
+def test_bicep_allow_rules_start_after_dynamic_block_range() -> None:
+    bicep = (REPO_ROOT / "infra" / "main.bicep").read_text(encoding="utf-8")
+    for rule in ("Allow-Honeypot-SSH", "Allow-HTTPS", "Allow-HTTP-ACME", "Allow-Management-SSH"):
+        marker = f"name: '{rule}'"
+        index = bicep.index(marker)
+        priority_line = bicep[index:].split("priority:", 1)[1].splitlines()[0].strip()
+        priority = int(priority_line.split()[0])
+        assert priority > 199
