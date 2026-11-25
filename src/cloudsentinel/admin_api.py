@@ -26,6 +26,7 @@ from .pipeline import EventPipeline
 from .api.routers.events import build_events_router
 from .api.routers.analytics import build_analytics_router
 from .api.routers.blocks import build_blocks_router
+from .api.routers.auth_routes import build_auth_router
 from .api.routers.llm import build_llm_router
 from .api.routers.sessions import build_sessions_router
 from .api.routers.health import build_health_router
@@ -924,6 +925,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     )
     app.include_router(blocks_router)
     app.include_router(build_llm_router(settings, require_auth))
+    app.include_router(build_auth_router())
 
     @app.post("/admin/exposure", dependencies=[Depends(require_auth)])
     async def exposure(body: dict[str, Any]) -> dict[str, Any]:
@@ -1048,30 +1050,6 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             "provider": provider,
             "actions": actions,
         }
-
-    @app.post("/auth/login")
-    async def login(body: dict[str, str]) -> dict[str, Any]:
-        try:
-            from .auth import get_auth
-
-            auth = get_auth()
-            if not auth.config.enabled:
-                return {"message": "Auth not enabled", "token": "dev-mode"}
-            username = body.get("username", "")
-            password = body.get("password", "")
-            expected_user = os.getenv("CLOUDSENTINEL_ADMIN_USER", "admin")
-            expected_pass = os.getenv("CLOUDSENTINEL_ADMIN_PASS", "")
-            if not expected_pass:
-                raise HTTPException(status_code=503, detail="Admin login is not configured")
-            if not hmac.compare_digest(username.encode(), expected_user.encode()) or not hmac.compare_digest(
-                password.encode(), expected_pass.encode()
-            ):
-                raise HTTPException(status_code=401, detail="Invalid credentials")
-            return auth.create_login_token(username)
-        except HTTPException:
-            raise
-        except Exception:
-            return {"message": "Auth module unavailable", "token": "dev-mode"}
 
     mobile_push_service = MobilePushService()
     app.state.mobile_push_service = mobile_push_service
