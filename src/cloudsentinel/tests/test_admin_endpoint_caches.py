@@ -22,20 +22,9 @@ def _client() -> TestClient:
     return TestClient(create_admin_app(settings, EventPipeline(settings.redis)))
 
 
-def test_exposure_digitalocean_and_no_ports(monkeypatch) -> None:
+def test_exposure_no_ports(monkeypatch) -> None:
     client = _client()
     headers = {"Authorization": "Bearer test-token"}
-    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_PROVIDER", "digitalocean")
-
-    async def fake_toggle(_enabled: bool, _settings: object) -> dict:
-        return {"ok": True, "effective_enabled": True}
-
-    monkeypatch.setattr(admin_module, "_toggle_exposure_digitalocean", fake_toggle)
-    response = client.post("/admin/exposure", headers=headers, json={"enabled": True})
-    assert response.status_code == 200
-    assert response.json()["ok"] is True
-
-    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_PROVIDER", "iptables")
     monkeypatch.setattr(admin_module, "_exposure_target_ports", lambda _settings: [])
     no_ports = client.post("/admin/exposure", headers=headers, json={"enabled": False})
     assert no_ports.status_code == 200

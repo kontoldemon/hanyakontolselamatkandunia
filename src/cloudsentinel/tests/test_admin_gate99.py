@@ -72,22 +72,3 @@ def test_event_output_empty_and_echo(monkeypatch) -> None:
     assert _load_recent_events_from_clickhouse(settings)
 
 
-def test_digitalocean_non_dict_rule(monkeypatch) -> None:
-    settings = load_settings(
-        "src/cloudsentinel/configs/usas-production.yaml",
-        "src/cloudsentinel/.env",
-    )
-    monkeypatch.setattr(admin_module, "_do_firewall_id", lambda: "fw")
-    monkeypatch.setattr(admin_module, "_do_token", lambda: "token")
-    monkeypatch.setattr(admin_module, "_do_api_base", lambda: "https://do.test")
-    monkeypatch.setattr(admin_module, "_exposure_target_ports", lambda _settings: [22])
-    before = {"firewall": {"name": "fw", "inbound_rules": ["bad"], "outbound_rules": []}}
-    after = {"firewall": {"name": "fw", "inbound_rules": [], "outbound_rules": []}}
-    queue = [(200, before, ""), (202, {}, ""), (200, after, "")]
-
-    async def fake_http(_method: str, _url: str, _token: str, payload=None, **_kwargs):
-        return queue.pop(0)
-
-    monkeypatch.setattr(admin_module, "_http_json", fake_http)
-    result = asyncio.run(admin_module._toggle_exposure_digitalocean(False, settings))
-    assert result["ok"] is True

@@ -18,7 +18,6 @@ def build_exposure_router(
     target_ports: Callable[[Settings], list[int]],
     firewall_paths: Callable[[Settings], list[str]],
     run_command: Callable[[list[str]], Any],
-    toggle_digitalocean: Callable[[bool, Settings], Any],
     to_bool: Callable[[Any], bool],
     now_ms: Callable[[], int],
     as_int: Callable[[Any], int],
@@ -46,23 +45,6 @@ def build_exposure_router(
                 "provider": str(existing_exposure.get("provider") or provider_name()),
             }
         provider = provider_name()
-        if provider == "digitalocean":
-            result = await toggle_digitalocean(enabled, settings)
-            paused = not bool(result.get("effective_enabled", enabled))
-            if result.get("ok"):
-                try:
-                    await persist_state(
-                        provider=provider,
-                        desired_enabled=enabled,
-                        effective_enabled=not paused,
-                        updated_at_ms=current_ms,
-                        last_toggle_at_ms=current_ms,
-                    )
-                except Exception:
-                    pass
-            result["enabled"] = not paused
-            result["paused"] = paused
-            return result
 
         paths = firewall_paths(settings)
         ports = target_ports(settings)

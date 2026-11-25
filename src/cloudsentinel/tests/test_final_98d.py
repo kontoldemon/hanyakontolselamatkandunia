@@ -12,32 +12,6 @@ import cloudsentinel.mttb_benchmark as mttb_module
 from cloudsentinel.config import load_settings
 
 
-def test_exposure_target_skip_and_http_payload(monkeypatch) -> None:
-    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_TARGET_PORTS", ",")
-    settings = load_settings(
-        "src/cloudsentinel/configs/usas-production.yaml",
-        "src/cloudsentinel/.env",
-    )
-    admin_module._exposure_target_ports(settings)
-
-    class Response:
-        status = 200
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return False
-
-        def read(self) -> bytes:
-            return b"{}"
-
-    monkeypatch.setattr(admin_module.urllib.request, "urlopen", lambda *_a, **_k: Response())
-    status, payload, _error = asyncio.run(
-        admin_module._http_json("POST", "https://do.test", "token", {"x": 1})
-    )
-    assert status == 200
-    assert payload == {}
 
 
 def test_mttb_main_entry(monkeypatch, tmp_path) -> None:

@@ -7,8 +7,6 @@ import hmac
 import json
 import os
 import time
-import urllib.error
-import urllib.request
 from datetime import UTC
 from typing import Any
 
@@ -87,19 +85,13 @@ logger = structlog.get_logger("cloudsentinel.admin_api")
 
 
 def _exposure_provider() -> str:
-    return os.getenv("CLOUDSENTINEL_EXPOSURE_PROVIDER", "iptables").strip().lower()
+    return "iptables"
 
 
-def _do_api_base() -> str:
-    return os.getenv("CLOUDSENTINEL_DO_API_BASE", "https://api.digitalocean.com/v2").rstrip("/")
 
 
-def _do_firewall_id() -> str:
-    return os.getenv("CLOUDSENTINEL_DO_FIREWALL_ID", "").strip()
 
 
-def _do_token() -> str:
-    return os.getenv("DIGITALOCEAN_TOKEN", "").strip()
 
 
 def _exposure_admin_ports() -> set[int]:
@@ -204,206 +196,16 @@ _MANUAL_UNBLOCK_TASKS: set[asyncio.Task[None]] = set()
 
 
 
-async def _http_json(
-    method: str, url: str, token: str, payload: dict[str, Any] | None = None, timeout: float = 7.0
-) -> tuple[int, dict[str, Any], str]:
-    body = None
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    if payload is not None:
-        body = json.dumps(payload).encode("utf-8")
-    request = urllib.request.Request(url=url, data=body, method=method.upper(), headers=headers)
-
-    def run() -> tuple[int, dict[str, Any], str]:
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                raw = response.read().decode("utf-8")
-                parsed = json.loads(raw) if raw else {}
-                return int(response.status), parsed if isinstance(parsed, dict) else {}, ""
-        except urllib.error.HTTPError as exc:
-            raw = exc.read().decode("utf-8") if exc.fp else ""
-            try:
-                parsed = json.loads(raw) if raw else {}
-            except Exception:
-                parsed = {}
-            return int(exc.code), parsed if isinstance(parsed, dict) else {}, raw[:300]
-        except Exception as exc:
-            return 0, {}, str(exc)[:300]
-
-    return await asyncio.to_thread(run)
 
 
-def _do_rule_matches_port(rule: dict[str, Any], port: int) -> bool:
-    ports = rule.get("ports")
-    if isinstance(ports, list):
-        return str(port) in {str(item) for item in ports}
-    if isinstance(ports, str):
-        value = ports.strip()
-        if not value:
-            return False
-        if value == str(port):
-            return True
-        if "-" in value:
-            try:
-                start_s, end_s = value.split("-", 1)
-                start_i = int(start_s.strip())
-                end_i = int(end_s.strip())
-                return start_i <= int(port) <= end_i
-            except Exception:
-                return False
-    return False
 
 
-def _do_rule_is_global(rule: dict[str, Any]) -> bool:
-    sources = rule.get("sources", {})
-    if not isinstance(sources, dict):
-        return False
-    addresses = sources.get("addresses")
-    if not isinstance(addresses, list):
-        return False
-    normalized = {str(item).strip() for item in addresses}
-    return "0.0.0.0/0" in normalized or "::/0" in normalized
 
 
-def _do_rule_is_tcp(rule: dict[str, Any]) -> bool:
-    return str(rule.get("protocol", "")).lower() == "tcp"
 
 
-def _do_read_allowed_ports(firewall: dict[str, Any], target_ports: set[int]) -> set[int]:
-    allowed: set[int] = set()
-    inbound = firewall.get("inbound_rules", [])
-    if not isinstance(inbound, list):
-        return allowed
-    for rule in inbound:
-        if not isinstance(rule, dict):
-            continue
-        if not _do_rule_is_tcp(rule):
-            continue
-        if not _do_rule_is_global(rule):
-            continue
-        for port in target_ports:
-            if _do_rule_matches_port(rule, port):
-                allowed.add(port)
-    return allowed
 
 
-async def _toggle_exposure_digitalocean(enabled: bool, settings: Settings) -> dict[str, Any]:
-    firewall_id = _do_firewall_id()
-    token = _do_token()
-    target_ports = _exposure_target_ports(settings)
-    if not firewall_id:
-        return {"ok": False, "error": "missing CLOUDSENTINEL_DO_FIREWALL_ID", "actions": []}
-    if not token:
-        return {"ok": False, "error": "missing DIGITALOCEAN_TOKEN", "actions": []}
-    if not target_ports:
-        return {"ok": False, "error": "no target ports after admin safety filter", "actions": []}
-
-    target_set = set(target_ports)
-    firewall_url = f"{_do_api_base()}/firewalls/{firewall_id}"
-    status, before_json, before_err = await _http_json("GET", firewall_url, token)
-    if status != 200:
-        return {
-            "ok": False,
-            "error": f"digitalocean read failed status={status}",
-            "details": before_err,
-            "actions": [],
-        }
-    before_fw = before_json.get("firewall")
-    if not isinstance(before_fw, dict):
-        return {"ok": False, "error": "digitalocean payload missing firewall object", "actions": []}
-    before_rules = before_fw.get("inbound_rules", [])
-    if not isinstance(before_rules, list):
-        return {"ok": False, "error": "digitalocean firewall inbound_rules invalid", "actions": []}
-    before_allowed = _do_read_allowed_ports(before_fw, target_set)
-
-    new_rules: list[dict[str, Any]] = []
-    for rule in before_rules:
-        if not isinstance(rule, dict):
-            continue
-        remove = (
-            _do_rule_is_tcp(rule)
-            and _do_rule_is_global(rule)
-            and any(_do_rule_matches_port(rule, p) for p in target_set)
-        )
-        if not remove:
-            new_rules.append(rule)
-    if enabled:
-        for port in sorted(target_set):
-            if port not in before_allowed:
-                new_rules.append(
-                    {
-                        "protocol": "tcp",
-                        "ports": str(port),
-                        "sources": {"addresses": ["0.0.0.0/0", "::/0"]},
-                    }
-                )
-
-    put_payload = {
-        "name": str(before_fw.get("name") or firewall_id),
-        "inbound_rules": new_rules,
-        "outbound_rules": before_fw.get("outbound_rules", []),
-        "droplet_ids": before_fw.get("droplet_ids", []),
-        "tags": before_fw.get("tags", []),
-    }
-    put_status, _, put_err = await _http_json("PUT", firewall_url, token, payload=put_payload)
-    if put_status not in {200, 202}:
-        return {
-            "ok": False,
-            "error": f"digitalocean update failed status={put_status}",
-            "details": put_err,
-            "actions": [],
-        }
-
-    verify_status, verify_json, verify_err = await _http_json("GET", firewall_url, token)
-    if verify_status != 200:
-        return {
-            "ok": False,
-            "error": f"digitalocean verify failed status={verify_status}",
-            "details": verify_err,
-            "actions": [],
-        }
-    verify_fw = verify_json.get("firewall")
-    if not isinstance(verify_fw, dict):
-        return {"ok": False, "error": "digitalocean verify payload invalid", "actions": []}
-    after_allowed = _do_read_allowed_ports(verify_fw, target_set)
-    expected_allowed = target_set if enabled else set()
-    verified = after_allowed == expected_allowed
-    if not verified:
-        rollback_payload = {
-            "name": str(before_fw.get("name") or firewall_id),
-            "inbound_rules": before_rules,
-            "outbound_rules": before_fw.get("outbound_rules", []),
-            "droplet_ids": before_fw.get("droplet_ids", []),
-            "tags": before_fw.get("tags", []),
-        }
-        rollback_status, _, rollback_err = await _http_json("PUT", firewall_url, token, payload=rollback_payload)
-        return {
-            "ok": False,
-            "error": "digitalocean verify mismatch, rollback attempted",
-            "details": rollback_err,
-            "rollback_ok": rollback_status in {200, 202},
-            "actions": [],
-            "desired_enabled": enabled,
-            "effective_enabled": len(before_allowed) > 0,
-        }
-
-    actions: list[dict[str, Any]] = []
-    for port in sorted(target_set):
-        if enabled:
-            changed = port not in before_allowed
-            actions.append({"port": port, "action": "opened" if changed else "already_open", "ok": True})
-        else:
-            changed = port in before_allowed
-            actions.append({"port": port, "action": "paused" if changed else "already_paused", "ok": True})
-    return {
-        "ok": True,
-        "actions": actions,
-        "desired_enabled": enabled,
-        "effective_enabled": enabled,
-        "provider": "digitalocean",
-    }
 
 
 
@@ -871,7 +673,6 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             lambda config: _exposure_target_ports(config),
             lambda config: _exposure_firewall_paths(config),
             lambda args: _run_command(args),
-            lambda enabled, config: _toggle_exposure_digitalocean(enabled, config),
             _to_bool,
             _now_ms,
             _as_int,

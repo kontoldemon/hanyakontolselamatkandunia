@@ -11,7 +11,6 @@ import cloudsentinel.admin_api as admin_module
 import cloudsentinel.auth as auth_module
 from cloudsentinel.admin_api import (
     _load_recent_events_from_clickhouse,
-    _toggle_exposure_digitalocean,
     _trim_replay_entries,
     create_admin_app,
 )
@@ -183,25 +182,3 @@ def test_exposure_firewall_failures(monkeypatch) -> None:
     assert first.json()["ok"] is False
 
 
-def test_persist_exposure_failure(monkeypatch) -> None:
-    settings = load_settings(
-        "src/cloudsentinel/configs/usas-production.yaml",
-        "src/cloudsentinel/.env",
-    )
-    settings.admin.token = SecretStr("test-token")
-    settings.clickhouse.enabled = False
-    pipeline = EventPipeline(settings.redis)
-    pipeline._redis = FakeRedis()  # type: ignore[assignment]
-    client = TestClient(create_admin_app(settings, pipeline))
-    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_PROVIDER", "digitalocean")
-
-    async def fake_toggle(_enabled: bool, _settings: object) -> dict:
-        return {"ok": True, "effective_enabled": True}
-
-    monkeypatch.setattr(admin_module, "_toggle_exposure_digitalocean", fake_toggle)
-    response = client.post(
-        "/admin/exposure",
-        headers={"Authorization": "Bearer test-token"},
-        json={"enabled": True},
-    )
-    assert response.status_code == 200
