@@ -27,6 +27,7 @@ from .api.routers.events import build_events_router
 from .api.routers.analytics import build_analytics_router
 from .api.routers.blocks import build_blocks_router
 from .api.routers.auth_routes import build_auth_router
+from .api.routers.exposure import build_exposure_router
 from .api.routers.llm import build_llm_router
 from .api.routers.sessions import build_sessions_router
 from .api.routers.health import build_health_router
@@ -926,130 +927,24 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
     app.include_router(blocks_router)
     app.include_router(build_llm_router(settings, require_auth))
     app.include_router(build_auth_router())
-
-    @app.post("/admin/exposure", dependencies=[Depends(require_auth)])
-    async def exposure(body: dict[str, Any]) -> dict[str, Any]:
-        enabled = _to_bool(body.get("enabled"))
-        now_ms = _now_ms()
-        existing_exposure = await _load_exposure_state()
-        existing_effective_enabled = _to_bool(existing_exposure.get("effective_enabled", True))
-        existing_last_toggle = _as_int(existing_exposure.get("last_toggle_at"))
-        elapsed_since_toggle = now_ms - existing_last_toggle if existing_last_toggle > 0 else EXPOSURE_TOGGLE_COOLDOWN_MS
-        if enabled != existing_effective_enabled and elapsed_since_toggle < EXPOSURE_TOGGLE_COOLDOWN_MS:
-            remaining = max(0, EXPOSURE_TOGGLE_COOLDOWN_MS - elapsed_since_toggle)
-            return {
-                "ok": False,
-                "error": "cooldown_active",
-                "cooldownRemainingMs": remaining,
-                "enabled": existing_effective_enabled,
-                "paused": not existing_effective_enabled,
-                "provider": str(existing_exposure.get("provider") or _exposure_provider()),
-            }
-        provider = _exposure_provider()
-        if provider == "digitalocean":
-            result = await _toggle_exposure_digitalocean(enabled, settings)
-            paused = not bool(result.get("effective_enabled", enabled))
-            if result.get("ok"):
-                try:
-                    await _persist_exposure_state(
-                        provider=provider,
-                        desired_enabled=enabled,
-                        effective_enabled=not paused,
-                        updated_at_ms=now_ms,
-                        last_toggle_at_ms=now_ms,
-                    )
-                except Exception:
-                    pass
-            result["enabled"] = not paused
-            result["paused"] = paused
-            return result
-
-        firewall_paths = _exposure_firewall_paths(settings)
-        ports = _exposure_target_ports(settings)
-        actions: list[dict[str, Any]] = []
-        if not ports:
-            return {
-                "ok": False,
-                "enabled": enabled,
-                "paused": not enabled,
-                "provider": provider,
-                "error": "no exposure target ports after admin safety filter",
-                "actions": actions,
-            }
-        for port in ports:
-            last_error = ""
-            applied = False
-            for firewall_path in firewall_paths:
-                rule = [
-                    firewall_path,
-                    "-C",
-                    "INPUT",
-                    "-p",
-                    "tcp",
-                    "--dport",
-                    str(port),
-                    "-m",
-                    "comment",
-                    "--comment",
-                    EXPOSURE_RULE_COMMENT,
-                    "-j",
-                    "DROP",
-                ]
-                check_code, _, check_err = await _run_command(rule)
-                if enabled:
-                    if check_code == 0:
-                        delete = rule.copy()
-                        delete[1] = "-D"
-                        code, _, stderr = await _run_command(delete)
-                        if code == 0:
-                            actions.append({"port": port, "action": "removed", "ok": True, "firewallPath": firewall_path})
-                            applied = True
-                            break
-                        last_error = stderr[:200]
-                        continue
-                    if check_code == 1:
-                        actions.append({"port": port, "action": "already_open", "ok": True, "firewallPath": firewall_path})
-                        applied = True
-                        break
-                    last_error = check_err[:200]
-                    continue
-                if check_code == 0:
-                    actions.append({"port": port, "action": "already_paused", "ok": True, "firewallPath": firewall_path})
-                    applied = True
-                    break
-                if check_code != 1:
-                    last_error = check_err[:200]
-                    continue
-                add = rule.copy()
-                add[1] = "-I"
-                add.insert(3, "1")
-                code, _, stderr = await _run_command(add)
-                if code == 0:
-                    actions.append({"port": port, "action": "paused", "ok": True, "firewallPath": firewall_path})
-                    applied = True
-                    break
-                last_error = stderr[:200]
-            if not applied:
-                actions.append({"port": port, "action": "failed", "ok": False, "error": last_error[:200]})
-        paused = not enabled
-        if all(item.get("ok") for item in actions):
-            try:
-                await _persist_exposure_state(
-                    provider=provider,
-                    desired_enabled=enabled,
-                    effective_enabled=enabled,
-                    updated_at_ms=now_ms,
-                    last_toggle_at_ms=now_ms,
-                )
-            except Exception:
-                pass
-        return {
-            "ok": all(item["ok"] for item in actions),
-            "enabled": enabled,
-            "paused": paused,
-            "provider": provider,
-            "actions": actions,
-        }
+    app.include_router(
+        build_exposure_router(
+            settings,
+            require_auth,
+            _load_exposure_state,
+            _persist_exposure_state,
+            _exposure_provider,
+            lambda config: _exposure_target_ports(config),
+            lambda config: _exposure_firewall_paths(config),
+            lambda args: _run_command(args),
+            lambda enabled, config: _toggle_exposure_digitalocean(enabled, config),
+            _to_bool,
+            _now_ms,
+            _as_int,
+            EXPOSURE_TOGGLE_COOLDOWN_MS,
+            EXPOSURE_RULE_COMMENT,
+        )
+    )
 
     mobile_push_service = MobilePushService()
     app.state.mobile_push_service = mobile_push_service
