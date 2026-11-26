@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -29,7 +30,7 @@ def test_key_vault_and_blob_are_private() -> None:
     assert "publicNetworkAccess: 'Disabled'" in bicep
     assert "enablePurgeProtection: true" in bicep
     assert "allowBlobPublicAccess: false" in bicep
-    assert "privatelink.vaultcore.azure.net" in bicep
+    assert re.search(r"privatelink\.vaultcore\.azure\.net", bicep)
 
 
 def test_no_active_digitalocean_provider_or_credentials() -> None:

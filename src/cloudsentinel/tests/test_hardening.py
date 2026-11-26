@@ -85,13 +85,14 @@ async def test_stream_removes_passwords_from_public_events() -> None:
     )
     await asyncio.sleep(0)
     assert "password" not in stream._buffer[-1]
-    await stream.emit_coro(
+    stream.emit(
         {
             "eventid": "cloudsentinel.login.success",
             "username": "root",
             "password": "hunter2",
         }
     )
+    await asyncio.sleep(0)
     assert "password" not in stream._buffer[-1]
 
 
@@ -594,8 +595,9 @@ def test_manual_unblock_helper_is_scheduled(monkeypatch) -> None:
         return (0, "", "")
 
     monkeypatch.setattr("cloudsentinel.api.firewall._run_command", fake_run)
-    helper = getattr(admin_api, "_schedule_manual_unblock")
-    asyncio.run(helper("203.0.113.10", "unit", 0, "/sbin/iptables"))
+    from cloudsentinel.api.firewall import _schedule_manual_unblock
+
+    asyncio.run(_schedule_manual_unblock("203.0.113.10", "unit", 0, "/sbin/iptables"))
     assert calls[-1][:2] == ["/sbin/iptables", "-D"]
 
 def test_dashboard_security_headers_are_strict() -> None:
@@ -608,7 +610,7 @@ def test_dashboard_security_headers_are_strict() -> None:
     assert "Cross-Origin-Opener-Policy" in proxy
     assert "Cross-Origin-Resource-Policy" in proxy
     assert "X-Permitted-Cross-Domain-Policies" in proxy
-    assert "challenges.cloudflare.com" in proxy
+    assert re.search(r"challenges\.cloudflare\.com", proxy)
     assert "poweredByHeader: false" in config
 
 
