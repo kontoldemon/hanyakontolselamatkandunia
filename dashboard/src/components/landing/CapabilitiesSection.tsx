@@ -52,7 +52,7 @@ export default function CapabilitiesSection() {
                   </h3>
                 </div>
                 <span className="shrink-0 inline-flex items-center rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                  99.4% Match
+                  Known Botnet DNA
                 </span>
               </div>
               <p className="mt-2 text-[11.5px] leading-relaxed text-text-muted">
@@ -78,7 +78,7 @@ export default function CapabilitiesSection() {
                 </span>
               </div>
               <p className="mt-2 text-[11.5px] leading-relaxed text-text-muted">
-                Watch recorded intruder sessions replay second by second like a video, inspecting exact bash commands, typos, and payload URLs.
+                Step through recorded intruder sessions and inspect the exact bash commands, typos, and payload URLs captured in the sandbox.
               </p>
             </div>
           </Reveal>

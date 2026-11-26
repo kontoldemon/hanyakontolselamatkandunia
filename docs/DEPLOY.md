@@ -118,9 +118,12 @@ Caddy terminates TLS on port 443 and proxies both the admin API and Socket.io. S
 
 ```text
 NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL=https://<sensorFqdn>
+NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN=<same value as STREAM_AUTH_TOKEN>
 CLOUDSENTINEL_ADMIN_API_URL=https://<sensorFqdn>
 CLOUDSENTINEL_ADMIN_TOKEN=<contents of /root/cloudsentinel-admin-token>
 ```
+
+Set `STREAM_AUTH_TOKEN` in the sensor `.env` as well; both sides must match or the dashboard falls back to HTTP event polling.
 
 `VERCEL_DASHBOARD_ORIGIN` in the installer must match the dashboard origin so the stream CORS policy accepts it.
 

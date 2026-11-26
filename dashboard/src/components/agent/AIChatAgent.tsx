@@ -138,34 +138,22 @@ export default function AIChatAgent() {
     const handleActionApprove = useCallback(
         async (msgIndex: number) => {
             const snapshotMsg = messagesRef.current[msgIndex];
-            if (!snapshotMsg?.actions || snapshotMsg.actions.length === 0) return;
-            let actions: NonNullable<AgentMessage["actions"]> = [];
-            let postActionContent = "";
-            setMessages((prev) => {
-                const msg = prev[msgIndex];
-                actions = msg?.actions ?? [];
-                postActionContent = msg?.postActionContent ?? "";
-                if (!msg || actions.length === 0) {
-                    return prev;
-                }
-                return prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "executing" as const } : m));
-            });
-            if (!actions || actions.length === 0) return;
+            const actions = snapshotMsg?.actions ?? [];
+            if (actions.length === 0) return;
+
+            setMessages((prev) =>
+                prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "executing" as const } : m)),
+            );
 
             for (const action of actions) {
                 await executeAction(action);
             }
 
-            let completionText = postActionContent || (actions.length > 1 ? "All actions completed successfully." : "Action completed.");
-            setMessages((prev) => {
-                const updated = prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "done" as const } : m));
-                const latestMsg = updated[msgIndex];
-                if (latestMsg?.postActionContent) {
-                    completionText = latestMsg.postActionContent;
-                }
-                return updated;
-            });
-
+            const completionText = snapshotMsg?.postActionContent
+                || (actions.length > 1 ? "All actions completed successfully." : "Action completed.");
+            setMessages((prev) =>
+                prev.map((m, i) => (i === msgIndex ? { ...m, actionState: "done" as const } : m)),
+            );
             setMessages((prev) => [...prev, { role: "ai", content: completionText }]);
         },
         [executeAction],

@@ -188,7 +188,12 @@ class VFSAgent:
                 response_mode = "deterministic"
             else:
                 api_key = secret_to_str(self.settings.api_key)
-                if not api_key or self.settings.provider.lower() == "mock" or (self.settings.response_policy_enabled and not self.settings.llm_safe_fallback_enabled):
+                if (
+                    not api_key
+                    or self.settings.provider.lower() == "mock"
+                    or self.settings.deception_mode == "deterministic"
+                    or (self.settings.response_policy_enabled and not self.settings.llm_safe_fallback_enabled)
+                ):
                     output = self._mock_response(command)
                     self._set_cache(command, output)
                     response_mode = "deterministic"
@@ -216,7 +221,7 @@ class VFSAgent:
                     response_mode = "deterministic"
                 else:
                     self._session_llm_calls += 1
-                    safe_command = redact_secrets(command)
+                    safe_command = redact_secrets(command) if self.settings.prompt_sanitization else command
                     prompt = (
                         f"You are a terminal for {self.context.os_version}. "
                         f"The host is {self.context.hostname}. "
@@ -230,10 +235,11 @@ class VFSAgent:
 
                     try:
                         async with self._llm_gate:
-                            if self.settings.provider.lower() == "litellm":
-                                output = await self._call_litellm(prompt)
-                            elif self.settings.provider.lower() == "gemini":
+                            provider = self.settings.provider.lower()
+                            if provider == "gemini":
                                 output = await self._call_gemini(prompt)
+                            elif provider in {"litellm", "groq", "anthropic"}:
+                                output = await self._call_litellm(prompt)
                             else:
                                 output = await self._call_openai_compatible(prompt)
                         output = self._bounded(output)
@@ -319,12 +325,9 @@ class VFSAgent:
             kwargs["api_base"] = self.settings.endpoint
 
         # Build fallback chain from config
-        fallback_chain: list[dict[str, Any]] = []
-        for fb in getattr(self.settings, "fallback_models", []):
-            fb_kwargs: dict[str, Any] = {"model": fb}
-            if api_key:
-                fb_kwargs["api_key"] = api_key
-            fallback_chain.append(fb_kwargs)
+        fallback_chain: list[dict[str, Any]] = [
+            {"model": fb} for fb in getattr(self.settings, "fallback_models", [])
+        ]
         if fallback_chain:
             kwargs["fallbacks"] = fallback_chain
 

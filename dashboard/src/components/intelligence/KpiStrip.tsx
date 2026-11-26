@@ -32,7 +32,7 @@ export default function KpiStrip({ totalEvents, uniqueIps, totalCountries, uniqu
             <kpi.icon size={16} className={kpi.color} />
           </div>
           <div>
-            <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{kpi.label}</div>
+            <div className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium leading-none mb-1">{kpi.label}</div>
             <div className="font-mono text-base font-bold text-slate-900 dark:text-white leading-tight">{kpi.value}</div>
           </div>
         </div>

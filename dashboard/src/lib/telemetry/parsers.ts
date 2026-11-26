@@ -173,10 +173,15 @@ export function formatUptime(seconds: number): string {
 export function toThreatLog(event: CloudSentinelEvent): ThreatLog {
   const ts = parseEventTime(event.timestamp);
   const country = normalizeCountryCode(event.country_code, event.country_name, event.country);
-  const blocked = ["iptables_block", "dry_run_block"].includes(
-    event.cloudsentinel_soar_action ?? "",
-  );
-  const detected = event.cloudsentinel_soar_action === "detect_only";
+  const soarAction = event.cloudsentinel_soar_action ?? "";
+  const blocked = [
+    "iptables_block",
+    "already_blocked",
+    "eventgrid_published",
+    "event_published",
+  ].includes(soarAction);
+  const dryRun = soarAction === "dry_run_block";
+  const detected = soarAction === "detect_only";
   const dt = new Date(ts);
   const time = `${dt.toLocaleTimeString("en-GB", { hour12: false })}.${String(dt.getMilliseconds()).padStart(3, "0")}`;
   const mttb = typeof event.mttb_ms === "number" ? `${event.mttb_ms.toFixed(1)}ms` : null;
@@ -205,8 +210,8 @@ export function toThreatLog(event: CloudSentinelEvent): ThreatLog {
     type: eventType(event.eventid),
     payload: payloadFor(event),
     mitreId: event.cloudsentinel_mitre_techniques?.[0] ?? "",
-    action: blocked ? "Blocked" : detected ? "Detected" : "Active",
-    timeToBlock: blocked ? (mttb ?? "<100ms") : null,
+    action: blocked ? "Blocked" : dryRun ? "Dry Run" : detected ? "Detected" : "Active",
+    timeToBlock: blocked ? mttb : null,
     hassh: fingerprint,
     client,
     ja4s: event.ja4s,

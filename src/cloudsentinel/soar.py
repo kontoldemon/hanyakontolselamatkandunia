@@ -37,10 +37,16 @@ GEO_THREAT_SCORES: ClassVar[dict[str, int]] = {
 }
 COUNTRY_THRESHOLDS: ClassVar[dict[str, int]] = {"CN":40,"RU":40,"IR":40,"KP":30,"NG":50,"VN":60}
 
+NEW_BLOCK_ACTIONS: frozenset[str] = frozenset(
+    {"iptables_block", "eventgrid_published", "event_published"}
+)
+ENFORCED_BLOCK_ACTIONS: frozenset[str] = NEW_BLOCK_ACTIONS | {"already_blocked"}
+
 class SOAREngine:
     def __init__(
         self,
         risk_threshold=70,
+        trigger="risk",
         firewall_enabled=True,
         firewall_dry_run=True,
         firewall_path="/sbin/iptables",
@@ -54,7 +60,7 @@ class SOAREngine:
         eventgrid_key: str = "",
         redis_settings: Any = None,
     ):
-        self.risk_threshold=risk_threshold; self.firewall_enabled=firewall_enabled
+        self.risk_threshold=risk_threshold; self.trigger=trigger; self.firewall_enabled=firewall_enabled
         self.firewall_dry_run=firewall_dry_run; self.firewall_path=firewall_path
         self.block_ttl=block_ttl; self.decay_rate=decay_rate
         self.active_profile=active_profile; self.mttb_target_ms=mttb_target_ms
@@ -362,7 +368,16 @@ class SOAREngine:
         threshold=COUNTRY_THRESHOLDS.get(country,self.risk_threshold)
         persistence_override = "T1098" in techniques and event.get("eventid") in ("cloudsentinel.command.input", "cloudsentinel.command.failed")
 
-        if current_score>=threshold or persistence_override:
+        if self.trigger == "mitre":
+            triggered = len(techniques) > 1
+        elif self.trigger == "auth_spike":
+            triggered = await self._get_failed_auth(session_id) >= 10
+        elif self.trigger == "any_input":
+            triggered = event.get("eventid") in ("cloudsentinel.command.input", "cloudsentinel.command.failed")
+        else:
+            triggered = current_score >= threshold
+
+        if triggered or persistence_override:
             block_result=await self._block_ip(event)
             event["cloudsentinel_soar_action"]=block_result
             self._block_timings.append(time.perf_counter()-t_start)

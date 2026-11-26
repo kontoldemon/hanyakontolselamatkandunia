@@ -31,8 +31,6 @@ export type ThreatLog = {
 
 export type DashboardStats = {
   activeSessions: number;
-  blockedIPs: number;
-  credentialsHarvested: number;
   totalAttacks: number;
   totalEvents?: number;
   uniqueIps?: number;
@@ -40,9 +38,7 @@ export type DashboardStats = {
   uniqueCommands?: number;
   avgRisk?: number;
   blockRate?: number;
-  concurrentConnections: number;
   mttb: string;
-  mitreCoverage: number;
   systemUptime: string;
   attackActive: boolean;
   source: "live" | "offline";
@@ -238,12 +234,8 @@ export type CloudSentinelEvent = {
 
 export const EMPTY_STATS: DashboardStats = {
   activeSessions: 0,
-  blockedIPs: 0,
-  credentialsHarvested: 0,
   totalAttacks: 0,
-  concurrentConnections: 0,
   mttb: "offline",
-  mitreCoverage: 0,
   systemUptime: "offline",
   attackActive: false,
   source: "offline",

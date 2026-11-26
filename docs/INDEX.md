@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last reviewed: 2026-11-25.
+Last reviewed: 2026-11-26.
 
 ## Authoritative documents
 
@@ -8,11 +8,13 @@ Last reviewed: 2026-11-25.
 |---|---|---|
 | `README.md` | Start here. Status, quick start, doc map. | Project root |
 | `docs/ARCHITECTURE.md` | Single source of truth for architecture, trust boundaries, metrics, and known gaps. | Architecture |
+| `docs/MOBILE.md` | Android companion, pairing, mobile API, FCM, build and troubleshooting. | Mobile |
 | `docs/DEPLOY.md` | Legacy retirement note and Azure deployment plan. | Operations |
 | `docs/LOCAL_DEMO.md` | Zero-cost local demo with Docker. | Operations |
 | `docs/CLICKHOUSE_TRUTH_QA.md` | How to check that the dashboard shows ClickHouse truth. | Data |
 | `src/cloudsentinel/PROJECT_STRUCTURE.md` | Code map for the sensor package. | Code |
 | `dashboard/README.md` | Dashboard setup, environment variables, and deploy. | Frontend |
+| `mobile-android/README.md` | Android build and pairing quick start. | Mobile |
 | `cloudsentinel-skill.md` | Working reference for AI-assisted changes. Not a citation source. | Project |
 | `artifacts/mttb-benchmark.md` | MTTB evidence. | Evidence |
 | `artifacts/mttb-concurrency-threshold.md` | Concurrency evidence. | Evidence |

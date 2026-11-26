@@ -65,7 +65,7 @@ function labelForAction(type: AgentActionType, param: string): { label: string; 
     case "navigate_session":
       return { label: `View attacker ${param}`, description: "Navigate to Sessions and show full details" };
     case "block_ip":
-      return { label: `Block IP ${param}`, description: "Apply iptables firewall rule at the sensor" };
+      return { label: `Block IP ${param}`, description: "Apply a SOAR firewall block at the sensor" };
     case "navigate_page": {
       const names: Record<string, string> = {
         "/dashboard": "War Room",

@@ -30,7 +30,7 @@ def build_sessions_router(
             if isinstance(cached_payload, dict) and isinstance(cached_payload.get("sessions"), list):
                 await compute_war_room_state(force=False)
                 return cached_payload
-        sessions_list = queries._load_recent_sessions_from_clickhouse(settings)
+        sessions_list = await queries.load_recent_sessions_async(settings)
         existing = {str(item.get("ip", "")) for item in sessions_list}
         if not strict_truth and soar is not None:
             now_ts = time.time()

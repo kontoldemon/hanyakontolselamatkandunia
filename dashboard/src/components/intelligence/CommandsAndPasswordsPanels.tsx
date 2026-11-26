@@ -20,7 +20,7 @@ export function FingerprintsPanel({ expanded, onToggle, fingerprints }: Fingerpr
       title="HASSH Fingerprints"
       summary={`${fingerprints.length} Signatures`}
     >
-      <div className="h-[300px] overflow-y-auto border border-slate-100 dark:border-white/5 rounded-md">
+      <div className="h-[248px] overflow-y-auto border border-slate-100 dark:border-white/5 rounded-md">
         <table className="w-full text-left">
           <thead className="bg-slate-50 dark:bg-white/5 text-[10px] text-slate-500 sticky top-0 backdrop-blur-md">
             <tr>

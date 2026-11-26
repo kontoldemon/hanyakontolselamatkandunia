@@ -12,6 +12,8 @@ interface SoarBreakdownPanelProps {
 
 const COLORS = {
   iptables_block: "#ef4444",
+  eventgrid_published: "#dc2626",
+  event_published: "#e11d48",
   already_blocked: "#f97316",
   detect_only: "#f59e0b",
   dry_run_block: "#3b82f6",

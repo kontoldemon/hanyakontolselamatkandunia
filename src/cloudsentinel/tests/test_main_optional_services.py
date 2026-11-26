@@ -20,6 +20,7 @@ async def test_main_with_optional_services(monkeypatch) -> None:
     )
     settings.admin.enabled = True
     settings.stream.enabled = True
+    settings.stream.auth_token = "stream-secret"
     settings.honeypot.http_enabled = True
     settings.honeypot.dns_enabled = True
     settings.honeypot.tls_cert_file = "var/lib/cloudsentinel/tls/unit.crt"
@@ -42,7 +43,10 @@ async def test_main_with_optional_services(monkeypatch) -> None:
             return None
 
     class FakeStream:
-        def __init__(self, **_kwargs: object) -> None:
+        last_kwargs: dict[str, object] = {}
+
+        def __init__(self, **kwargs: object) -> None:
+            FakeStream.last_kwargs = kwargs
             self.stopped = False
 
         async def start(self) -> None:
@@ -53,6 +57,9 @@ async def test_main_with_optional_services(monkeypatch) -> None:
 
     class FakeDNS:
         def __init__(self, **_kwargs: object) -> None:
+            return None
+
+        def set_event_callback(self, _callback: object) -> None:
             return None
 
         async def start(self) -> None:
@@ -92,3 +99,4 @@ async def test_main_with_optional_services(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "cloudsentinel.metrics", None)
 
     await server_module.main()
+    assert FakeStream.last_kwargs.get("auth_token") == "stream-secret"

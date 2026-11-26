@@ -100,7 +100,10 @@ class CloudSentinelSession(asyncssh.SSHServerSession):
         )
         self.vfs = VFSAgent(server.settings.llm, context)
         # Fast local filesystem for command registry commands (ls/cat/pwd/etc).
-        self._command_fs = VirtualFileSystem.build_default()
+        self._command_fs = VirtualFileSystem.for_deception(
+            server.settings.deception.level,
+            server.settings.deception.seed_canary_keys,
+        )
         self._anomaly_detector = server.anomaly_detector
 
     def connection_made(self, chan: asyncssh.SSHServerChannel) -> None:

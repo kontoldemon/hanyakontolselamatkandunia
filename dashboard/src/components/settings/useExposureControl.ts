@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { SensorOperations, WarRoomState } from "@/lib/liveEvents";
 
 const EXPOSURE_STATE_KEY = "cloudsentinel.exposure.paused";
@@ -21,6 +21,7 @@ export function useExposureControl(
     const [exposureBusy, setExposureBusy] = useState(false);
     const [toast, setToast] = useState<ExposureToast | null>(null);
     const [showExposureConfirm, setShowExposureConfirm] = useState(false);
+    const [isClosingExposureConfirm, setIsClosingExposureConfirm] = useState(false);
     const [pendingExposurePaused, setPendingExposurePaused] = useState<boolean | null>(null);
     const [pendingEffectiveExposurePaused, setPendingEffectiveExposurePaused] = useState<boolean | null>(null);
     const [syncStartedAt, setSyncStartedAt] = useState<number | null>(null);
@@ -99,20 +100,40 @@ export function useExposureControl(
     }
 
     async function confirmExposureToggle() {
+        if (isClosingExposureConfirm) return;
         if (pendingExposurePaused === null) {
             setShowExposureConfirm(false);
             return;
         }
-        setShowExposureConfirm(false);
-        await applyExposure(pendingExposurePaused);
-        setPendingExposurePaused(null);
+        setIsClosingExposureConfirm(true);
+        const targetState = pendingExposurePaused;
+        setTimeout(async () => {
+            setShowExposureConfirm(false);
+            setIsClosingExposureConfirm(false);
+            await applyExposure(targetState);
+            setPendingExposurePaused(null);
+        }, 180);
     }
 
-    function cancelExposureConfirm() {
-        setShowExposureConfirm(false);
-        setPendingExposurePaused(null);
-        setToast({ message: "Exposure update cancelled.", type: "info" });
-    }
+    const cancelExposureConfirm = useCallback(() => {
+        if (isClosingExposureConfirm) return;
+        setIsClosingExposureConfirm(true);
+        setTimeout(() => {
+            setShowExposureConfirm(false);
+            setIsClosingExposureConfirm(false);
+            setPendingExposurePaused(null);
+            setToast({ message: "Exposure update cancelled.", type: "info" });
+        }, 180);
+    }, [isClosingExposureConfirm]);
+
+    useEffect(() => {
+        if (!showExposureConfirm) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") cancelExposureConfirm();
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [showExposureConfirm, cancelExposureConfirm]);
 
     useEffect(() => {
         if (!toast) return;
@@ -182,6 +203,7 @@ export function useExposureControl(
         exposureBusy,
         toast,
         showExposureConfirm,
+        isClosingExposureConfirm,
         pendingExposurePaused,
         cooldownRemainingSec,
         exposureCooldownActive,

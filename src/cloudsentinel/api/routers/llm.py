@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any, Callable
 
 import structlog
-from fastapi import APIRouter, Depends
-from pydantic import SecretStr
+from fastapi import APIRouter, Depends, HTTPException
 
 from ...config import Settings, secret_to_str
+from ...runtime_config import RuntimeConfigStore
 
 logger = structlog.get_logger("cloudsentinel.api.routers.llm")
 
@@ -17,6 +16,7 @@ logger = structlog.get_logger("cloudsentinel.api.routers.llm")
 def build_llm_router(
     settings: Settings,
     require_auth: Callable[..., Any],
+    config_store: RuntimeConfigStore,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -81,40 +81,17 @@ def build_llm_router(
             logger.warning("LLM chat failed: %s", exc)
             return {"ok": False, "error": "AI assistant unavailable"}
 
+    @router.get("/llm/config", dependencies=[Depends(require_auth)])
+    async def get_llm_config() -> dict[str, Any]:
+        llm = config_store.snapshot()["llm"]
+        return {"ok": True, "available": llm["has_api_key"], **llm}
+
     @router.post("/llm/config", dependencies=[Depends(require_auth)])
     async def llm_config(body: dict[str, Any]) -> dict[str, Any]:
-        api_key = str(body.get("api_key") or "")
-        provider = str(body.get("provider") or "")
-        model = str(body.get("model") or "")
-        fallback_models = body.get("fallback_models")
-
-        if api_key:
-            settings.llm.api_key = SecretStr(api_key)
-            os.environ["LLM_API_KEY"] = api_key
-            if "gemini" in (provider or model).lower():
-                os.environ["GEMINI_API_KEY"] = api_key
-            elif "openai" in (provider or model).lower():
-                os.environ["OPENAI_API_KEY"] = api_key
-            elif "groq" in (provider or model).lower():
-                os.environ["GROQ_API_KEY"] = api_key
-            elif "anthropic" in (provider or model).lower():
-                os.environ["ANTHROPIC_API_KEY"] = api_key
-        if provider:
-            settings.llm.provider = provider
-        if model:
-            settings.llm.model = model
-            os.environ["LLM_MODEL"] = model
-        if isinstance(fallback_models, list) and fallback_models:
-            settings.llm.fallback_models = [str(m).strip() for m in fallback_models if str(m).strip()]
-            os.environ["LLM_FALLBACK_MODELS"] = ",".join(settings.llm.fallback_models)
-
-        return {
-            "ok": True,
-            "status": "configured",
-            "available": bool(secret_to_str(settings.llm.api_key)),
-            "provider": settings.llm.provider,
-            "model": settings.llm.model,
-            "fallback_models": settings.llm.fallback_models,
-        }
+        try:
+            llm = config_store.update({"llm": body})["llm"]
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"ok": True, "available": llm["has_api_key"], **llm}
 
     return router

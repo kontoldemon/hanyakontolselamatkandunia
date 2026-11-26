@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAgent } from "@/lib/AgentContext";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, X } from "lucide-react";
 
 export default function AgentOverlay() {
-  const { isExecuting, currentAction } = useAgent();
+  const { isExecuting, currentAction, cancelAction } = useAgent();
   const [shouldRender, setShouldRender] = useState(isExecuting);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [savedAction, setSavedAction] = useState(currentAction);
@@ -95,6 +95,15 @@ export default function AgentOverlay() {
             <span className="whitespace-nowrap font-semibold tracking-wide">
               {savedAction ? savedAction.label : "Agent in action..."}
             </span>
+            <button
+              type="button"
+              onClick={cancelAction}
+              className="ml-1 rounded-full p-1 text-blue-100 transition hover:bg-white/20 hover:text-white"
+              title="Cancel action"
+              aria-label="Cancel action"
+            >
+              <X size={14} />
+            </button>
           </div>
         </div>
       </div>

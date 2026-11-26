@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Response
 
 from ...config import Settings
 from ...pipeline import EventPipeline
-from ..queries import _latest_mttb_from_clickhouse
+from .. import queries
 
 
 def build_health_router(
@@ -40,6 +40,10 @@ def build_health_router(
             "clickhouse_enabled": clickhouse_enabled,
             "clickhouse_ok": clickhouse_ok,
             "stream_enabled": bool(settings.stream.enabled),
+            "stream_port": settings.stream.port if settings.stream.enabled else 0,
+            "ssh_port": settings.honeypot.ssh_port,
+            "deception_level": settings.deception.level,
+            "deception_mode": settings.llm.deception_mode,
         }
 
     @router.get("/metrics")
@@ -61,7 +65,7 @@ def build_health_router(
             from ...metrics import get_metrics
 
             metrics = get_metrics()
-            mttb_value = metrics.mttb_ms or _latest_mttb_from_clickhouse(settings)
+            mttb_value = metrics.mttb_ms or await queries.load_latest_mttb_async(settings)
             return {
                 "active_sessions": metrics.active_sessions,
                 "mttb_ms": mttb_value,

@@ -186,12 +186,6 @@ class HASSHDNA:
             "botnet_family": "Scripting",
             "threat_level": "medium",
         },
-        # GitHub Actions Runner (same KEX as host OpenSSH 8.9p1)
-        "699519fdcc30cbcd093d5cd01e4b1d56": {
-            "client_software": "GitHub Actions Runner SSH",
-            "botnet_family": "Ci/CD",
-            "threat_level": "medium",
-        },
         # Jenkins SSH Agent (older KEX list, limited ciphers)
         "a207034c990377cb2f22c5c02166dc94": {
             "client_software": "Jenkins SSH Agent",
@@ -242,13 +236,6 @@ class HASSHDNA:
             "botnet_family": "none",
             "threat_level": "low",
         },
-        # Ansible SSH (uses host OpenSSH 8.4p1 KEX)
-        "3ccd1778a76049721c71ad7d2bf62bbc": {
-            "client_software": "Ansible SSH",
-            "botnet_family": "Automation",
-            "threat_level": "low",
-    
-
         # Critical: additional botnet variants
         "98d6137982cb17ddabecfff564aa0dd9": {
             "client_software": "Mirai Sora/Iz1H variant",
@@ -325,7 +312,6 @@ class HASSHDNA:
             "botnet_family": "Scanner",
             "threat_level": "medium",
         },
-    },
     }
 
     def __init__(self, max_seen: int = 10000) -> None:
@@ -369,3 +355,20 @@ class HASSHDNA:
             "botnet_family": botnet_family,
             "threat_level": threat_level,
         }
+
+
+HASSH_THREAT_SCORES: dict[str, int] = {
+    "critical": 100,
+    "high": 80,
+    "medium": 60,
+    "low": 20,
+    "unknown": 0,
+}
+
+
+def hassh_action_applies(action: str, threshold: int, intel: dict[str, str]) -> bool:
+    """True when the operator-selected HASSH action should fire for this fingerprint."""
+    if action != "drop":
+        return False
+    score = HASSH_THREAT_SCORES.get(str(intel.get("threat_level", "unknown")), 0)
+    return score > 0 and score >= int(threshold)

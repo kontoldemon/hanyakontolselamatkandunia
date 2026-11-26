@@ -42,6 +42,11 @@ function socketUrl(): string | null {
   return configured || null;
 }
 
+function socketAuth(): { token: string } | undefined {
+  const token = process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN?.trim();
+  return token ? { token } : undefined;
+}
+
 let globalSocket: ReturnType<typeof io> | null = null;
 let globalLogs: ThreatLog[] = [];
 const subscribers = new Set<(logs: ThreatLog[]) => void>();
@@ -168,6 +173,7 @@ function initSocket(url: string) {
     transports: ["polling", "websocket"],
     reconnection: true,
     withCredentials: false,
+    auth: socketAuth(),
   });
   socketTelemetryState.socketUrl = url;
 
@@ -186,6 +192,9 @@ function initSocket(url: string) {
   globalSocket.on("connect_error", (error: Error) => {
     socketTelemetryState.lastError = error.message;
     pushSocketTelemetry("connect_error", "error", error.message);
+    if (error.message.toLowerCase().includes("unauthorized")) {
+      globalSocket?.io.reconnection(false);
+    }
   });
 
   globalSocket.io.on("reconnect_attempt", (attempt: number) => {

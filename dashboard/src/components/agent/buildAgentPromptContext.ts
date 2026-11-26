@@ -295,11 +295,11 @@ NAVIGATION MARKERS:
 UI CONTROL MARKERS (for controlling dropdowns, search, filters, toggles):
 [ACTION:ui_command:sessions.search=VALUE] - Set sessions search query
 [ACTION:ui_command:sessions.filter=VALUE] - Filter sessions (all or active)
-[ACTION:ui_command:settings.deception_level=VALUE] - Set deception level (High (Full VFS), Medium (Restricted), Low (Port listener))
-[ACTION:ui_command:settings.hassh_action=VALUE] - Set HASSH action (Immediate Drop, Allow & Monitor, Tarpit)
+[ACTION:ui_command:settings.deception_level=VALUE] - Set deception level (full, restricted, listener)
+[ACTION:ui_command:settings.hassh_action=VALUE] - Set HASSH action (drop, monitor)
 [ACTION:ui_command:settings.hassh_threshold=VALUE] - Set HASSH confidence threshold (0-100)
-[ACTION:ui_command:settings.soar_trigger=VALUE] - Set SOAR trigger (MITRE Match (>1), Auth Spike (>10/m), Any Input)
-[ACTION:ui_command:settings.soar_execution=VALUE] - Set SOAR execution path (Lambda (Warm), Lambda (Cold), Local Docker)
+[ACTION:ui_command:settings.soar_trigger=VALUE] - Set SOAR trigger (risk, mitre, auth_spike, any_input)
+[ACTION:ui_command:settings.soar_execution=VALUE] - Set SOAR execution path (eventgrid, host)
 [ACTION:ui_command:settings.fake_keys=VALUE] - Toggle fake AWS keys (true/false)
 [ACTION:ui_command:intel.sort=VALUE] - Sort commands (most or least)
 [ACTION:ui_command:intel.search=VALUE] - Search attacker commands

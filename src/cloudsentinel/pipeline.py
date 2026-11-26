@@ -217,6 +217,12 @@ class EventPipeline:
         self._connected = False
 
     async def emit(self, envelope: EventEnvelope) -> None:
+        try:
+            from .metrics import get_metrics
+
+            get_metrics().record_event(envelope.event_type)
+        except Exception:
+            pass
         if self._redis is None or not self._connected:
             await self._wal.write(envelope)
             self._wal_pending += 1

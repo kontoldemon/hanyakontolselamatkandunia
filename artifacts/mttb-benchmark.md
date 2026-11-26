@@ -2,8 +2,8 @@
 
 - Mode: dry-run
 - Source IP: 8.8.8.8
-- Iterations: 3
-- Median MTTB: 0.962 ms
-- p95 MTTB: 1.5 ms
+- Iterations: 0
+- Median MTTB: 0.0 ms
+- p95 MTTB: 0.0 ms
 - Target: 100 ms
-- Result: PASS
+- Result: FAIL

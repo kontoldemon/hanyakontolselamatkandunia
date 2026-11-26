@@ -1,13 +1,14 @@
 # CloudSentinel Agent Handoff
 
-Last updated: 2026-11-25. Read this first in a new session.
+Last updated: 2026-11-26. Read this first in a new session.
 
 ## Repository
 
 - Path: `C:\Users\RADZ\project io\FYP`
 - Branch: `main`
 - Push target: `kontoldemon/hanyakontolselamatkandunia` (personal repo). Use the `kontoldemon` remote / active GitHub account when needed.
-- Latest pushed commit: `37d98d4` (Azure readiness guard tests).
+- Latest pushed commit: `de3ddfb` (fail-closed admin login + dashboard security headers).
+- Detailed docs: `docs/ARCHITECTURE.md` (system), `docs/MOBILE.md` (Android), `docs/DEPLOY.md` (Azure), `docs/INDEX.md` (map).
 
 ## Current status
 
@@ -16,8 +17,15 @@ Last updated: 2026-11-25. Read this first in a new session.
   - Event Grid -> Azure Function -> NSG deny rule with TTL.
   - Private ClickHouse VM, Key Vault private endpoint, Bicep, custom least-privilege NSG role.
   - Host firewall agent remains as the local/non-Azure fallback.
-- Python suite: **522 passed, 2 skipped, coverage 99.02%**. GitHub CI is green; Azure readiness tests enforce NSG priority and private Key Vault/Blob settings.
-- Dashboard: `npm run build` passes. `npm run lint` is very slow (timed out at 5 minutes with no error output).
+- Python suite: **577 passed, 2 skipped, coverage 99.04%** (local WIP snapshot, 2026-11-26; the 99% gate passes). CI at `de3ddfb`: **531 passed, 99.32%**. Ruff critical, bandit high, `npm audit`, and `pip-audit` are clean; full `npm run lint` exits 0.
+- Dashboard: `npm run build` passes and full `npm run lint` now exits 0 (2026-11-26; earlier it timed out).
+- Android: `mobile-android\gradlew.bat :app:assembleDebug` and `:app:assembleRelease` (unsigned) pass with local JDK 21 + SDK (2026-11-26); signing/device pass still unverified.
+- Live admin API smoke (2026-11-26): uvicorn on `127.0.0.1:8099` returned `healthz=200`, unauth `401`, persisted runtime config (`full` -> `restricted`), `/decoys` reflected the change, `/llm/config` returned the live provider, and `/docs` + `/openapi.json` returned 404 with docs disabled.
+- Live Socket.io smoke (2026-11-26): token-authenticated client received the event with `password` redacted; wrong token now raises `ConnectionRefusedError` so the client reports `connected=False` and receives nothing. The dashboard socket stops reconnecting on an "unauthorized" error and falls back to HTTP polling.
+- Live deployment audit (2026-11-26): `https://dashboard-six-mu-20.vercel.app` still serves the **pre-`de3ddfb` CSP** and `Access-Control-Allow-Origin: *`; `https://cloudsentinel.zis3c.dev` returns **NXDOMAIN**. Dead-domain defaults were removed from `deploy.sh`, `vercel.json`, `stream.py`, and the QA runbook; redeploy Vercel after wiring it to the current repo.
+- Dashboard post-login `next` redirect now validates the resolved origin, blocking backslash/absolute external redirects.
+- Mobile exposure now uses the shared firewall toggle (`apply_exposure_toggle`), with iptables cooldown/rollback semantics; `/mobile/runtime-controls` and `/mobile/policy` are covered by tests. Mobile exposure still targets host iptables, not the Azure NSG.
+- Dashboard wiring (2026-11-26): settings persist to the sensor via `GET/POST /runtime-config` + `GET /decoys`; LLM config is a real proxy (`GET/POST /llm/config`). VFS depth, canary keys, HASSH drop, SOAR trigger/runtime, and LLM provider/model/limits apply live. Fake MTTB/risk/port values, hardcoded decoy inventory, synthetic anomaly trend, Next.js mobile fallbacks, and dry-run counting as a real block were removed. `GET /anomaly-stats` reports real detector state; `/readiness` exposes real port/deception config. Events cap: `CLOUDSENTINEL_EVENTS_MAX_LIMIT` (default 20000, max 50000). Dashboard polls are deduplicated across hooks. DNS and HTTP honeypot events now reach the pipeline and live stream. The Socket.io stream supports `STREAM_AUTH_TOKEN` (sensor) matched by `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN` (dashboard); an empty token keeps the stream open. Mobile alert state now round-trips camelCase fields (riskScore/mitreId/timestampMs) instead of resetting them on reload. ClickHouse reads now run via `asyncio.to_thread` wrappers so admin handlers no longer block the sensor loop. VFS routes Groq/Anthropic through litellm and no longer reuses the primary key for fallback models. The AI chat approve action no longer depends on `setMessages` side effects. `/docs` + `/openapi.json` are opt-in via `CLOUDSENTINEL_ENABLE_DOCS=1`. HTTP/DNS events are geo-enriched and carry `input`/`reason`; DNS/HTTP now reach ClickHouse with meaningful rows. Prometheus `events_total` and uptime are wired (`EventPipeline.emit` + `_start_metrics`). The mobile pairing panel defaults to the configured sensor URL (`NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL` / `CLOUDSENTINEL_ADMIN_API_URL`) instead of the dashboard hostname. Persisted runtime config is re-validated on load; invalid sections fall back to defaults. Changed-file eslint is clean (0 errors/warnings). HASSH DNA had a malformed entry (missing brace after "Ansible SSH") that nested 17 botnet variants under one key, so most critical signatures were unreachable; fixed, `_KNOWN` now has 33 top-level signatures and `mypy hassh.py` is clean. HASSH now has no duplicate keys (guarded by an AST test) and all entries are flat top-level records. Mobile `/runtime-controls` deception level + HASSH action now persist through the runtime config store; `soar_dry_run` still applies in-memory only. Android API models were checked field-by-field against the mobile router responses and match. Deployment remains blocked locally: no Vercel credentials, `az`, `bicep`, or Docker.
 - This Windows machine has no `az`, `bicep`, `func`, `docker`, or `bash`; Bicep, Function, and shell scripts are untested here.
 
 ## Outstanding work
@@ -25,14 +33,16 @@ Last updated: 2026-11-25. Read this first in a new session.
 1. **Dependency security:** Dependabot has **0 open alerts**; 55 historical alerts are fixed. `npm audit` and `pip-audit` are clean.
 2. **Azure deployment:** run `az bicep build --file infra/main.bicep`, deploy, publish the Function, create the Event Grid subscription, and test a real NSG block. Block rules now use priority 100-199, before static allows at 200-230.
 3. **Evidence:** MTTB is sensor-side, not full NSG enforcement time.
-4. **Next code audit:** mobile pairing state/rate limits, remaining `admin_api.py` helper extraction, or the uncommitted dashboard settings refactor.
-5. Dashboard WIP is uncommitted: settings/telemetry refactor. Build it before committing.
+4. **Live stream auth:** code is wired (`STREAM_AUTH_TOKEN` -> `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN`), but deployment must set both or the stream stays open on port 3001. Events are redacted; treat the dashboard token as a read credential.
+5. **Next code audit:** remaining `admin_api.py` helper extraction and unused test-only modules (`shell.py`, `_secrets.py`, `attack_graph.py`, benchmark scripts).
+6. Dashboard WIP is uncommitted: settings/telemetry/wiring refactor. Build and run the Python suite before committing.
+7. **Live deployment drift:** current Vercel deployment is stale; redeploy it from the current repo and decide whether to restore a custom domain. Live headers are not final until then.
 
 ## Verification commands
 
 ```powershell
 $env:PYTHONPATH="src"
-python -m pytest src/cloudsentinel/tests -q -o addopts=""
+python -m pytest src/cloudsentinel/tests -q -o addopts="-n auto --cov=cloudsentinel --cov-report=term --cov-fail-under=99"
 cd dashboard
 npm run build
 ```
@@ -41,4 +51,4 @@ Never commit `.env` or secrets. `.env` is ignored. Local demo credentials are lo
 
 ## Recent work
 
-Recent loops extracted the sensor session/server, HTTP/admin bootstrap, TTY/fingerprint/limits, API routers (health, events, sessions, analytics, blocks, LLM, auth, exposure), read-model queries, firewall helpers, mobile companion security (token-gated pairing, rate limits, shared state, real sensor dispatch), and fixed Azure NSG priority ordering so blocks precede allows. See `git log --oneline -25`.
+Recent loops extracted the sensor session/server, HTTP/admin bootstrap, TTY/fingerprint/limits, API routers (health, events, sessions, analytics, blocks, LLM, auth, exposure), read-model queries, firewall helpers, mobile companion security (token-gated pairing, rate limits, shared state, real sensor dispatch), and fixed Azure NSG priority ordering so blocks precede allows. The 2026-11-26 loop wired dashboard settings/decoys/LLM/anomaly to the sensor, made mobile endpoints fail honestly, stopped dry-run blocks from inflating truth metrics, added optional Socket.io stream auth, and fixed mobile alert state round-tripping. See `git log --oneline -25`.

@@ -34,7 +34,7 @@ export default function TimingHeatmapPanel({ expanded, onToggle, heatmap }: Timi
       summary={`Peak activity: ${peakFormat}`}
     >
       <div className="flex justify-between items-center mb-4 h-7">
-        <span className="text-xs text-slate-500">7-Day Hourly Activity</span>
+        <span className="text-xs text-slate-500">Hourly Activity (selected window)</span>
       </div>
       <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60vh] w-full overflow-x-auto terminal-scrollbar pb-2 relative flex flex-col justify-center">
         <div className="min-w-[600px] flex flex-col gap-1 relative h-full" onMouseLeave={() => setHovered(null)}>

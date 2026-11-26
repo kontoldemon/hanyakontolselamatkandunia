@@ -63,13 +63,6 @@ const offlineFallback: WarRoomStatePayload = {
     attackCooldownMs: 90_000,
     activeFreshnessMs: 90_000,
   },
-  exposure: {
-    provider: "runtime",
-    desiredEnabled: true,
-    effectiveEnabled: true,
-    syncing: false,
-    updatedAt: 0,
-  },
 };
 
 function isAttackEventId(eventid: string): boolean {
@@ -156,13 +149,6 @@ async function loadCompatibilityWarRoomState(
       onlineGraceMs,
       attackCooldownMs,
       activeFreshnessMs,
-    },
-    exposure: {
-      provider: "compat",
-      desiredEnabled: true,
-      effectiveEnabled: true,
-      syncing: false,
-      updatedAt: now,
     },
   };
 }

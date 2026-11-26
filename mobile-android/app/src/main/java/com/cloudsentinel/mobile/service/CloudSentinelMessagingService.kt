@@ -43,55 +43,6 @@ class CloudSentinelMessagingService : FirebaseMessagingService() {
         )
 
         (application as? CloudSentinelApp)?.repository?.prependIncomingPush(alert)
-        showThreatNotification(alert)
-    }
-
-    private fun showThreatNotification(alert: ThreatAlertItem) {
-        val notifId = alert.id.hashCode()
-        val channelId = if (alert.riskScore >= 75) {
-            NotificationChannels.CRITICAL_DEFCON_CHANNEL
-        } else {
-            NotificationChannels.STANDARD_ALERTS_CHANNEL
-        }
-
-        val openIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val openPending = PendingIntent.getActivity(
-            this,
-            notifId,
-            openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val builder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_shield_logo)
-            .setContentTitle("CloudSentinel | Risk ${alert.riskScore}/100")
-            .setContentText("${alert.ip} (${alert.country}) - ${alert.summary}")
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("${alert.ip} (${alert.country})\n${alert.eventType}${if (alert.mitreId.isNotBlank()) " | ${alert.mitreId}" else ""}\n${alert.summary}")
-            )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(openPending)
-
-        if (!alert.blocked && alert.ip != "Unknown IP") {
-            val blockIntent = Intent(this, NotificationActionReceiver::class.java).apply {
-                action = NotificationActionReceiver.ACTION_BLOCK_IP
-                putExtra(NotificationActionReceiver.EXTRA_IP, alert.ip)
-                putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notifId)
-            }
-            val blockPending = PendingIntent.getBroadcast(
-                this,
-                notifId + 1,
-                blockIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            builder.addAction(R.drawable.ic_shield_logo, "Block IP", blockPending)
-        }
-
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(notifId, builder.build())
+        ThreatNotificationDispatcher.show(this, alert)
     }
 }

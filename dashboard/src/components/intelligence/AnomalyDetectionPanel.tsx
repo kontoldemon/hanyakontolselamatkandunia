@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ThreatLog } from "@/lib/liveEvents";
+import { SensorResult, ThreatLog } from "@/lib/liveEvents";
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import CollapsiblePanel from "@/components/ui/CollapsiblePanel";
@@ -10,10 +10,26 @@ interface AnomalyDetectionPanelProps {
     expanded: boolean;
     onToggle: () => void;
     logs: ThreatLog[];
+    anomaly?: SensorResult<Record<string, unknown>> | null;
 }
 
-export default function AnomalyDetectionPanel({ expanded, onToggle, logs }: AnomalyDetectionPanelProps) {
+const BUCKET_MS = 10 * 60 * 1000;
+const BUCKET_COUNT = 6;
+
+export default function AnomalyDetectionPanel({ expanded, onToggle, logs, anomaly }: AnomalyDetectionPanelProps) {
+    const detector = (anomaly?.data ?? {}) as Record<string, unknown>;
+    const detectorAvailable = anomaly?.ok === true && detector.available === true;
+    const modelReady = detector.model_ready === true;
+    const commandsAnalyzed = typeof detector.total_commands_analyzed === "number" ? detector.total_commands_analyzed : 0;
+
     const anomalyData = useMemo(() => {
+        const bucketData = (now: number) => Array.from({ length: BUCKET_COUNT }, (_, index) => {
+            const end = now - (BUCKET_COUNT - 1 - index) * BUCKET_MS;
+            const start = end - BUCKET_MS;
+            const val = logs.filter((log) => log.epochMs >= start && log.epochMs < end).length;
+            return { time: index === BUCKET_COUNT - 1 ? "Now" : `T-${(BUCKET_COUNT - 1 - index) * 10}m`, val };
+        });
+
         if (logs.length < 10) {
             return { status: "gathering", deviation: 0, currentRate: 0, baselineRate: 0, chartData: [] };
         }
@@ -46,14 +62,6 @@ export default function AnomalyDetectionPanel({ expanded, onToggle, logs }: Anom
         const safeBaseline = Math.max(baselineHourlyRate, 1);
         const deviationPercent = ((currentHourlyRate - safeBaseline) / safeBaseline) * 100;
 
-        const chartData = [
-            { time: "T-60m", val: safeBaseline * 0.9 },
-            { time: "T-45m", val: safeBaseline * 1.1 },
-            { time: "T-30m", val: safeBaseline },
-            { time: "T-15m", val: safeBaseline * 1.05 },
-            { time: "Now", val: currentHourlyRate },
-        ];
-
         let status = "normal";
         if (deviationPercent > 200) status = "critical";
         else if (deviationPercent > 50) status = "warning";
@@ -64,7 +72,7 @@ export default function AnomalyDetectionPanel({ expanded, onToggle, logs }: Anom
             deviation: deviationPercent,
             currentRate: Math.round(currentHourlyRate),
             baselineRate: Math.round(safeBaseline),
-            chartData,
+            chartData: bucketData(now),
         };
     }, [logs]);
 
@@ -80,8 +88,8 @@ export default function AnomalyDetectionPanel({ expanded, onToggle, logs }: Anom
                 <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 p-3 rounded-lg shadow-xl text-xs z-[100]">
                     <p className="font-bold mb-1 text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-white/10 pb-1">{String(label ?? "")}</p>
                     <div className="flex items-center justify-between gap-4 mt-2">
-                        <span className="text-slate-500">Rate</span>
-                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{Math.round(Number(payload[0]?.value ?? 0))}/hr</span>
+                        <span className="text-slate-500">Events</span>
+                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{Math.round(Number(payload[0]?.value ?? 0))}</span>
                     </div>
                 </div>
             );
@@ -132,7 +140,7 @@ export default function AnomalyDetectionPanel({ expanded, onToggle, logs }: Anom
                 </div>
 
                 <div className="flex-1 min-h-0 relative rounded-lg overflow-hidden border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] p-2">
-                    <span className="absolute top-2 left-2 text-[10px] text-slate-400 font-semibold z-10">60-Min Trend</span>
+                    <span className="absolute top-2 left-2 text-[10px] text-slate-400 font-semibold z-10">60-Min Event Trend</span>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={anomalyData.chartData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                             <XAxis dataKey="time" hide />
@@ -147,6 +155,12 @@ export default function AnomalyDetectionPanel({ expanded, onToggle, logs }: Anom
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
+
+                <p className="mt-2 text-[10px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
+                    {detectorAvailable
+                        ? `IsolationForest: ${modelReady ? "trained" : "heuristic"} · ${commandsAnalyzed} commands scored`
+                        : "Detector telemetry unavailable"}
+                </p>
             </div>
         );
     };

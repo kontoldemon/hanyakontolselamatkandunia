@@ -45,6 +45,13 @@ function parseEpochMs(raw: unknown): number {
   return Date.now();
 }
 
+const ENFORCED_ACTIONS = new Set([
+  "iptables_block",
+  "already_blocked",
+  "eventgrid_published",
+  "event_published",
+]);
+
 function classifyType(eventid = ""): "ssh" | "cmd" | "web" | "other" {
   const normalized = eventid.toLowerCase();
   if (normalized.includes("login.failed")) return "ssh";
@@ -112,15 +119,23 @@ export async function GET(request: Request) {
       });
     }
 
-    const payload = (await response.json()) as { events?: CloudSentinelEvent[] };
+    const payload = (await response.json()) as {
+      events?: CloudSentinelEvent[];
+      source?: "clickhouse" | "runtime" | "memory" | "mixed";
+      authoritative?: boolean;
+      sourceBreakdown?: Record<string, unknown>;
+    };
     const events = payload.events ?? [];
+    const source = payload.source ?? "runtime";
+    const authoritative = payload.authoritative === true;
+    const seriesSource = payload.sourceBreakdown?.series ?? source;
     if (events.length === 0) {
       return NextResponse.json({
         ok: true,
         status: "live",
-        source: "clickhouse",
-        authoritative: true,
-        sourceBreakdown: { series: "clickhouse" },
+        source,
+        authoritative,
+        sourceBreakdown: { series: seriesSource },
         sampledAt: new Date().toISOString(),
         series: [],
       });
@@ -153,7 +168,7 @@ export async function GET(request: Request) {
       const target = buckets.get(bucketKey)!;
       target.totalEvents += 1;
       const action = (event.cloudsentinel_soar_action ?? "").toLowerCase();
-      const isBlocked = action.includes("block");
+      const isBlocked = ENFORCED_ACTIONS.has(action);
       if (isBlocked) {
         target.blockedEvents += 1;
       }
@@ -193,9 +208,9 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       status: "live",
-      source: "clickhouse",
-      authoritative: true,
-      sourceBreakdown: { series: "clickhouse" },
+      source,
+      authoritative,
+      sourceBreakdown: { series: seriesSource },
       sampledAt: new Date().toISOString(),
       window,
       windowMs: windowMs ?? "all",

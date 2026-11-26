@@ -70,6 +70,7 @@ def test_admin_routes_keep_auth_dependencies() -> None:
         "/attack-graph",
         "/anomaly-stats",
         "/llm",
+        "/runtime-config",
         "/readiness",
         "/metrics/json",
         "/mobile/config",

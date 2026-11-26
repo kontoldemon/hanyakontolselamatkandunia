@@ -99,6 +99,7 @@ export async function POST(request: Request) {
     const turnstileRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
       body: formData,
+      signal: AbortSignal.timeout(8000),
     });
     const turnstileData = await turnstileRes.json();
 

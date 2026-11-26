@@ -240,7 +240,7 @@ export function useCapturedSessions() {
       current.country = current.country || log.country;
       current.countryCode = current.countryCode || log.country;
       current.countryName = current.countryName || log.countryName || log.country;
-      current.riskScore = Math.max(current.riskScore ?? 0, log.action === "Blocked" ? 70 : 0);
+      current.riskScore = current.riskScore ?? 0;
       if (!current.soarAction || current.soarAction === "none") {
         current.soarAction = log.action === "Blocked" ? "detect_only" : "none";
       }

@@ -1,25 +1,30 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LayoutDashboard, Terminal, BrainCircuit, Settings, LogOut, ChevronLeft, PanelLeftOpen, Moon, Sun, X } from "lucide-react";
+import { LayoutDashboard, Terminal, BrainCircuit, Settings, LogOut, ChevronLeft, PanelLeftOpen, Moon, Sun, X, Activity } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "next-themes";
 import { useAgentCommand } from "@/lib/AgentContext";
 
 const SIDEBAR_COLLAPSED_KEY = "cloudsentinel.sidebar.collapsed";
+const subscribeHydration = () => () => {};
 
 export default function Sidebar() {
-    const [isCollapsed, setIsCollapsed] = useState(() => {
-        if (typeof window === "undefined") return false;
-        return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
-    });
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const mounted = useSyncExternalStore(subscribeHydration, () => true, () => false);
     const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
     const [isClosingSignOut, setIsClosingSignOut] = useState(false);
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the persisted sidebar state after hydration
+        setIsCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+    }, []);
 
     const closeSignOutModal = useCallback(() => {
         if (isClosingSignOut) return;
@@ -58,6 +63,7 @@ export default function Sidebar() {
         { name: "War Room", href: "/dashboard", icon: LayoutDashboard },
         { name: "Sessions", href: "/sessions", icon: Terminal },
         { name: "Intelligence", href: "/intelligence", icon: BrainCircuit },
+        { name: "Telemetry", href: "/telemetry", icon: Activity },
         { name: "Settings", href: "/settings", icon: Settings },
     ];
 
@@ -71,7 +77,7 @@ export default function Sidebar() {
             <aside
                 className={clsx(
                     "hidden md:flex flex-col bg-white/70 dark:bg-[#050505]/90 border-r border-slate-200 dark:border-white/10 transition-[width] duration-200 ease-in-out backdrop-blur-md h-screen sticky top-0 will-change-[width] z-30",
-                    isCollapsed ? "w-16" : "w-44"
+                    isCollapsed ? "w-16" : "w-52"
                 )}
             >
                 <div
@@ -82,11 +88,11 @@ export default function Sidebar() {
                 >
                     <div
                         className={clsx(
-                            "flex items-center overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out",
-                            isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-32 opacity-100"
+                            "flex items-center overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out min-w-0",
+                            isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-40 opacity-100 flex-1"
                         )}
                     >
-                        <Link href="/dashboard" className="group flex items-center px-2.5 text-left focus-visible:outline-none whitespace-nowrap">
+                        <Link href="/dashboard" className="group flex items-center pl-2.5 pr-1 text-left focus-visible:outline-none whitespace-nowrap">
                             <div className="flex h-5 w-5 shrink-0 items-center justify-center">
                                 <Image
                                     src="/logo.svg"
@@ -155,7 +161,7 @@ export default function Sidebar() {
                                 <span
                                     className={clsx(
                                         "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-in-out ml-2",
-                                        isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-28 opacity-100"
+                                        isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-36 opacity-100"
                                     )}
                                 >
                                     {link.name}
@@ -173,18 +179,18 @@ export default function Sidebar() {
                             "flex items-center h-9 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200 transition-colors duration-150 text-xs font-medium whitespace-nowrap cursor-pointer",
                             isCollapsed ? "justify-center px-0" : "px-2.5"
                         )}
-                        title={theme === "dark" ? "Light Mode" : "Dark Mode"}
+                        title={mounted ? (theme === "dark" ? "Light Mode" : "Dark Mode") : "Theme"}
                     >
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-                            {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+                            {mounted ? (theme === "dark" ? <Sun size={17} /> : <Moon size={17} />) : <Moon size={17} />}
                         </div>
                         <span
                             className={clsx(
                                 "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-in-out ml-2",
-                                isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-28 opacity-100"
+                                isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-36 opacity-100"
                             )}
                         >
-                            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                            {mounted ? (theme === "dark" ? "Light Mode" : "Dark Mode") : "Theme"}
                         </span>
                     </button>
 
@@ -203,7 +209,7 @@ export default function Sidebar() {
                         <span
                             className={clsx(
                                 "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-in-out ml-2",
-                                isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-28 opacity-100"
+                                isCollapsed ? "max-w-0 opacity-0 pointer-events-none hidden" : "max-w-36 opacity-100"
                             )}
                         >
                             Sign Out

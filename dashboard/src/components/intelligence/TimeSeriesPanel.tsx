@@ -234,7 +234,7 @@ export default function TimeSeriesPanel({ expanded, onToggle, timelineWindow }: 
         >
             <div className="flex flex-col h-[280px] group-data-[fullscreen=true]/fs:h-[60vh] w-full">
                 <div className="flex justify-between items-center mb-4 shrink-0">
-                    <span className="text-xs text-slate-500">Server pre-aggregated window: {timelineLabels[timelineWindow]}</span>
+                    <span className="text-xs text-slate-500">Bucketed from stored events: {timelineLabels[timelineWindow]}</span>
                     <CustomDropdown
                         options={viewOptions}
                         value={activeView}

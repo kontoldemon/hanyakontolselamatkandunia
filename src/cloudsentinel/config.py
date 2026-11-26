@@ -68,6 +68,8 @@ class LLMSettings(BaseModel):
     session_call_limit: int = Field(default=20, ge=0)
     global_hourly_limit: int = Field(default=200, ge=0)
     response_template_max_lines: int = Field(default=16, ge=2, le=200)
+    prompt_sanitization: bool = True
+    deception_mode: str = "dynamic"
     blocked_command_prefixes: list[str] = Field(default_factory=lambda: [
         "clickhouse-client",
         "journalctl",
@@ -134,6 +136,15 @@ class FingerprintSettings(BaseModel):
     enable_ja4s: bool = True
 
 
+class DeceptionSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    level: str = "full"
+    seed_canary_keys: bool = True
+    hassh_action: str = "monitor"
+    hassh_threshold: int = Field(default=85, ge=0, le=100)
+
+
 class ObservabilitySettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -147,6 +158,7 @@ class SOARSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     risk_threshold: int = Field(default=70, ge=1, le=100)
+    trigger: str = "risk"
     firewall_enabled: bool = True
     firewall_dry_run: bool = True
     firewall_path: str = "/sbin/iptables"
@@ -215,6 +227,7 @@ class StreamSettings(BaseModel):
     port: int = Field(default=3001, ge=1, le=65535)
     cors_origin: str = "*"
     public_read_only: bool = True
+    auth_token: SecretStr = SecretStr("")
 
 
 class AdminSettings(BaseModel):
@@ -246,6 +259,7 @@ class Settings(BaseModel):
     kafka: KafkaSettings = Field(default_factory=KafkaSettings)
     clickhouse: ClickHouseSettings = Field(default_factory=ClickHouseSettings)
     fingerprinting: FingerprintSettings = Field(default_factory=FingerprintSettings)
+    deception: DeceptionSettings = Field(default_factory=DeceptionSettings)
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
     soar: SOARSettings = Field(default_factory=SOARSettings)
     elasticsearch: ElasticsearchSettings = Field(default_factory=ElasticsearchSettings)
@@ -333,6 +347,7 @@ class EnvOverrides(BaseSettings):
     stream_port: int | None = None
     stream_cors_origin: str | None = None
     stream_public_read_only: bool | None = None
+    stream_auth_token: SecretStr | None = None
     admin_enabled: bool | None = None
     admin_port: int | None = None
     admin_token: SecretStr | None = None
@@ -476,6 +491,7 @@ def load_settings(
     _set_if_present(settings.stream, "port", env.stream_port)
     _set_if_present(settings.stream, "cors_origin", env.stream_cors_origin)
     _set_if_present(settings.stream, "public_read_only", env.stream_public_read_only)
+    _set_if_present(settings.stream, "auth_token", env.stream_auth_token)
     _set_if_present(settings.admin, "enabled", env.admin_enabled)
     _set_if_present(settings.admin, "port", env.admin_port)
     _set_if_present(settings.admin, "token", env.admin_token)

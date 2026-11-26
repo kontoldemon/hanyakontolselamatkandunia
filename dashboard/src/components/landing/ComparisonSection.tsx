@@ -24,7 +24,7 @@ const COMPARISON_ROWS = [
     },
     cloudsentinel: {
       badge: "Autonomous SOAR",
-      detail: "Automated iptables and NSG drop rules (< 2ms)",
+      detail: "Automated iptables/NSG blocks (sensor path < 2ms)",
       highlight: true,
     },
   },
@@ -66,7 +66,7 @@ const COMPARISON_ROWS = [
     },
     cloudsentinel: {
       badge: "Integrated War Room",
-      detail: "Live 3D threat globe and web keystroke DVR",
+      detail: "Live world threat map and keystroke replay",
       highlight: true,
     },
   },

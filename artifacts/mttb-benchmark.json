@@ -1,0 +1,11 @@
+{
+  "actions": [],
+  "active": false,
+  "iterations": 0,
+  "median_ms": 0.0,
+  "p95_ms": 0.0,
+  "pass": false,
+  "samples": [],
+  "source_ip": "8.8.8.8",
+  "target_ms": 100
+}

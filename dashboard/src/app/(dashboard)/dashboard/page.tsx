@@ -97,7 +97,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex-1 min-h-0 overflow-hidden p-2">
-            <AttackLog selectedRegion={selectedRegion} underAttack={underAttack} threatLogs={combinedLogs} />
+            <AttackLog selectedRegion={selectedRegion} threatLogs={combinedLogs} />
           </div>
         </div>
       </div>

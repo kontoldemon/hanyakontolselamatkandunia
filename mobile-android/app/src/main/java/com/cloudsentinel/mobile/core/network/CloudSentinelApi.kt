@@ -18,4 +18,22 @@ interface CloudSentinelApi {
 
     @POST("mobile/block-ip")
     suspend fun blockIp(@Body request: BlockIpRequest): SimpleOkResponse
+
+    @GET("mobile/dashboard")
+    suspend fun getDashboardStats(): ClusterStatsResponse
+
+    @POST("mobile/exposure")
+    suspend fun toggleExposure(@Body request: ExposureToggleRequest): ExposureToggleResponse
+
+    @GET("mobile/sessions")
+    suspend fun getSessions(): MobileSessionsResponse
+
+    @POST("mobile/ai-copilot")
+    suspend fun askAiCopilot(@Body request: MobileCopilotRequest): MobileCopilotResponse
+
+    @POST("mobile/policy")
+    suspend fun updatePolicy(@Body request: MobileAlertPolicyInfo): UpdatePolicyResponse
+
+    @POST("mobile/runtime-controls")
+    suspend fun updateRuntimeControls(@Body request: RuntimeControlsRequest): RuntimeControlsResponse
 }

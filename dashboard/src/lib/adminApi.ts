@@ -42,6 +42,34 @@ export function adminApiConfigError(): NextResponse | null {
   }
 }
 
+export async function proxyAdminGet(
+  upstreamPath: string,
+  timeoutMs = 8000,
+): Promise<NextResponse> {
+  const configError = adminApiConfigError();
+  if (configError) return configError;
+  const { baseUrl, headers } = adminApiConfig();
+
+  try {
+    const response = await fetch(new URL(upstreamPath, baseUrl), {
+      method: "GET",
+      cache: "no-store",
+      headers,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const data = await response.json().catch(() => ({}));
+    return NextResponse.json(
+      response.ok ? data : { ok: false, error: data.detail ?? data.error ?? response.statusText },
+      { status: 200 },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "request failed" },
+      { status: 200 },
+    );
+  }
+}
+
 export async function proxyAdminPost(
   request: Request,
   upstreamPath: string,

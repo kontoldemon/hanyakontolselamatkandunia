@@ -17,6 +17,15 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def isolated_runtime_config(tmp_path, monkeypatch):
+    """Keep dashboard runtime settings out of the repository during tests."""
+    monkeypatch.setenv(
+        "CLOUDSENTINEL_RUNTIME_CONFIG_PATH",
+        str(tmp_path / "runtime_config.json"),
+    )
+
+
 @pytest.fixture(scope="session")
 def event_loop():
     """Create a session-scoped event loop for async tests."""

@@ -15,6 +15,26 @@ import {
 import { formatUptime, normalizeTelemetrySource } from "./parsers";
 import { handleUnauthorizedApi } from "./socketClient";
 
+type SharedResponse = { status: number; ok: boolean; data: unknown };
+
+// Coalesce duplicate dashboard requests so mounted hooks share one poll per endpoint.
+const responseCache = new Map<string, { at: number; promise: Promise<SharedResponse> }>();
+
+function sharedGet(url: string, ttlMs: number): Promise<SharedResponse> {
+  const now = Date.now();
+  const cached = responseCache.get(url);
+  if (cached && now - cached.at < ttlMs) {
+    return cached.promise;
+  }
+  const promise = fetch(url, { cache: "no-store" }).then(async (response) => ({
+    status: response.status,
+    ok: response.ok,
+    data: await response.json().catch(() => ({})),
+  }));
+  responseCache.set(url, { at: now, promise });
+  return promise;
+}
+
 let warRoomSnapshotCache: WarRoomState | null = null;
 
 function loadPersistedWarRoomState(): WarRoomState | null {
@@ -86,7 +106,7 @@ export function useDashboardStats() {
 
     async function loadStats() {
       try {
-        const response = await fetch("/api/cloudsentinel/summary", { cache: "no-store" });
+        const response = await sharedGet("/api/cloudsentinel/summary", 3500);
         if (response.status === 401) {
           handleUnauthorizedApi("summary");
           return;
@@ -96,7 +116,7 @@ export function useDashboardStats() {
           maybeSetOffline();
           return;
         }
-        const data = (await response.json()) as SummaryResponse;
+        const data = response.data as SummaryResponse;
         if (cancelled) {
           return;
         }
@@ -135,7 +155,6 @@ export function useDashboardStats() {
         setStats({
           ...EMPTY_STATS,
           activeSessions,
-          blockedIPs: metrics.blockedIpsCurrent ?? 0,
           totalAttacks:
             totalAuthFailures +
             totalConnections +
@@ -150,7 +169,6 @@ export function useDashboardStats() {
           totalAuthFailures,
           totalCommands,
           totalBlocks,
-          concurrentConnections: activeSessions,
           mttb:
             typeof metrics.mttbMs === "number" && metrics.mttbMs > 0
               ? `${metrics.mttbMs.toFixed(2)}ms`
@@ -242,7 +260,7 @@ export function useSensorOperations() {
 
     async function loadOperations() {
       try {
-        const response = await fetch("/api/cloudsentinel/operations", { cache: "no-store" });
+        const response = await sharedGet("/api/cloudsentinel/operations", 8000);
         if (response.status === 401) {
           handleUnauthorizedApi("operations");
           return;
@@ -252,7 +270,7 @@ export function useSensorOperations() {
           maybeSetOffline();
           return;
         }
-        const data = (await response.json()) as SensorOperations;
+        const data = response.data as SensorOperations;
         if (!cancelled) {
           consecutiveFailuresRef.current = 0;
           lastSuccessAtRef.current = Date.now();
@@ -332,7 +350,7 @@ export function useWarRoomState() {
 
     async function loadWarRoomState() {
       try {
-        const response = await fetch("/api/cloudsentinel/war-room-state", { cache: "no-store" });
+        const response = await sharedGet("/api/cloudsentinel/war-room-state", 4000);
         if (response.status === 401) {
           handleUnauthorizedApi("war-room-state");
           return;
@@ -342,7 +360,7 @@ export function useWarRoomState() {
           keepLastState();
           return;
         }
-        const data = (await response.json()) as WarRoomState;
+        const data = response.data as WarRoomState;
         if (cancelled) {
           return;
         }

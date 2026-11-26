@@ -22,6 +22,7 @@ async def start_admin_api(
     soar: Any = None,
     cert_path: str = "",
     key_path: str = "",
+    anomaly: Any = None,
 ) -> None:
     admin_server = os.getenv("ADMIN_SERVER", "uvicorn").lower()
     if admin_server == "granian":
@@ -40,7 +41,7 @@ async def start_admin_api(
 
         _USE_GRANIAN = False
 
-    app = create_admin_app(settings, pipeline, soar)
+    app = create_admin_app(settings, pipeline, soar, anomaly)
 
     tls_kwargs: dict[str, Any] = {}
     if cert_path and key_path and Path(cert_path).exists() and Path(key_path).exists():

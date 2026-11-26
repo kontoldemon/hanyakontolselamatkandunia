@@ -67,7 +67,7 @@ export function detectIntentActions(
     actions.push({
       type: "block_ip",
       label: `Block IP ${ip}`,
-      description: "Apply iptables firewall rule at the sensor",
+      description: "Apply a SOAR firewall block at the sensor",
       params: { value: ip },
     });
   }
@@ -113,22 +113,27 @@ export function detectIntentActions(
     {
       keywords: ["deception level", "deception", "vfs"],
       target: "settings.deception_level",
-      values: { high: "High (Full VFS)", medium: "Medium (Restricted)", low: "Low (Port listener)" },
+      values: { high: "full", full: "full", medium: "restricted", restricted: "restricted", low: "listener", listener: "listener" },
     },
     {
       keywords: ["hassh action", "hassh", "fingerprint action"],
       target: "settings.hassh_action",
-      values: { drop: "Immediate Drop", monitor: "Allow & Monitor", tarpit: "Tarpit" },
+      values: { drop: "drop", monitor: "monitor" },
     },
     {
       keywords: ["soar trigger", "trigger condition"],
       target: "settings.soar_trigger",
-      values: { mitre: "MITRE Match (>1)", spike: "Auth Spike (>10/m)", any: "Any Input" },
+      values: { risk: "risk", mitre: "mitre", spike: "auth_spike", any: "any_input" },
     },
     {
-      keywords: ["execution path", "soar execution", "lambda", "docker"],
+      keywords: ["execution path", "soar execution", "azure function", "function", "netfilter", "docker"],
       target: "settings.soar_execution",
-      values: { warm: "Lambda (Warm)", cold: "Lambda (Cold)", docker: "Local Docker" },
+      values: {
+        "event grid": "eventgrid",
+        netfilter: "host",
+        docker: "host",
+        warm: "eventgrid",
+      },
     },
   ];
 

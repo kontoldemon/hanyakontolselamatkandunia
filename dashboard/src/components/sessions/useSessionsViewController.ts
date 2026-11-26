@@ -41,16 +41,6 @@ export function useSessionsViewController() {
     const lastNonEmptySessionsAtRef = useRef(0);
     const lastSelectedSnapshotRef = useRef<CapturedSession | null>(null);
 
-    const [viewedSessionIds, setViewedSessionIds] = useState<Set<string>>(() => {
-        if (typeof window === "undefined") return new Set<string>();
-        try {
-            const raw = window.localStorage.getItem("cloudsentinel.viewed_sessions");
-            return raw ? new Set(JSON.parse(raw)) : new Set<string>();
-        } catch {
-            return new Set<string>();
-        }
-    });
-
     const filteredSessions = useMemo(() => {
         const byIp = new Map<string, CapturedSession[]>();
         const query = searchQuery.toLowerCase();
@@ -183,17 +173,6 @@ export function useSessionsViewController() {
         setSelectedSessionId(session.id);
         setLastSelectedIp(session.ip);
         lastSelectedSnapshotRef.current = session;
-        setViewedSessionIds((prev) => {
-            if (prev.has(session.id)) return prev;
-            const next = new Set(prev);
-            next.add(session.id);
-            try {
-                window.localStorage.setItem("cloudsentinel.viewed_sessions", JSON.stringify([...next].slice(-500)));
-            } catch {
-                // ignore storage quota error
-            }
-            return next;
-        });
     }, []);
 
     useAgentCommand("sessions.search", useCallback((v: string) => setSearchQuery(v), []));
@@ -386,7 +365,6 @@ export function useSessionsViewController() {
         nowMs,
         searchQuery,
         onSelect: selectSession,
-        viewedSessionIds,
     };
 
     const clearSelection = useCallback(() => {

@@ -176,12 +176,12 @@ class MobilePushService:
                         id=str(item["id"]),
                         ip=str(item.get("ip", "")),
                         country=str(item.get("country", "Unknown")),
-                        risk_score=int(item.get("risk_score", 0)),
-                        event_type=str(item.get("event_type", "THREAT_DETECTED")),
+                        risk_score=int(item.get("risk_score", item.get("riskScore", 0))),
+                        event_type=str(item.get("event_type", item.get("eventType", "THREAT_DETECTED"))),
                         summary=str(item.get("summary", "")),
-                        mitre_id=str(item.get("mitre_id", "")),
+                        mitre_id=str(item.get("mitre_id", item.get("mitreId", ""))),
                         blocked=bool(item.get("blocked", False)),
-                        timestamp_ms=int(item.get("timestamp_ms", 0)),
+                        timestamp_ms=int(item.get("timestamp_ms", item.get("timestampMs", 0))),
                     )
                 )
         except Exception as exc:

@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "https://cloudsentinel.zis3c.dev",
+  [string]$BaseUrl = "https://dashboard-six-mu-20.vercel.app",
   [string]$Window = "24h",
   [string]$OutDir = "artifacts",
   [string]$AuthCookie = "",

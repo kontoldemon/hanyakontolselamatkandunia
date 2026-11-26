@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Ban, Check, Copy, Fingerprint, Shield, ShieldAlert, Terminal } from "lucide-react";
+import { ArrowLeft, Ban, Check, Copy, Fingerprint, Shield, ShieldAlert, Terminal, X } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import type { CapturedSession } from "@/lib/liveEvents";
@@ -67,6 +67,18 @@ export default function SessionDetailPane({
     const [activeTab, setActiveTab] = useState<"forensics" | "mitre" | "soar">("forensics");
     const scrollRef = useRef<HTMLDivElement>(null);
     const [showScrollDown, setShowScrollDown] = useState(false);
+    const [closingBlockIp, setClosingBlockIp] = useState<string | null>(null);
+    const activeBlockIp = confirmBlockIp ?? closingBlockIp;
+    const isClosingBlock = closingBlockIp !== null;
+
+    const handleCloseBlockModal = useCallback(() => {
+        if (closingBlockIp !== null) return;
+        setClosingBlockIp(confirmBlockIp);
+        setTimeout(() => {
+            onRequestBlockIp(null);
+            setClosingBlockIp(null);
+        }, 180);
+    }, [closingBlockIp, confirmBlockIp, onRequestBlockIp]);
 
     const handleScroll = useCallback(() => {
         if (!scrollRef.current) return;
@@ -102,7 +114,22 @@ export default function SessionDetailPane({
 
     const selectedAction = formatSoarAction(selectedView?.soarAction);
     const selectedBlocked = isBlockEffective(selectedView?.soarAction, selectedView?.blockEffective);
-    const riskScore = selectedView?.riskScore ?? 85;
+    const riskScore = selectedView?.riskScore;
+    const rawSoarAction = (selectedView?.soarAction ?? "").toLowerCase();
+    const enforcementLayer = selectedBlocked
+        ? rawSoarAction.includes("eventgrid") || rawSoarAction.includes("nsg")
+            ? "Azure NSG Deny Rule"
+            : rawSoarAction.includes("iptables")
+                ? "Linux Netfilter / iptables"
+                : "SOAR Block Rule"
+        : rawSoarAction.includes("dry_run")
+            ? "Dry-run (not enforced)"
+            : "Monitor only";
+    const responsePipeline = selectedBlocked
+        ? "Automated SOAR Trigger"
+        : rawSoarAction.includes("dry_run")
+            ? "Dry-run Policy"
+            : "Detection only";
 
     return (
         <>
@@ -123,7 +150,7 @@ export default function SessionDetailPane({
                                     {selectedView.ip}
                                 </h2>
                                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-white/10 shrink-0">
-                                    Port 22/TCP
+                                    Port 2222/TCP
                                 </span>
                             </div>
                             <button
@@ -237,22 +264,26 @@ export default function SessionDetailPane({
                                                         <span className="text-[10.5px] font-semibold text-slate-800 dark:text-slate-200">Threat Assessment</span>
                                                         <span className={cn(
                                                             "text-[9.5px] font-mono px-1.5 py-0.5 rounded font-bold border",
-                                                            riskScore >= 80
-                                                                ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
-                                                                : riskScore >= 50
-                                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                                                                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                                            riskScore == null
+                                                                ? "bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-slate-400 border-slate-200/60 dark:border-white/10"
+                                                                : riskScore >= 80
+                                                                    ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
+                                                                    : riskScore >= 50
+                                                                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                                                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                                                         )}>
-                                                            Risk {riskScore}/100
+                                                            {riskScore == null ? "Not scored" : `Risk ${riskScore}/100`}
                                                         </span>
                                                     </div>
                                                     <div className="w-full h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                                                         <div
                                                             className={cn(
                                                                 "h-full rounded-full transition-all",
-                                                                riskScore >= 80 ? "bg-red-500" : riskScore >= 50 ? "bg-amber-500" : "bg-emerald-500"
+                                                                riskScore == null
+                                                                    ? "bg-slate-300 dark:bg-white/10"
+                                                                    : riskScore >= 80 ? "bg-red-500" : riskScore >= 50 ? "bg-amber-500" : "bg-emerald-500"
                                                             )}
-                                                            style={{ width: `${Math.min(100, Math.max(5, riskScore))}%` }}
+                                                            style={{ width: `${riskScore == null ? 0 : Math.min(100, Math.max(5, riskScore))}%` }}
                                                         />
                                                     </div>
                                                 </div>
@@ -429,21 +460,21 @@ export default function SessionDetailPane({
                                                     <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
                                                         <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Mean Time to Block</span>
                                                         <span className="text-slate-900 dark:text-slate-200 font-semibold text-xs block">
-                                                            {(selectedView.mttbMs ?? 0) > 0 ? `${(selectedView.mttbMs ?? 0).toFixed(2)}ms` : "1.08ms"}
+                                                            {(selectedView.mttbMs ?? 0) > 0 ? `${(selectedView.mttbMs ?? 0).toFixed(2)}ms` : "Not blocked"}
                                                         </span>
                                                     </div>
 
                                                     <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
                                                         <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Enforcement Layer</span>
                                                         <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium">
-                                                            {selectedBlocked ? "Linux Netfilter / iptables" : "Simulated Deception Node"}
+                                                            {enforcementLayer}
                                                         </span>
                                                     </div>
 
                                                     <div className="bg-white dark:bg-[#0c0d10] p-2.5 rounded-lg border border-slate-200/60 dark:border-white/5">
                                                         <span className="text-[10px] text-slate-400 block mb-0.5 font-sans">Response Pipeline</span>
                                                         <span className="text-slate-900 dark:text-slate-200 text-xs block font-medium">
-                                                            Automated Event Trigger
+                                                            {responsePipeline}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -473,24 +504,65 @@ export default function SessionDetailPane({
                 )}
             </div>
 
-            {confirmBlockIp && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold mb-2">Block IP</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Are you sure you want to block <span className="font-mono bg-slate-100 dark:bg-white/10 px-1 rounded">{confirmBlockIp}</span> at the sensor firewall?</p>
-                        <div className="flex gap-3 justify-end">
+            {activeBlockIp && (
+                <div
+                    onClick={handleCloseBlockModal}
+                    className={cn(
+                        "fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4",
+                        isClosingBlock ? "animate-overlay-out" : "animate-overlay-in"
+                    )}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                            "relative max-w-[320px] w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-6 text-center shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-[#0c0c0e] dark:shadow-[0_24px_60px_rgba(0,0,0,0.8)]",
+                            isClosingBlock ? "animate-modal-out" : "animate-modal-in"
+                        )}
+                    >
+                        {/* Dismiss Button */}
+                        <button
+                            type="button"
+                            onClick={handleCloseBlockModal}
+                            className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                            aria-label="Close"
+                        >
+                            <X size={15} />
+                        </button>
+
+                        {/* Icon Header */}
+                        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/80 bg-slate-100/80 text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200">
+                            <Ban size={16} className="text-rose-500 dark:text-rose-400" />
+                        </div>
+
+                        {/* Title & Description */}
+                        <h3 className="font-display text-base font-bold tracking-tight text-slate-900 sm:text-lg dark:text-white">
+                            Block IP
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Are you sure you want to block <span className="font-mono bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded text-rose-500 dark:text-rose-400 font-semibold">{activeBlockIp}</span> at the sensor firewall?
+                        </p>
+
+                        {/* Action Buttons */}
+                        <div className="mt-5 flex items-center gap-2.5">
                             <button
-                                onClick={(e) => { e.stopPropagation(); onRequestBlockIp(null); }}
-                                className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                                type="button"
+                                onClick={handleCloseBlockModal}
+                                className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={(e) => { e.stopPropagation(); onConfirmBlockIp(confirmBlockIp); }}
-                                disabled={blockingIp === confirmBlockIp}
-                                className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onConfirmBlockIp(activeBlockIp);
+                                    handleCloseBlockModal();
+                                }}
+                                disabled={blockingIp === activeBlockIp}
+                                className="inline-flex h-9.5 flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600 hover:bg-rose-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer"
                             >
-                                {blockingIp === confirmBlockIp ? "Blocking..." : "Confirm"}
+                                <Ban size={12} />
+                                <span>{blockingIp === activeBlockIp ? "Blocking..." : "Confirm"}</span>
                             </button>
                         </div>
                     </div>

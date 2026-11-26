@@ -17,7 +17,7 @@ Do not test against systems you do not own. The local demo and CI are the suppor
 
 | Check | Workflow | Scope | Current result |
 |---|---|---|---|
-| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 522 passed, 99.32% (gate 99%) |
+| Unit tests + coverage | `.github/workflows/ci.yml` | Python 3.12, Redis service | 531 passed, 99.32% (CI at `de3ddfb`) |
 | SQL/static lint | `.github/workflows/ci.yml` | Ruff critical rules | passing |
 | CodeQL | `.github/workflows/codeql.yml` | Python + JavaScript/TypeScript, `security-extended` | 0 open alerts (2026-11-06) |
 | Python dependency audit | `.github/workflows/security.yml` | `pip-audit -r src/cloudsentinel/requirements.txt` | 0 known vulnerabilities |
@@ -50,8 +50,9 @@ npm audit --omit=dev --audit-level=high
 - **Bandit medium findings** cover deliberate honeypot behavior: fake `/tmp` paths, permissive listener defaults, local trusted VFS pickle loading, and parameterized ClickHouse query fragments built from constants. They are reported but do not fail CI. High-severity findings do fail CI.
 - **The nested `minimatch` used by `@typescript-eslint/typescript-estree` is pinned to `11.0.5`.** This clears the last dev-only advisory while keeping lint and build passing.
 - **`CLOUDSENTINEL_AUTH_SECRET` is required when auth is enabled.** `load_settings` validates this and refuses to start in production without it.
-- **The admin API fails closed.** With no `ADMIN_TOKEN` and no JWT auth, protected endpoints return `503`. Compose also refuses to start without `ADMIN_TOKEN`. The Prometheus `/metrics` endpoint stays unauthenticated and must remain private; nginx restricts it and Compose binds the API to localhost.
-- **The public stream is read-only and unauthenticated.** Captured passwords are removed before emit; other attacker commands remain visible.
+- **The admin API fails closed.** With no `ADMIN_TOKEN` and no JWT auth, protected endpoints return `503`. Compose also refuses to start without `ADMIN_TOKEN`. `/docs` and `/openapi.json` are disabled unless `CLOUDSENTINEL_ENABLE_DOCS=1`; enable them only for local debugging. The Prometheus `/metrics` endpoint stays unauthenticated and must remain private; nginx restricts it and Compose binds the API to localhost.
+- **The stream is read-only and can require a token.** Set `STREAM_AUTH_TOKEN` on the sensor and `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN` on the dashboard to the same value. If the token is empty the stream stays open, so keep it on a private network or behind TLS. Captured passwords are removed before emit; other attacker commands remain visible to connected clients.
+- **Mobile devices use a separate scoped credential.** Pairing requires a short-lived code plus token; device tokens are hashed at rest and revokeable. Mobile blocks use the normal block handler. Mobile exposure uses the sensor host iptables path, not the Azure NSG, and fails closed when the command cannot run. Device tokens can also change in-memory runtime controls, so treat them as high-privilege credentials. FCM push uses a manually supplied access token that must be rotated before expiry.
 - **Per-session memory is bounded.** SOAR, HASSH, and connection-limiter maps cap at 10,000 entries; SSH command lines cap at 8 KiB and per-session TTY logs at 1 MB.
 - **Dashboard OTP delivery fails closed in production.** A missing `RESEND_API_KEY`/`ADMIN_EMAIL` or a failed email send returns `503`. The OTP is logged only in development.
 - **Firewall actions must remain dry-run until the deployment host is verified.** Production mode requires `SOAR_FIREWALL_DRY_RUN=false` and a working Event Grid/Function path or host agent.

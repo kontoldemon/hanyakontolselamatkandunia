@@ -2,6 +2,8 @@ package com.cloudsentinel.mobile.ui.alerts
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,12 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,31 +35,47 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
+import com.cloudsentinel.mobile.core.theme.AmberWarning
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cloudsentinel.mobile.R
 import com.cloudsentinel.mobile.core.network.ThreatAlertItem
-import com.cloudsentinel.mobile.core.theme.ElectricBlueSoft
-import com.cloudsentinel.mobile.core.theme.EmeraldLive
+import com.cloudsentinel.mobile.core.theme.ElectricBlue
+import com.cloudsentinel.mobile.core.theme.ObsidianBg
+import com.cloudsentinel.mobile.core.theme.ObsidianBorder
+import com.cloudsentinel.mobile.core.theme.ObsidianCard
+import com.cloudsentinel.mobile.core.theme.ObsidianSurfaceElevated
+import com.cloudsentinel.mobile.core.theme.TextMutedDark
+import com.cloudsentinel.mobile.core.theme.TextPrimaryDark
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertFeedScreen(
     alerts: List<ThreatAlertItem>,
+    isRefreshing: Boolean,
+    isSensorReachable: Boolean?,
     onRefresh: () -> Unit,
     onBlockIp: (String) -> Unit,
+    onInspectAlert: (ThreatAlertItem) -> Unit,
     onOpenSettings: () -> Unit
 ) {
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var selectedFilter by remember { mutableStateOf("ALL") }
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -66,51 +84,38 @@ fun AlertFeedScreen(
         }
     }
 
+    val filteredAlerts = remember(alerts, selectedFilter) {
+        when (selectedFilter) {
+            "CRITICAL" -> alerts.filter { it.riskScore >= 85 }
+            "BLOCKED" -> alerts.filter { it.blocked }
+            else -> alerts
+        }
+    }
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = ObsidianBg,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = ObsidianBg
                 ),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_shield_logo),
                             contentDescription = "CloudSentinel",
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(28.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = buildAnnotatedString {
-                                append("Cloud")
-                                withStyle(SpanStyle(color = ElectricBlueSoft)) {
-                                    append("Sentinel")
-                                }
-                            },
-                            style = MaterialTheme.typography.titleMedium
+                            text = "Alerts",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 20.sp,
+                                letterSpacing = (-0.3).sp
+                            ),
+                            color = TextPrimaryDark
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(EmeraldLive.copy(alpha = 0.14f))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(EmeraldLive)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = "LIVE",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = EmeraldLive
-                            )
-                        }
                     }
                 },
                 actions = {
@@ -118,62 +123,156 @@ fun AlertFeedScreen(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh alerts",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = TextMutedDark,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
             )
         }
     ) { innerPadding ->
-        if (alerts.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_shield_logo),
-                        contentDescription = null,
-                        modifier = Modifier.size(44.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            AnimatedVisibility(visible = isSensorReachable == false) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AmberWarning.copy(alpha = 0.12f))
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(AmberWarning)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Sensor Perimeter Clear",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "No high-risk alerts received yet. Trigger Send Test Alert from Web Settings to verify delivery.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Sensor unreachable · Waiting to reconnect",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AmberWarning,
+                        fontSize = 12.sp
                     )
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+
+            // Minimalist Filter Row
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(alerts, key = { it.id }) { alert ->
-                    AlertCard(
-                        alert = alert,
-                        nowMs = nowMs,
-                        onBlockIp = onBlockIp
-                    )
+                val filters = listOf(
+                    "ALL" to "All (${alerts.size})",
+                    "CRITICAL" to "Critical (${alerts.count { it.riskScore >= 85 }})",
+                    "BLOCKED" to "Blocked (${alerts.count { it.blocked }})"
+                )
+                items(filters) { (key, label) ->
+                    val isSelected = selectedFilter == key
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isSelected) ElectricBlue else ObsidianCard)
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) ElectricBlue else ObsidianBorder,
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { selectedFilter = key }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            ),
+                            color = if (isSelected) TextPrimaryDark else TextMutedDark,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            ) {
+                if (filteredAlerts.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(ObsidianCard)
+                                    .border(1.dp, ObsidianBorder, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_shield_logo),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(18.dp))
+                            Text(
+                                text = if (alerts.isEmpty()) "Perimeter Clear" else "No Matching Alerts",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 17.sp
+                                ),
+                                color = TextPrimaryDark,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = if (alerts.isEmpty()) {
+                                    "No threat alerts dispatched yet. New detections from your sensor will show up here."
+                                } else {
+                                    "Switch filters above to view other captured honeypot alerts."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMutedDark,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 19.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(filteredAlerts, key = { it.id }) { alert ->
+                            AlertCard(
+                                alert = alert,
+                                nowMs = nowMs,
+                                onBlockIp = { ip ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onBlockIp(ip)
+                                },
+                                onClick = { onInspectAlert(alert) }
+                            )
+                        }
+                    }
                 }
             }
         }

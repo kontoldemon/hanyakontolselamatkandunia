@@ -60,15 +60,15 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
           <div className="h-full flex items-center justify-center text-slate-500">No network data available</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
-              <XAxis type="number" hide />
+            <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 6, left: -25, bottom: 0 }}>
+              <XAxis type="number" hide domain={[0, "dataMax"]} />
               <YAxis
                 dataKey="name"
                 type="category"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: "#64748b" }}
-                width={120}
+                width={100}
                 tickFormatter={(value) => (value.length > 15 ? value.substring(0, 15) + "..." : value)}
               />
               <Tooltip

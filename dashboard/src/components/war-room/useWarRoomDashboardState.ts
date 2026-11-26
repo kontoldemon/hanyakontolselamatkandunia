@@ -17,7 +17,6 @@ const REALTIME_ATTACK_HINT_MS = 20 * 1000;
 export function useWarRoomDashboardState() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [displayConnections, setDisplayConnections] = useState(0);
-  const [chipState, setChipState] = useState<"OFFLINE" | "LIVE" | "UNDER ATTACK">("LIVE");
   const [now, setNow] = useState<number>(0);
 
   const stats = useDashboardStats();
@@ -167,72 +166,11 @@ export function useWarRoomDashboardState() {
 
   const inferredWarRoomOnline = rawOnlineSignal || hasRecentConnectivityEvidence;
   const inferredUnderAttack = inferredWarRoomOnline && (rawAttackSignal || hasRecentAttackEvidence);
-  const inferredWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
-    !inferredWarRoomOnline && !hasRecentThreatActivity
-      ? "OFFLINE"
-      : inferredUnderAttack
-        ? "UNDER ATTACK"
-        : "LIVE";
-  const backendWarRoomStateRaw: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
-    warRoom.state === "under_attack"
-      ? "UNDER ATTACK"
-      : warRoom.state === "live"
-        ? "LIVE"
-        : "OFFLINE";
   const exposurePaused = warRoom.exposure?.effectiveEnabled === false;
-  const sensorReachable =
-    !exposurePaused && (operations?.source === "live" || operations?.sensor.readiness.ok === true);
-  const backendWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" =
-    backendWarRoomStateRaw === "OFFLINE" && sensorReachable ? "LIVE" : backendWarRoomStateRaw;
   const backendUnderAttack = warRoom.state === "under_attack";
-  const backendStateStale = now > 0 && warRoom.updatedAt > 0 && now - warRoom.updatedAt > 60_000;
-  const useEmergencyFallback = !warRoom.ok || (warRoom.degraded && backendStateStale);
-  const derivedWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = useEmergencyFallback
-    ? inferredWarRoomState
-    : backendWarRoomState === "LIVE" && hasRealtimeAttackHint
-      ? "UNDER ATTACK"
-      : backendWarRoomState;
-  const initialUnknownState = !warRoom.ok && warRoom.updatedAt <= 0;
-  const warRoomPending = !exposurePaused && initialUnknownState;
-  const warRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = exposurePaused
-    ? "OFFLINE"
-    : initialUnknownState && derivedWarRoomState === "OFFLINE"
-      ? "LIVE"
-      : derivedWarRoomState;
-  const recentOnlineEvidence =
-    (warRoom.lastOnlineAt ?? 0) > 0 && now > 0 && now - Number(warRoom.lastOnlineAt) <= 90_000;
-  const recentWarRoomRefresh = warRoom.updatedAt > 0 && now > 0 && now - warRoom.updatedAt <= 2500;
-  const holdOfflineLabel =
-    !exposurePaused &&
-    warRoomState === "OFFLINE" &&
-    (recentWarRoomRefresh || sensorReachable || recentOnlineEvidence);
-  const warRoomChipPending = warRoomPending || holdOfflineLabel;
-  const stableWarRoomState: "OFFLINE" | "LIVE" | "UNDER ATTACK" = warRoomChipPending ? "LIVE" : warRoomState;
-
-  useEffect(() => {
-    const nextState =
-      stableWarRoomState === "UNDER ATTACK" || stableWarRoomState === "LIVE"
-        ? stableWarRoomState
-        : "OFFLINE";
-    const delayMs = nextState === "OFFLINE" ? 1500 : 0;
-    const timer = window.setTimeout(() => {
-      setChipState(nextState);
-    }, delayMs);
-    return () => window.clearTimeout(timer);
-  }, [stableWarRoomState]);
-
-  const exposureSyncing = warRoom.exposure?.syncing === true;
-  const exposureSyncStartedAt = warRoom.exposure?.updatedAt ?? 0;
-  const exposureSyncElapsedSec =
-    exposureSyncing && exposureSyncStartedAt > 0
-      ? Math.max(0, Math.floor((now - exposureSyncStartedAt) / 1000))
-      : 0;
-  const exposureSyncSlow = exposureSyncing && exposureSyncElapsedSec >= 8;
   const underAttack = exposurePaused
     ? false
-    : useEmergencyFallback
-      ? inferredUnderAttack
-      : backendUnderAttack || hasRealtimeAttackHint;
+    : backendUnderAttack || inferredUnderAttack || hasRealtimeAttackHint;
 
   const mappedFromGraph = (operations?.sensor.attackGraph.data?.nodes ?? []).filter((node) => {
     if (!node || typeof node !== "object") {
@@ -253,7 +191,7 @@ export function useWarRoomDashboardState() {
     }
     return unique.size;
   })();
-  const mappedMitreCount = Math.max(stats.mitreCoverage, mappedFromGraph, mappedFromSessions);
+  const mappedMitreCount = Math.max(mappedFromGraph, mappedFromSessions);
 
   const downloadSensorJson = useCallback(() => {
     if (!operations) {
@@ -285,15 +223,10 @@ export function useWarRoomDashboardState() {
     selectedRegion,
     setSelectedRegion,
     displayConnections,
-    chipState,
     stats,
     operations,
     warRoom,
     combinedLogs,
-    warRoomChipPending,
-    exposureSyncing,
-    exposureSyncElapsedSec,
-    exposureSyncSlow,
     underAttack,
     mappedMitreCount,
     downloadSensorJson,

@@ -288,7 +288,13 @@ export function useIntelligenceViewData(params: {
                 riskWeight += sessionWeight;
             }
             const action = (session.soarAction ?? "").trim().toLowerCase();
-            if (session.blockEffective || action === "iptables_block" || action === "already_blocked") {
+            if (
+              session.blockEffective ||
+              action === "iptables_block" ||
+              action === "already_blocked" ||
+              action === "eventgrid_published" ||
+              action === "event_published"
+            ) {
                 blockedSessionWeight += sessionWeight;
             }
         }

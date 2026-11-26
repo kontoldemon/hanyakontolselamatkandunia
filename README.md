@@ -7,6 +7,7 @@ CloudSentinel is an SSH honeypot and automated response platform. It records att
 - The Azure migration is the supported target: sensor VM, private ClickHouse VM, Event Grid, Azure Function + NSG rules, Key Vault, Blob backups, and the Vercel dashboard.
 - The legacy DigitalOcean Phase 1 deployment is retired and is no longer a supported target.
 - The dashboard runs on Vercel.
+- The Android companion is in `mobile-android/`; see [docs/MOBILE.md](docs/MOBILE.md). It is a scoped companion, not a second admin console.
 - For a zero-cost demo, run the full stack locally with Docker. See [docs/LOCAL_DEMO.md](docs/LOCAL_DEMO.md).
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writing the report. Azure is the only supported deployment target.
@@ -25,6 +26,8 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code or writin
 | Backups | Azure Blob Storage target |
 | Live stream | Socket.io server on the sensor VM |
 | Admin API | FastAPI service, token/JWT protected |
+| Mobile backend | FastAPI `/mobile/*` routes with scoped device tokens and FCM |
+| Android app | Kotlin + Jetpack Compose, min SDK 26, target SDK 35 |
 | Dashboard | Next.js 16 on Vercel |
 | Secrets | Azure Key Vault with private endpoint and managed identity |
 | Infrastructure as code | Bicep |
@@ -54,6 +57,7 @@ For a server deployment, see [docs/DEPLOY.md](docs/DEPLOY.md).
 | Need | Read |
 |---|---|
 | Architecture and trust boundaries | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Android companion, pairing, FCM, debug | [docs/MOBILE.md](docs/MOBILE.md) |
 | Which document is current | [docs/INDEX.md](docs/INDEX.md) |
 | Zero-cost local demo | [docs/LOCAL_DEMO.md](docs/LOCAL_DEMO.md) |
 | Deployment steps | [docs/DEPLOY.md](docs/DEPLOY.md) |
@@ -80,7 +84,8 @@ The `0.86 s` MTTB in the literature is from Chin et al. (2025). It is not a resu
 - Honeypot credentials are accepted on purpose. The sensor is not a production SSH server.
 - Redis and ClickHouse use passwords on the deployment paths. NATS uses a compose default password; override it. Keep them and the admin API on a private network or behind a firewall.
 - The admin API fails closed: it returns `503` when neither `ADMIN_TOKEN` nor JWT auth is configured. The Prometheus `/metrics` endpoint stays private.
-- The public Socket.io stream removes captured passwords before emitting events.
+- The Socket.io stream removes captured passwords before emitting events. Set `STREAM_AUTH_TOKEN` on the sensor and `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN` on the dashboard to require a token; an empty token leaves it open, so bind it behind a private network or TLS.
+- Mobile pairing uses a short-lived code plus token; device tokens are scoped to `/mobile/*`, hashed server-side, and revocable. Release Android builds reject cleartext. Mobile exposure reuses the sensor host firewall; it does not change the Azure NSG. See [docs/MOBILE.md](docs/MOBILE.md).
 - The Event Grid Function accepts only public, non-allowlisted IPs; it creates an NSG deny rule and queues its deletion after the TTL. A five-minute timer trigger cleans up expired rules if a queue message is lost. Manual dashboard blocks use the same path.
 - Do not commit `.env` files or `.vercel/` secrets. Rotate any key that was shared. Store runtime secrets in Azure Key Vault; `deploy/load_secrets.sh` copies them into `.env` through the private endpoint.
 - The LLM response path is optional. Prompts are best-effort redacted and rate-limited. Set `LLM_PROVIDER=mock` if commands must not leave the host.

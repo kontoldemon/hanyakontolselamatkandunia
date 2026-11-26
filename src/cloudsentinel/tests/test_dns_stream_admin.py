@@ -216,3 +216,102 @@ def test_admin_read_only_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
     events = client.get("/events?limit=5", headers=headers)
     assert events.status_code == 200
     assert events.json()["events"] == []
+
+def test_http_honeypot_emits_stream_and_pipeline() -> None:
+    from fastapi.testclient import TestClient
+    from cloudsentinel.http_server import create_http_honeypot
+
+    class StubPipeline:
+        def __init__(self) -> None:
+            self.envelopes: list = []
+
+        async def emit(self, envelope) -> None:
+            self.envelopes.append(envelope)
+
+    class StubStream:
+        def __init__(self) -> None:
+            self.events: list = []
+
+        def emit(self, event) -> None:
+            self.events.append(event)
+
+    class StubSoar:
+        async def process_event(self, session_id, event):
+            scored = dict(event)
+            scored["cloudsentinel_soar_action"] = "detect_only"
+            return scored
+
+    pipeline = StubPipeline()
+    stream = StubStream()
+    app = create_http_honeypot(pipeline, StubSoar(), stream=stream)
+    response = TestClient(app).get("/.env")
+    assert response.status_code == 200
+    assert pipeline.envelopes
+    assert stream.events
+    assert stream.events[-1]["eventid"] == "http.request"
+    assert stream.events[-1]["src_ip"]
+    assert "country_code" in stream.events[-1]
+    assert pipeline.envelopes[-1].payload["input"].startswith("GET")
+
+
+async def test_aux_honeypot_forwarding_helper() -> None:
+    from cloudsentinel.server import _emit_aux_honeypot_event
+
+    class StubPipeline:
+        def __init__(self) -> None:
+            self.envelopes: list = []
+
+        async def emit(self, envelope) -> None:
+            self.envelopes.append(envelope)
+
+    class StubStream:
+        def __init__(self) -> None:
+            self.events: list = []
+
+        def emit(self, event) -> None:
+            self.events.append(event)
+
+    class StubSoar:
+        async def process_event(self, session_id, event):
+            scored = dict(event)
+            scored["cloudsentinel_soar_action"] = "none"
+            return scored
+
+    pipeline = StubPipeline()
+    stream = StubStream()
+    event = {
+        "eventid": "cloudsentinel.dns.query",
+        "session": "dns",
+        "src_ip": "1.2.3.4",
+        "src_port": 5353,
+        "timestamp": 1.0,
+        "domain": "example.com",
+    }
+    scored = await _emit_aux_honeypot_event(event, pipeline, StubSoar(), stream)
+    assert scored["domain"] == "example.com"
+    assert "country_code" in scored
+    assert pipeline.envelopes[0].payload["domain"] == "example.com"
+    assert stream.events[0]["src_ip"] == "1.2.3.4"
+
+    class BrokenSoar:
+        async def process_event(self, _session_id, _event):
+            raise RuntimeError("soar down")
+
+    fallback = await _emit_aux_honeypot_event(event, pipeline, BrokenSoar(), None)
+    assert fallback["domain"] == "example.com"
+
+def test_http_honeypot_survives_stream_failure() -> None:
+    from fastapi.testclient import TestClient
+    from cloudsentinel.http_server import create_http_honeypot
+
+    class StubPipeline:
+        async def emit(self, _envelope) -> None:
+            return None
+
+    class RaisingStream:
+        def emit(self, _event) -> None:
+            raise RuntimeError("stream down")
+
+    app = create_http_honeypot(StubPipeline(), None, stream=RaisingStream())
+    response = TestClient(app).get("/config.php")
+    assert response.status_code == 404

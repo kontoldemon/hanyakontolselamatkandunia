@@ -8,10 +8,20 @@ import { ArrowLeft, CheckCircle2, Eye, EyeOff, Lock } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 
 function safeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("://")) {
+  if (!value) {
     return "/dashboard";
   }
-  return value === "/signin" ? "/dashboard" : value;
+  const base = "https://cloudsentinel.invalid";
+  try {
+    const target = new URL(value, base);
+    if (target.origin !== base) {
+      return "/dashboard";
+    }
+    const path = `${target.pathname}${target.search}${target.hash}`;
+    return path === "/signin" ? "/dashboard" : path;
+  } catch {
+    return "/dashboard";
+  }
 }
 
 export default function SignInPage() {

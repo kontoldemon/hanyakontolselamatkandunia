@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
@@ -13,6 +14,7 @@ import structlog
 from ..config import Settings, secret_to_str
 from ..geoip import enrich as geo_enrich
 from ..hassh import HASSHDNA, fallback_hassh_from_version, infer_client_software
+from ..soar import ENFORCED_BLOCK_ACTIONS, NEW_BLOCK_ACTIONS
 
 logger = structlog.get_logger("cloudsentinel.api.queries")
 
@@ -491,13 +493,27 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
         return []
 
 
+def _events_max_limit() -> int:
+    raw = os.getenv("CLOUDSENTINEL_EVENTS_MAX_LIMIT", "20000").strip()
+    try:
+        configured = int(raw)
+    except ValueError:
+        configured = 20000
+    return max(1, min(configured, 50000))
+
+
+def _action_in(column: str, actions: frozenset[str]) -> str:
+    values = ", ".join(f"'{action}'" for action in sorted(actions))
+    return f"{column} IN ({values})"
+
+
 def _load_recent_events_from_clickhouse(settings: Settings, limit: int = 100) -> list[dict[str, Any]]:
     if not settings.clickhouse.enabled:
         return []
     try:
         import clickhouse_connect
 
-        safe_limit = max(1, min(int(limit), 500))
+        safe_limit = max(1, min(int(limit), _events_max_limit()))
         query = f"""
             SELECT
                 eventid,
@@ -790,9 +806,9 @@ def _load_truth_summary_from_clickhouse(settings: Settings) -> dict[str, Any] | 
                     AND positionCaseInsensitive(input, 'cloudsentinel.') = 0
                     AND positionCaseInsensitive(input, '[redacted]') = 0
                 ) AS unique_commands,
-                countIf(positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0) AS total_blocks,
-                uniqExactIf(src_ip, positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0) AS blocked_ips_current,
-                avgIf(mttb_ms, mttb_ms > 0 AND positionCaseInsensitive(cloudsentinel_soar_action, 'block') > 0) AS mttb_ms,
+                countIf({_action_in("cloudsentinel_soar_action", NEW_BLOCK_ACTIONS)}) AS total_blocks,
+                uniqExactIf(src_ip, {_action_in("cloudsentinel_soar_action", ENFORCED_BLOCK_ACTIONS)}) AS blocked_ips_current,
+                avgIf(mttb_ms, mttb_ms > 0 AND {_action_in("cloudsentinel_soar_action", NEW_BLOCK_ACTIONS)}) AS mttb_ms,
                 avgIf(
                     toFloat64(cloudsentinel_risk_score),
                     cloudsentinel_risk_score > 0
@@ -892,3 +908,36 @@ def _load_war_room_evidence_from_clickhouse(settings: Settings) -> dict[str, Any
             "last_online_at": 0,
             "last_attack_at": 0,
         }
+
+
+async def load_recent_events_async(settings: Settings, limit: int = 100) -> list[dict[str, Any]]:
+    return await asyncio.to_thread(_load_recent_events_from_clickhouse, settings, limit)
+
+
+async def load_truth_summary_async(settings: Settings) -> dict[str, Any] | None:
+    return await asyncio.to_thread(_load_truth_summary_from_clickhouse, settings)
+
+
+async def load_recent_sessions_async(
+    settings: Settings,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    if limit is None:
+        return await asyncio.to_thread(_load_recent_sessions_from_clickhouse, settings)
+    return await asyncio.to_thread(_load_recent_sessions_from_clickhouse, settings, limit)
+
+
+async def load_attack_distribution_async(settings: Settings) -> dict[str, int]:
+    return await asyncio.to_thread(_load_attack_distribution_from_clickhouse, settings)
+
+
+async def load_attack_graph_async(settings: Settings, limit: int = 60) -> dict[str, list[dict[str, Any]]]:
+    return await asyncio.to_thread(_load_attack_graph_from_clickhouse, settings, limit)
+
+
+async def load_latest_mttb_async(settings: Settings) -> float:
+    return await asyncio.to_thread(_latest_mttb_from_clickhouse, settings)
+
+
+async def load_war_room_evidence_async(settings: Settings) -> dict[str, Any]:
+    return await asyncio.to_thread(_load_war_room_evidence_from_clickhouse, settings)

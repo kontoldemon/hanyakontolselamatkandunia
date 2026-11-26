@@ -153,7 +153,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
               });
               const data = await res.json();
               result = data.ok
-                ? `IP ${ip} has been successfully blocked at the sensor firewall (iptables). The block will expire in 1 hour.`
+                ? data.action === "dry_run_block" || data.action === "detect_only"
+                  ? `Block request for ${ip} was accepted, but SOAR is in ${data.action === "dry_run_block" ? "dry-run" : "detect-only"} mode, so no firewall rule was enforced.`
+                  : `IP ${ip} has been blocked via ${data.action ?? "the sensor firewall"}. The block will expire in 1 hour.`
                 : `Block attempt for ${ip} returned: ${data.error ?? "unknown error"}.`;
             } catch {
               result = `Network error while trying to block ${ip}. Verify sensor status in Settings.`;
@@ -177,10 +179,17 @@ export function AgentProvider({ children }: { children: ReactNode }) {
               await wait(1200);
             }
             try {
+              const stateRes = await fetch("/api/cloudsentinel/war-room-state", { cache: "no-store" });
+              const state = await stateRes.json().catch(() => ({}));
+              const current = state?.exposure?.effectiveEnabled;
+              if (typeof current !== "boolean") {
+                result = "Exposure state is unknown right now. Open Settings to review the gateway before toggling.";
+                break;
+              }
               const res = await fetch("/api/cloudsentinel/exposure", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ enabled: true }), // toggle (backend decides)
+                body: JSON.stringify({ enabled: !current }),
               });
               const data = await res.json();
               result = data.ok

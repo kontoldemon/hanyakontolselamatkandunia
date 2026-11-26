@@ -97,7 +97,13 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
     for (const s of sessions24h) {
       const action = (s.soarAction ?? "none").trim().toLowerCase() || "none";
       soarMap.set(action, (soarMap.get(action) ?? 0) + 1);
-      if (s.blockEffective || action === "iptables_block" || action === "already_blocked") blockedCount++;
+      if (
+        s.blockEffective ||
+        action === "iptables_block" ||
+        action === "already_blocked" ||
+        action === "eventgrid_published" ||
+        action === "event_published"
+      ) blockedCount++;
     }
     const soarData = [...soarMap.entries()].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     const blockRate = sessions24h.length > 0 ? clampPercent(Math.round((blockedCount / sessions24h.length) * 100)) : 0;

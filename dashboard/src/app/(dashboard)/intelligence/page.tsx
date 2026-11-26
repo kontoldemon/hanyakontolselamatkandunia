@@ -1,10 +1,11 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Download } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAgentCommand } from "@/lib/AgentContext";
 import { useSensorOperations } from "@/lib/liveEvents";
 import CustomDropdown from "@/components/ui/CustomDropdown";
+import ScrollDownHint from "@/components/ui/ScrollDownHint";
 import CountryStatsPanel from "@/components/intelligence/CountryStatsPanel";
 import TimingHeatmapPanel from "@/components/intelligence/TimingHeatmapPanel";
 import NetworkStatsPanel from "@/components/intelligence/NetworkStatsPanel";
@@ -85,6 +86,25 @@ export default function IntelligencePage() {
     const operations = useSensorOperations();
     const isAllExpanded = Object.values(panels).every(Boolean);
 
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [showScrollDown, setShowScrollDown] = useState(false);
+
+    const handleScroll = useCallback(() => {
+        if (!scrollRef.current) return;
+        const el = scrollRef.current;
+        const dist = el.scrollHeight - (el.scrollTop + el.clientHeight);
+        setShowScrollDown(dist > 35);
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (!scrollRef.current) return;
+            const el = scrollRef.current;
+            setShowScrollDown(el.scrollHeight - el.clientHeight > 35);
+        }, 150);
+        return () => clearTimeout(timer);
+    }, [panels]);
+
     const downloadIntelligenceReport = useCallback(() => {
         const payload = {
             exportedAt: new Date().toISOString(),
@@ -115,7 +135,7 @@ export default function IntelligencePage() {
     }, [downloadIntelligenceReport]);
 
     return (
-        <div className="h-full flex flex-col gap-3 overflow-hidden pt-1">
+        <div className="h-full flex flex-col gap-3 overflow-hidden pt-1 relative">
             <div className="flex justify-end items-center gap-2 shrink-0 px-1 pt-0.5">
                 <CustomDropdown
                     options={TIMELINE_OPTIONS}
@@ -152,7 +172,7 @@ export default function IntelligencePage() {
                 blockRate={kpiValues.blockRate}
             />
 
-            <div className="flex-1 overflow-y-auto terminal-scrollbar min-h-0 pb-6 pr-2 space-y-2.5">
+            <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto terminal-scrollbar min-h-0 pb-1 pr-2 space-y-2.5">
                 <AttackDistributionPanels
                     attackTypesExpanded={panels.attackTypes}
                     mitreExpanded={panels.mitre}
@@ -163,12 +183,12 @@ export default function IntelligencePage() {
                     mitreData={mitreData}
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                     <CountryStatsPanel expanded={panels.countries} onToggle={() => togglePanel("countries")} countries={stats.countries} />
                     <TimingHeatmapPanel expanded={panels.timing} onToggle={() => togglePanel("timing")} heatmap={stats.heatmap} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                     <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
                     <FingerprintsPanel expanded={panels.fingerprints} onToggle={() => togglePanel("fingerprints")} fingerprints={fingerprints} />
                 </div>
@@ -216,9 +236,12 @@ export default function IntelligencePage() {
                         expanded={panels.anomaly}
                         onToggle={() => togglePanel("anomaly")}
                         logs={filteredLiveLogs}
+                        anomaly={operations?.sensor?.anomaly}
                     />
                 </div>
             </div>
+
+            <ScrollDownHint visible={showScrollDown} />
         </div>
     );
 }

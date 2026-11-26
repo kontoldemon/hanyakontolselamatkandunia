@@ -135,6 +135,8 @@ class DNSHoneypot:
                     "src_ip": ip,
                     "src_port": addr[1],
                     "domain": query_name,
+                    "input": f"DNS {query_name}",
+                    "reason": "dns.query",
                     "timestamp": time.time(),
                     "sensor": "CloudSentinel",
                 })

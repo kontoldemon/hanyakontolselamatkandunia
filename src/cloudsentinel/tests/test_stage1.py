@@ -1143,7 +1143,7 @@ def test_war_room_state_transitions(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("cloudsentinel.admin_api._now_ms", lambda: int(clock["now"]))
     monkeypatch.setattr(
-        "cloudsentinel.admin_api._load_war_room_evidence_from_clickhouse",
+        "cloudsentinel.api.queries._load_war_room_evidence_from_clickhouse",
         lambda _settings: {
             "source": "clickhouse",
             "authoritative": True,
@@ -1212,7 +1212,7 @@ def test_war_room_state_degraded_hold(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("cloudsentinel.admin_api._now_ms", lambda: int(clock["now"]))
     monkeypatch.setattr(
-        "cloudsentinel.admin_api._load_war_room_evidence_from_clickhouse",
+        "cloudsentinel.api.queries._load_war_room_evidence_from_clickhouse",
         lambda _settings: {
             "source": "clickhouse",
             "authoritative": True,
@@ -1278,7 +1278,7 @@ def test_war_room_state_uses_direct_redis_fallback(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr("redis.asyncio.from_url", lambda *args, **kwargs: fake_redis)
     monkeypatch.setattr("cloudsentinel.admin_api._now_ms", lambda: 5_010_000)
     monkeypatch.setattr(
-        "cloudsentinel.admin_api._load_war_room_evidence_from_clickhouse",
+        "cloudsentinel.api.queries._load_war_room_evidence_from_clickhouse",
         lambda _settings: {
             "source": "clickhouse",
             "authoritative": True,

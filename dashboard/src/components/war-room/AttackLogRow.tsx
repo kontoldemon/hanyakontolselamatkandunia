@@ -24,7 +24,6 @@ export type AggregatedLog = {
 export type RowData = {
     logs: AggregatedLog[];
     selectedRegion?: string | null;
-    underAttack: boolean;
     blockingIp: string | null;
     onBlock: (ip: string) => void;
     onOpenSession: (ip: string) => void;

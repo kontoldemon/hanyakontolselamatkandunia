@@ -5,7 +5,7 @@ from __future__ import annotations
 import pickle
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 DEFAULT_PROFILES = {
     "ubuntu-22.04": {
@@ -189,6 +189,58 @@ class VirtualFileSystem:
                 vfs.mkfile(f"/home/{username}/.bashrc", b"# ~/.bashrc: executed by bash(1) for non-login shells.\n")
                 vfs.mkfile(f"/home/{username}/.profile", b"# ~/.profile: executed by the command interpreter for login shells.\n")
 
+        return vfs
+
+    CANARY_PATHS: ClassVar[tuple[str, ...]] = (
+        "/root/.aws/credentials",
+        "/root/usas_backup_credentials.txt",
+    )
+    DEEP_DECOY_PATHS: ClassVar[tuple[str, ...]] = (
+        "/root/.bash_history",
+        "/root/.ssh",
+        "/root/.ssh/authorized_keys",
+        "/root/.ssh/id_rsa",
+        "/root/.ssh/id_rsa.pub",
+        "/root/.ssh/known_hosts",
+        "/root/.mysql_history",
+        "/root/backup.sh",
+        "/root/research_grants_2026.txt",
+        "/tmp/.hidden_miner_config",
+        "/var/www",
+        "/var/www/html",
+        "/var/www/html/config.php",
+        "/var/log/auth.log",
+        "/var/log/backup.log",
+        "/etc/crontab",
+        "/etc/ssh",
+        "/etc/ssh/sshd_config",
+    )
+
+    @classmethod
+    def for_deception(
+        cls,
+        level: str = "full",
+        seed_canary_keys: bool = True,
+        os_profile_name: str = "ubuntu-22.04",
+    ) -> VirtualFileSystem:
+        if level == "full":
+            vfs = cls.build_default(os_profile_name=os_profile_name)
+        elif level == "restricted":
+            vfs = cls._build_minimal(os_profile_name)
+            for path in cls.DEEP_DECOY_PATHS:
+                vfs._entries.pop(path, None)
+            vfs.mkfile("/root/.bash_history", b"ls -la\ncd /var/tmp\nuname -a\nwhoami\nexit\n")
+            vfs.mkdir("/etc/ssh")
+            vfs.mkfile("/etc/ssh/sshd_config", b"Port 22\nPermitRootLogin yes\nPasswordAuthentication yes\n")
+            vfs.mkdir("/var/log")
+            vfs.mkfile("/var/log/auth.log", b"Jan 15 12:00:00 usas-prod-srv-01 sshd[423]: Accepted publickey for root from 10.0.0.1 port 54321 ssh2\n")
+        else:
+            vfs = cls._build_minimal(os_profile_name)
+            for path in cls.DEEP_DECOY_PATHS:
+                vfs._entries.pop(path, None)
+        if level != "full" or not seed_canary_keys:
+            for path in cls.CANARY_PATHS:
+                vfs._entries.pop(path, None)
         return vfs
 
     @classmethod

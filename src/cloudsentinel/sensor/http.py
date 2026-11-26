@@ -18,6 +18,7 @@ async def start_http_honeypot(
     settings: Settings,
     pipeline: EventPipeline,
     soar: SOAREngine,
+    stream: Any = None,
 ) -> None:
     try:
         import granian as _granian_http
@@ -30,7 +31,7 @@ async def start_http_honeypot(
 
     from ..http_server import create_http_honeypot
 
-    app = create_http_honeypot(pipeline, soar)
+    app = create_http_honeypot(pipeline, soar, stream)
     http_port = getattr(settings.honeypot, "http_port", 8080)
 
     tls_kwargs: dict[str, Any] = {}

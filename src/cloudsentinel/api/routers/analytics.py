@@ -21,6 +21,7 @@ def build_analytics_router(
     soar: Any,
     attack_distribution_ttl_seconds: int,
     attack_graph_ttl_seconds: int,
+    anomaly: Any = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -34,7 +35,7 @@ def build_analytics_router(
             from ...metrics import get_metrics
 
             metrics = get_metrics()
-            mttb_value = metrics.mttb_ms or queries._latest_mttb_from_clickhouse(settings)
+            mttb_value = metrics.mttb_ms or await queries.load_latest_mttb_async(settings)
             data.update(
                 {
                     "active_sessions": metrics.active_sessions,
@@ -60,7 +61,7 @@ def build_analytics_router(
             cached_payload, _ = await hot_cache_get("attack-distribution:strict")
             if isinstance(cached_payload, list):
                 return cached_payload
-        metrics_data = queries._load_attack_distribution_from_clickhouse(settings)
+        metrics_data = await queries.load_attack_distribution_async(settings)
         if not strict_truth:
             try:
                 from ...metrics import get_metrics
@@ -137,7 +138,7 @@ def build_analytics_router(
                         {"id": f"edge-{node_id}-{tech_id}", "source": node_id, "target": tech_id}
                     )
         if len(nodes) <= 1:
-            clickhouse_graph = queries._load_attack_graph_from_clickhouse(settings)
+            clickhouse_graph = await queries.load_attack_graph_async(settings)
             nodes.extend(clickhouse_graph.get("nodes", []))
             edges.extend(clickhouse_graph.get("edges", []))
         payload = {
@@ -155,11 +156,9 @@ def build_analytics_router(
 
     @router.get("/anomaly-stats", dependencies=[Depends(require_auth)])
     async def anomaly_stats() -> dict[str, Any]:
-        try:
-            from ...anomaly import CommandAnomalyDetector  # noqa: F401
-
-            return {"available": True, "note": "Anomaly detector active on sensor"}
-        except Exception:
+        stats = getattr(anomaly, "stats", None)
+        if not isinstance(stats, dict):
             return {"available": False}
+        return {"available": True, **stats}
 
     return router

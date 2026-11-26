@@ -13,10 +13,10 @@ import structlog
 from ..anomaly import CommandAnomalyDetector
 from ..config import Settings
 from ..geoip import enrich as geo_enrich
-from ..hassh import HASSHDNA, fallback_hassh_from_version, infer_client_software
+from ..hassh import HASSHDNA, fallback_hassh_from_version, hassh_action_applies, infer_client_software
 from ..mobile_push import MobilePushService
 from ..pipeline import EventPipeline
-from ..soar import SOAREngine
+from ..soar import ENFORCED_BLOCK_ACTIONS, NEW_BLOCK_ACTIONS, SOAREngine
 from ..stream import LiveStream
 from .fingerprint import extract_hassh, extract_ja4s
 from .limits import ConnectionLimiter
@@ -165,6 +165,23 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
                     logger.warning(
                         "KNOWN BOTNET: %s from %s", intel.get("botnet_family"), self.src_ip
                     )
+                if hassh_action_applies(
+                    self.settings.deception.hassh_action,
+                    self.settings.deception.hassh_threshold,
+                    intel,
+                ):
+                    logger.warning(
+                        "HASSH DROP: %s from %s", intel.get("client_software"), self.src_ip
+                    )
+                    asyncio.create_task(self._emit_event("cloudsentinel.login.failed", {
+                        "username": username,
+                        "auth_type": "hassh",
+                        "reason": "malicious_hassh",
+                        "hassh_md5": self.hassh,
+                    }))
+                    if self.conn is not None:
+                        self.conn.close()
+                    return False
 
         if self.conn is not None and self.ja4s is None and self.settings.fingerprinting.enable_ja4s:
             self.ja4s = extract_ja4s(self.conn, self.hassh_algorithms)
@@ -284,14 +301,14 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
         try:
             from ..metrics import get_metrics
             metrics = get_metrics()
-            if action not in ("none", "detect_only"):
+            if action in NEW_BLOCK_ACTIONS:
                 metrics.record_block(str(action))
                 metrics.set_mttb(self.soar.mttb_ms)
+            if action in ENFORCED_BLOCK_ACTIONS:
                 blocked_ips = set(getattr(self.soar, "_mem_blocked_ips", set()))
-                if action not in ("skip_allowlisted_ip", "skip_private_ip", "skip_no_ip", "block_failed"):
-                    ip = str(soar_result.get("src_ip") or "")
-                    if ip:
-                        blocked_ips.add(ip)
+                ip = str(soar_result.get("src_ip") or "")
+                if ip:
+                    blocked_ips.add(ip)
                 metrics.blocked_ips = blocked_ips
                 metrics.set_blocked_count(len(blocked_ips))
         except Exception:

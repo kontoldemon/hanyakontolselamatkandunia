@@ -15,6 +15,7 @@ import asyncio
 import logging
 import os
 import signal
+import time
 from pathlib import Path
 
 import asyncssh
@@ -24,9 +25,10 @@ from .api.bootstrap import start_admin_api
 from .anomaly import CommandAnomalyDetector
 from .auth import get_auth
 from .config import Settings, load_settings, secret_to_str
+from .geoip import enrich as geo_enrich
 from .hassh import HASSHDNA
 from .observability import setup_observability
-from .pipeline import ClickHouseForwarder, EventPipeline
+from .pipeline import ClickHouseForwarder, EventEnvelope, EventPipeline
 from .sensor.fingerprint import (
     _decode_alg_list,
     _load_or_create_host_key_sync,
@@ -52,6 +54,45 @@ logger = structlog.get_logger("cloudsentinel.server")
 PACKAGE_ROOT = Path(__file__).resolve().parent
 DEFAULT_STAGE1_CONFIG = str(PACKAGE_ROOT / "configs" / "usas-production.yaml")
 DEFAULT_STAGE1_ENV = str(PACKAGE_ROOT / ".env")
+
+
+async def _start_metrics() -> None:
+    try:
+        from .metrics import get_metrics
+
+        await get_metrics().start()
+    except Exception:
+        return
+
+
+async def _emit_aux_honeypot_event(
+    event: dict,
+    pipeline: EventPipeline,
+    soar: SOAREngine | None = None,
+    stream: LiveStream | None = None,
+) -> dict:
+    """Score, persist, and stream a non-SSH honeypot event (DNS, HTTP)."""
+    payload = dict(event)
+    src_ip = str(payload.get("src_ip") or "")
+    if src_ip:
+        payload.update(geo_enrich(src_ip))
+    if soar is not None:
+        try:
+            payload = await soar.process_event(str(payload.get("session") or "honeypot"), payload)
+        except Exception as exc:
+            logger.warning("Aux honeypot SOAR failed: %s", exc)
+    envelope = EventEnvelope(
+        event_type=str(payload.get("eventid") or "honeypot.event"),
+        session_id=str(payload.get("session") or "honeypot"),
+        src_ip=str(payload.get("src_ip") or ""),
+        src_port=int(payload.get("src_port") or 0),
+        timestamp=float(payload.get("timestamp") or time.time()),
+        payload=payload,
+    )
+    await pipeline.emit(envelope)
+    if stream is not None:
+        stream.emit(payload)
+    return payload
 
 
 def install_uvloop() -> None:
@@ -114,12 +155,14 @@ async def main() -> None:
     if args.redis_url:
         settings.redis.url = args.redis_url
     setup_observability(settings.observability)
+    await _start_metrics()
 
     # Core infrastructure
     pipeline = EventPipeline(settings.redis, settings.nats, settings.kafka)
     forwarder = ClickHouseForwarder(settings.redis, settings.clickhouse)
     soar = SOAREngine(
         risk_threshold=settings.soar.risk_threshold,
+        trigger=settings.soar.trigger,
         firewall_enabled=settings.soar.firewall_enabled,
         firewall_dry_run=settings.soar.firewall_dry_run,
         firewall_path=settings.soar.firewall_path,
@@ -183,7 +226,9 @@ async def main() -> None:
     # Optional admin API
     admin_task: asyncio.Task[None] | None = None
     if settings.admin.enabled:
-        admin_task = asyncio.create_task(start_admin_api(settings, pipeline, soar, cert_path, key_path))
+        admin_task = asyncio.create_task(
+            start_admin_api(settings, pipeline, soar, cert_path, key_path, anomaly_detector)
+        )
 
     # Optional Socket.io live stream
     if settings.stream.enabled:
@@ -191,19 +236,25 @@ async def main() -> None:
             host=settings.stream.host,
             port=settings.stream.port,
             cors_origin=settings.stream.cors_origin,
+            auth_token=secret_to_str(settings.stream.auth_token) or None,
         )
         await stream.start()
 
     # Optional HTTP honeypot
     http_task: asyncio.Task[None] | None = None
     if getattr(settings.honeypot, "http_enabled", False):
-        http_task = asyncio.create_task(start_http_honeypot(settings, pipeline, soar))
+        http_task = asyncio.create_task(start_http_honeypot(settings, pipeline, soar, stream))
 
     # Optional DNS honeypot
     dns_task: asyncio.Task[None] | None = None
     if getattr(settings.honeypot, "dns_enabled", False):
         from .dns_honeypot import DNSHoneypot
         dns_hp = DNSHoneypot(host=settings.honeypot.listen_host)
+        dns_hp.set_event_callback(
+            lambda event: asyncio.create_task(
+                _emit_aux_honeypot_event(event, pipeline, soar, stream)
+            )
+        )
         dns_task = asyncio.create_task(dns_hp.start())
         logger.info("DNS honeypot started on UDP 53")
 

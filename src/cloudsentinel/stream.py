@@ -10,6 +10,7 @@ JWT-secured WebSocket with CORS whitelist.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import urllib.parse
 from collections import deque
 from typing import Any
@@ -30,13 +31,11 @@ class LiveStream:
     Phase 2 (AWS): Migrate to App Runner with IAM auth.
     """
 
-    # Default allowed origins for Phase 1
+    # Fallback allowlist when CORS is not configured explicitly
     DEFAULT_ALLOWED_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
-        "https://cloudsentinel.zis3c.dev",
-        "https://cloudsentinel.vercel.app",
-        "https://cloudsentinel-dashboard.vercel.app",
+        "https://dashboard-six-mu-20.vercel.app",
     ]
 
     def __init__(
@@ -69,6 +68,24 @@ class LiveStream:
         # Track authenticated clients
         self._auth_clients: set[str] = set()
 
+    @staticmethod
+    def _provided_token(environ: dict, auth: Any = None) -> str:
+        if isinstance(auth, dict):
+            token = str(auth.get("token") or "")
+            if token:
+                return token
+        auth_header = str(environ.get("HTTP_AUTHORIZATION", ""))
+        if auth_header.startswith("Bearer "):
+            return auth_header[7:]
+        params = urllib.parse.parse_qs(str(environ.get("QUERY_STRING", "")))
+        return params.get("token", [""])[0]
+
+    def _authorized(self, environ: dict, auth: Any = None) -> bool:
+        if not self.auth_token:
+            return True
+        provided = self._provided_token(environ, auth)
+        return hmac.compare_digest(provided.encode(), self.auth_token.encode())
+
     async def start(self) -> None:
         """Start the Socket.io + aiohttp server."""
         import socketio
@@ -83,25 +100,10 @@ class LiveStream:
         self._sio.attach(self._app)
 
         @self._sio.event
-        async def connect(sid: str, environ: dict) -> None:
-            # -- JWT / API Key authentication --
-            if self.auth_token:
-                auth_header = environ.get("HTTP_AUTHORIZATION", "")
-                query_token = ""
-                qs = environ.get("QUERY_STRING", "")
-                params = urllib.parse.parse_qs(qs)
-                query_token = params.get("token", [""])[0]
-
-                provided = ""
-                if auth_header.startswith("Bearer "):
-                    provided = auth_header[7:]
-                elif query_token:
-                    provided = query_token
-
-                if provided != self.auth_token:
-                    logger.warning("Socket.io auth rejected for %s", sid)
-                    await self._sio.disconnect(sid)
-                    return
+        async def connect(sid: str, environ: dict, auth: dict | None = None) -> None:
+            if not self._authorized(environ, auth):
+                logger.warning("Socket.io auth rejected for %s", sid)
+                raise socketio.exceptions.ConnectionRefusedError("unauthorized")
 
             self._auth_clients.add(sid)
             logger.info("Socket.io client connected: %s (authenticated)", sid)

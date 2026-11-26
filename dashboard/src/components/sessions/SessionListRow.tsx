@@ -40,7 +40,12 @@ export function isBlockEffective(action?: string, reported?: boolean) {
         return true;
     }
     const normalized = formatSoarAction(action);
-    return normalized === "iptables_block" || normalized === "already_blocked";
+    return (
+        normalized === "iptables_block" ||
+        normalized === "already_blocked" ||
+        normalized === "eventgrid_published" ||
+        normalized === "event_published"
+    );
 }
 
 export function blockStateText(action?: string, effective?: boolean) {
@@ -53,6 +58,9 @@ export function blockStateText(action?: string, effective?: boolean) {
     }
     if (normalized === "event_published") {
         return "Block event published";
+    }
+    if (normalized === "eventgrid_published") {
+        return "Event Grid block published";
     }
     if (isBlockEffective(action, effective)) {
         return "Blocked";
@@ -95,13 +103,12 @@ export type SessionRowData = {
     nowMs: number;
     searchQuery: string;
     onSelect: (session: CapturedSession) => void;
-    viewedSessionIds?: Set<string>;
 };
 
 export const SESSION_ROW_HEIGHT = 90;
 export const SESSION_ROW_GAP = 6;
 
-export function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs, searchQuery, onSelect, viewedSessionIds }: RowComponentProps<SessionRowData>) {
+export function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs, searchQuery, onSelect }: RowComponentProps<SessionRowData>) {
     const session = sessions[index];
     const isSelected = selectedSessionId === session.id;
     const isFocused = !!focusIp && session.ip === focusIp;

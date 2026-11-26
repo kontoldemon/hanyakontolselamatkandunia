@@ -34,11 +34,18 @@ export default function CollapsiblePanel({
     };
 
     const content = (
-        <div className={`bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col ${isFullscreen ? 'fixed inset-4 z-50 shadow-2xl h-full' : 'overflow-hidden'}`}>
-            <button
-                type="button"
+        <div className={`bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col h-full ${isFullscreen ? 'fixed inset-4 z-50 shadow-2xl' : 'overflow-hidden'}`}>
+            <div
+                role="button"
+                tabIndex={isFullscreen ? -1 : 0}
                 onClick={isFullscreen ? undefined : onToggle}
-                className={`w-full px-3.5 py-2.5 flex items-center justify-between gap-2 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors ${isFullscreen ? 'cursor-default' : 'cursor-pointer'}`}
+                onKeyDown={(e) => {
+                    if (!isFullscreen && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
+                        onToggle();
+                    }
+                }}
+                className={`w-full px-3.5 py-2.5 flex items-center justify-between gap-2 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors select-none ${isFullscreen ? 'cursor-default' : 'cursor-pointer'}`}
             >
                 <div className="flex items-center gap-2 min-w-0">
                     <Icon size={15} className={`${iconColor} shrink-0`} />
@@ -47,9 +54,11 @@ export default function CollapsiblePanel({
                 <div className="flex items-center gap-3 shrink-0">
                     <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">{summary}</span>
                     <button
+                        type="button"
                         onClick={toggleFullscreen}
-                        className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer p-0.5"
                         title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                        aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >
                         {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                     </button>
@@ -60,7 +69,7 @@ export default function CollapsiblePanel({
                         />
                     )}
                 </div>
-            </button>
+            </div>
             <div
                 className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isFullscreen ? 'flex-1 overflow-hidden' : ''}`}
                 style={isFullscreen ? { gridTemplateRows: "1fr" } : { gridTemplateRows: expanded ? "1fr" : "0fr" }}

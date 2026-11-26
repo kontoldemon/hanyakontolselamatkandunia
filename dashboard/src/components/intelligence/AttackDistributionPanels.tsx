@@ -33,6 +33,7 @@ export default function AttackDistributionPanels({
 }: AttackDistributionPanelsProps) {
   const [hoveredAttack, setHoveredAttack] = useState<HoverTooltip | null>(null);
   const [hoveredMitre, setHoveredMitre] = useState<HoverTooltip | null>(null);
+  const mitreMax = Math.max(1, ...mitreData.map((item) => item.count));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
@@ -121,7 +122,7 @@ export default function AttackDistributionPanels({
           {mitreData.length === 0 ? (
             <div className="text-xs text-slate-500 text-center h-full flex items-center justify-center">No MITRE techniques in selected window.</div>
           ) : mitreData.map((item) => {
-            const width = `${Math.round((item.count / Math.max(1, mitreData.length)) * 100)}%`;
+            const width = `${Math.round((item.count / mitreMax) * 100)}%`;
             return (
               <div
                 key={item.name}

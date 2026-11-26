@@ -610,3 +610,18 @@ def test_dashboard_security_headers_are_strict() -> None:
     assert "X-Permitted-Cross-Domain-Policies" in proxy
     assert "challenges.cloudflare.com" in proxy
     assert "poweredByHeader: false" in config
+
+
+def test_deployment_defaults_do_not_reference_dead_dashboard_domain() -> None:
+    root = Path(__file__).resolve().parents[3]
+    paths = [
+        root / "dashboard" / "vercel.json",
+        root / "dashboard" / "qa" / "truth_audit.ps1",
+        root / "docs" / "CLICKHOUSE_TRUTH_QA.md",
+        root / "src" / "cloudsentinel" / "deploy.sh",
+        root / "src" / "cloudsentinel" / "stream.py",
+    ]
+    for path in paths:
+        assert "cloudsentinel.zis3c.dev" not in path.read_text(encoding="utf-8"), path
+    deploy = (root / "src" / "cloudsentinel" / "deploy.sh").read_text(encoding="utf-8")
+    assert "Set VERCEL_DASHBOARD_ORIGIN" in deploy

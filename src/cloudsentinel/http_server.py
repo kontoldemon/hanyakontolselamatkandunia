@@ -11,12 +11,13 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from .geoip import enrich as geo_enrich
 from .pipeline import EventEnvelope, EventPipeline
 
 logger = structlog.get_logger("cloudsentinel.http")
 
 
-def create_http_honeypot(pipeline: EventPipeline, soar: Any = None) -> FastAPI:
+def create_http_honeypot(pipeline: EventPipeline, soar: Any = None, stream: Any = None) -> FastAPI:
     """Creates an HTTP honeypot catching automated exploitation with SOAR scoring."""
 
     app = FastAPI(title="CloudSentinel HTTP Honeypot", docs_url=None, redoc_url=None)
@@ -55,6 +56,9 @@ def create_http_honeypot(pipeline: EventPipeline, soar: Any = None) -> FastAPI:
             "status_code": response.status_code,
             "risk_score": risk,
             "mitre_techniques": mitre_techniques,
+            "input": f"{request.method} {url_path}",
+            "reason": f"HTTP {response.status_code}",
+            **geo_enrich(client_host),
         }
         if soar is not None:
             event = {
@@ -82,6 +86,24 @@ def create_http_honeypot(pipeline: EventPipeline, soar: Any = None) -> FastAPI:
             payload=payload,
         )
         asyncio.create_task(pipeline.emit(envelope))
+        if stream is not None:
+            try:
+                stream.emit({
+                    "eventid": "http.request",
+                    "session": session_id,
+                    "src_ip": client_host,
+                    "src_port": client_port,
+                    "timestamp": start_time,
+                    "input": f"{request.method} {url_path}",
+                    "reason": f"HTTP {response.status_code}",
+                    "cloudsentinel_risk_score": payload.get("soar_risk_score", risk),
+                    "cloudsentinel_mitre_techniques": mitre_techniques,
+                    "cloudsentinel_soar_action": payload.get("soar_action", "none"),
+                    "country_code": payload.get("country_code", ""),
+                    "country_name": payload.get("country_name", ""),
+                })
+            except Exception as exc:
+                logger.debug("HTTP stream emit failed: %s", exc)
         return response
 
     @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])

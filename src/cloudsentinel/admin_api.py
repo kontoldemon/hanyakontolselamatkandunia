@@ -23,8 +23,9 @@ from .api.routers.events import build_events_router
 from .api.routers.analytics import build_analytics_router
 from .api.routers.blocks import build_blocks_router
 from .api.routers.auth_routes import build_auth_router
-from .api.routers.exposure import build_exposure_router
+from .api.routers.exposure import apply_exposure_toggle, build_exposure_router
 from .api.routers.llm import build_llm_router
+from .api.routers.runtime_config import build_runtime_config_router
 from .api.routers.sessions import build_sessions_router
 from .api.routers.health import build_health_router
 from .api.routers.mobile import build_mobile_router
@@ -37,8 +38,10 @@ from .api.firewall import (
     _schedule_manual_unblock,
     _spawn_manual_unblock,
 )
+from .runtime_config import build_runtime_config_store
 from .api.queries import (
     ACTIVE_FRESHNESS_WINDOW_SECONDS,
+    load_war_room_evidence_async,
     SYNTHETIC_ACTIVE_WINDOW_SECONDS,
     WAR_ROOM_ACTIVE_FRESHNESS_MS,
     WAR_ROOM_ATTACK_EVENT_IDS,
@@ -303,13 +306,21 @@ def _compose_war_room_state(
 
 
 
-def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = None) -> FastAPI:
+def create_admin_app(
+    settings: Settings,
+    pipeline: EventPipeline,
+    soar: Any = None,
+    anomaly: Any = None,
+) -> FastAPI:
+    docs_enabled = os.getenv("CLOUDSENTINEL_ENABLE_DOCS", "0").strip() == "1"
     app = FastAPI(
         title="CloudSentinel Admin API",
         version="2.0.0",
-        docs_url="/docs" if settings.admin.enabled else None,
+        docs_url="/docs" if settings.admin.enabled and docs_enabled else None,
+        openapi_url="/openapi.json" if docs_enabled else None,
         redoc_url=None,
     )
+    runtime_store = build_runtime_config_store(settings, soar)
 
     async def require_auth(
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -423,6 +434,23 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         )
         await redis_client.expire(EXPOSURE_STATE_REDIS_KEY, WAR_ROOM_REDIS_TTL_SECONDS)
 
+    async def _toggle_exposure_control(enabled: bool) -> dict[str, Any]:
+        return await apply_exposure_toggle(
+            settings,
+            enabled,
+            load_state=_load_exposure_state,
+            persist_state=_persist_exposure_state,
+            provider_name=_exposure_provider,
+            target_ports=_exposure_target_ports,
+            firewall_paths=_exposure_firewall_paths,
+            run_command=_run_command,
+            to_bool=_to_bool,
+            now_ms=_now_ms,
+            as_int=_as_int,
+            toggle_cooldown_ms=EXPOSURE_TOGGLE_COOLDOWN_MS,
+            rule_comment=EXPOSURE_RULE_COMMENT,
+        )
+
     async def _persist_war_room_state(payload: dict[str, Any]) -> tuple[float, str]:
         redis_client, redis_mode = await _resolve_war_room_redis()
         fields = {
@@ -481,7 +509,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
 
         war_room_last_refresh_ms = now_ms
         try:
-            evidence = _load_war_room_evidence_from_clickhouse(settings)
+            evidence = await load_war_room_evidence_async(settings)
             persisted, redis_read_latency_ms, redis_read_mode = await _load_war_room_persisted_state()
             exposure = await _load_exposure_state()
             state = _compose_war_room_state(
@@ -648,6 +676,7 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             soar,
             HOT_CACHE_TTL_ATTACK_DISTRIBUTION_SECONDS,
             HOT_CACHE_TTL_ATTACK_GRAPH_SECONDS,
+            anomaly,
         )
     )
     blocks_router, mobile_block_handler = build_blocks_router(
@@ -661,7 +690,8 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
         lambda **kwargs: publish_block(**kwargs),
     )
     app.include_router(blocks_router)
-    app.include_router(build_llm_router(settings, require_auth))
+    app.include_router(build_llm_router(settings, require_auth, runtime_store))
+    app.include_router(build_runtime_config_router(require_auth, runtime_store))
     app.include_router(build_auth_router())
     app.include_router(
         build_exposure_router(
@@ -689,6 +719,13 @@ def create_admin_app(settings: Settings, pipeline: EventPipeline, soar: Any = No
             require_auth=require_auth,
             mobile_service=mobile_push_service,
             block_ip_handler=mobile_block_handler,
+            load_exposure_state=_load_exposure_state,
+            persist_exposure_state=_persist_exposure_state,
+            exposure_provider=_exposure_provider,
+            toggle_exposure=_toggle_exposure_control,
+            soar=soar,
+            pipeline=pipeline,
+            runtime_store=runtime_store,
         )
     )
 

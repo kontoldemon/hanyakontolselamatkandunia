@@ -33,8 +33,12 @@ class FakeSio:
 
 @pytest.mark.asyncio
 async def test_live_stream(monkeypatch) -> None:
+    class ConnectionRefusedError(Exception):
+        pass
+
     socketio = types.ModuleType("socketio")
     socketio.AsyncServer = FakeSio
+    socketio.exceptions = types.SimpleNamespace(ConnectionRefusedError=ConnectionRefusedError)
     monkeypatch.setitem(sys.modules, "socketio", socketio)
 
     aiohttp = types.ModuleType("aiohttp")
@@ -84,12 +88,12 @@ async def test_live_stream(monkeypatch) -> None:
     )
     assert "sid-2" in stream._auth_clients
 
-    await sio.handlers["connect"](
-        "sid-3",
-        {"HTTP_AUTHORIZATION": "Bearer wrong", "QUERY_STRING": ""},
-    )
+    with pytest.raises(ConnectionRefusedError):
+        await sio.handlers["connect"](
+            "sid-3",
+            {"HTTP_AUTHORIZATION": "Bearer wrong", "QUERY_STRING": ""},
+        )
     assert "sid-3" not in stream._auth_clients
-    assert "sid-3" in sio.disconnected
 
     await sio.handlers["subscribe"]("sid-1", {"types": ["login"]})
     await sio.handlers["subscribe"]("sid-unknown", {"types": ["login"]})

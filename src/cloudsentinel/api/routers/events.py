@@ -23,7 +23,7 @@ def build_events_router(
     @router.get("/events", dependencies=[Depends(require_auth)])
     async def events(limit: int = 100) -> dict[str, Any]:
         payload = {
-            "events": queries._load_recent_events_from_clickhouse(settings, limit=limit),
+            "events": await queries.load_recent_events_async(settings, limit=limit),
             "source": "clickhouse",
             "authoritative": True,
             "sourceBreakdown": {"events": "clickhouse"},
@@ -37,7 +37,7 @@ def build_events_router(
         if isinstance(cached_payload, dict) and isinstance(cached_payload.get("metrics"), dict):
             await compute_war_room_state(force=False)
             return cached_payload
-        summary = queries._load_truth_summary_from_clickhouse(settings)
+        summary = await queries.load_truth_summary_async(settings)
         if summary is None:
             payload = {
                 "ok": False,

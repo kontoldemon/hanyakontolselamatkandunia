@@ -1,159 +1,82 @@
 import { NextResponse } from "next/server";
-import { randomBytes, randomInt } from "crypto";
 import { adminApiConfig, adminApiConfigError } from "@/lib/adminApi";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type MobilePolicy = {
-  enabled: boolean;
-  minRiskScore: number;
-  cooldownSeconds: number;
-  notifyBruteForce: boolean;
-  notifyCommandExec: boolean;
-  notifySoarBlock: boolean;
-};
-
-type PairedDevice = {
-  deviceId: string;
-  deviceName: string;
-  platform: string;
-  hasFcmToken: boolean;
-  pairedAtMs: number;
-  lastSeenAtMs: number;
-};
-
-// Local runtime fallback store when Python Admin API is offline
-let localPolicy: MobilePolicy = {
-  enabled: true,
-  minRiskScore: 70,
-  cooldownSeconds: 60,
-  notifyBruteForce: true,
-  notifyCommandExec: true,
-  notifySoarBlock: true,
-};
-
-let localDevices: PairedDevice[] = [];
-
-async function proxyToAdminApi(path: string, init: RequestInit): Promise<Response | null> {
-  if (adminApiConfigError()) {
-    return null;
-  }
+async function proxy(path: string, init: RequestInit): Promise<NextResponse> {
+  const configError = adminApiConfigError();
+  if (configError) return configError;
+  const { baseUrl, headers } = adminApiConfig();
   try {
-    const { baseUrl, headers } = adminApiConfig();
-    return await fetch(new URL(path, baseUrl), {
+    const response = await fetch(new URL(path, baseUrl), {
       ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...headers,
-        ...(init.headers ?? {}),
-      },
-      signal: AbortSignal.timeout(4000),
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", ...headers },
+      signal: AbortSignal.timeout(6000),
     });
+    const data = await response.json().catch(() => ({}));
+    return NextResponse.json(
+      response.ok ? data : { ok: false, error: data.detail ?? data.error ?? response.statusText },
+      { status: 200 },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "sensor admin API unreachable" },
+      { status: 200 },
+    );
+  }
+}
+
+function defaultSensorUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL?.trim()
+    || process.env.CLOUDSENTINEL_ADMIN_API_URL?.trim()
+    || "";
+  if (!configured) return "";
+  try {
+    const url = new URL(configured);
+    return `${url.protocol}//${url.host}`;
   } catch {
-    return null;
+    return "";
   }
 }
 
 export async function GET() {
-  const upstream = await proxyToAdminApi("/mobile/config", { method: "GET" });
-  if (upstream && upstream.ok) {
-    const data = await upstream.json();
-    return NextResponse.json({ ...data, source: "sensor" });
-  }
-  return NextResponse.json({
-    ok: true,
-    policy: localPolicy,
-    devices: localDevices,
-    source: "local_fallback",
-  });
+  const response = await proxy("/mobile/config", { method: "GET" });
+  const payload = await response.json().catch(() => ({}));
+  return NextResponse.json(
+    { ...payload, serverUrl: defaultSensorUrl() },
+    { status: response.status },
+  );
 }
 
 export async function POST(request: Request) {
-  try {
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const action = String(body.action || "config");
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const action = String(body.action || "config");
 
-    if (action === "pairing-token") {
-      const serverUrl = String(body.serverUrl || "").trim();
-      const upstream = await proxyToAdminApi("/mobile/pairing-token", {
-        method: "POST",
-        body: JSON.stringify({ serverUrl }),
-      });
-      if (upstream && upstream.ok) {
-        return NextResponse.json(await upstream.json());
-      }
-      const code = String(randomInt(100000, 999999));
-      const token = randomBytes(18).toString("base64url");
-      const ttlSeconds = 300;
-      const expiresAtMs = Date.now() + ttlSeconds * 1000;
-      const cleanUrl = serverUrl || "http://127.0.0.1:8080";
-      return NextResponse.json({
-        ok: true,
-        pairingCode: code,
-        pairingToken: token,
-        serverUrl: cleanUrl,
-        expiresAtMs,
-        ttlSeconds,
-        qrPayload: JSON.stringify({
-          v: 1,
-          serverUrl: cleanUrl,
-          pairingCode: code,
-          pairingToken: token,
-        }),
-        source: "local_fallback",
-      });
-    }
-
-    if (action === "test-alert") {
-      const upstream = await proxyToAdminApi("/mobile/test-alert", {
-        method: "POST",
-        body: JSON.stringify({
-          ip: body.ip || "185.220.101.42",
-          country: body.country || "Germany",
-          riskScore: body.riskScore ?? 92,
-          summary: body.summary || "Test DEFCON alert triggered from CloudSentinel Web Settings",
-        }),
-      });
-      if (upstream && upstream.ok) {
-        return NextResponse.json(await upstream.json());
-      }
-      return NextResponse.json({
-        ok: true,
-        dispatched: localDevices.length,
-        mode: "local_fallback",
-        message: "Test alert queued locally (sensor admin API offline).",
-      });
-    }
-
-    // Default: update policy config
-    const policyUpdates = (body.policy ?? body) as Partial<MobilePolicy>;
-    localPolicy = {
-      ...localPolicy,
-      ...policyUpdates,
-      minRiskScore: Math.max(0, Math.min(100, Number(policyUpdates.minRiskScore ?? localPolicy.minRiskScore))),
-      cooldownSeconds: Math.max(0, Math.min(3600, Number(policyUpdates.cooldownSeconds ?? localPolicy.cooldownSeconds))),
-    };
-
-    const upstream = await proxyToAdminApi("/mobile/config", {
+  if (action === "pairing-token") {
+    return proxy("/mobile/pairing-token", {
       method: "POST",
-      body: JSON.stringify(localPolicy),
+      body: JSON.stringify({ serverUrl: String(body.serverUrl || "").trim() }),
     });
-    if (upstream && upstream.ok) {
-      return NextResponse.json(await upstream.json());
-    }
-    return NextResponse.json({
-      ok: true,
-      policy: localPolicy,
-      devices: localDevices,
-      source: "local_fallback",
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Mobile API request failed" },
-      { status: 400 },
-    );
   }
+
+  if (action === "test-alert") {
+    const alert: Record<string, unknown> = {};
+    if (body.ip) alert.ip = body.ip;
+    if (body.country) alert.country = body.country;
+    if (typeof body.riskScore === "number") alert.riskScore = body.riskScore;
+    if (body.summary) alert.summary = body.summary;
+    return proxy("/mobile/test-alert", {
+      method: "POST",
+      body: JSON.stringify(alert),
+    });
+  }
+
+  return proxy("/mobile/config", {
+    method: "POST",
+    body: JSON.stringify(body.policy ?? body),
+  });
 }
 
 export async function DELETE(request: Request) {
@@ -162,17 +85,5 @@ export async function DELETE(request: Request) {
   if (!deviceId) {
     return NextResponse.json({ ok: false, error: "deviceId is required" }, { status: 400 });
   }
-  const upstream = await proxyToAdminApi(`/mobile/devices/${encodeURIComponent(deviceId)}`, {
-    method: "DELETE",
-  });
-  if (upstream && upstream.ok) {
-    return NextResponse.json(await upstream.json());
-  }
-  localDevices = localDevices.filter((d) => d.deviceId !== deviceId);
-  return NextResponse.json({
-    ok: true,
-    deviceId,
-    devices: localDevices,
-    source: "local_fallback",
-  });
+  return proxy(`/mobile/devices/${encodeURIComponent(deviceId)}`, { method: "DELETE" });
 }
