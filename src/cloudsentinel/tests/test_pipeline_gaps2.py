@@ -150,17 +150,7 @@ async def test_pipeline_drain_and_login(monkeypatch) -> None:
     await pipeline._drain_pending()
     assert pipeline._pending
 
-    pipeline._wal = FakeWal([])  # type: ignore[assignment]
-    pipeline._connected = False
-    await pipeline.emit_login(
-        session_id="s",
-        src_ip="8.8.8.8",
-        src_port=22,
-        username="root",
-        password="x",
-        hassh=None,
-        ja4s=None,
-    )
+
 
 
 def test_forwarder_spill_blank_and_row(monkeypatch, tmp_path) -> None:

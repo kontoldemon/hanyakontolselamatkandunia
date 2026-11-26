@@ -7,7 +7,6 @@ import json
 import logging
 import time
 from collections import defaultdict
-from datetime import UTC
 from typing import Any, ClassVar
 
 import redis.asyncio as aioredis
@@ -525,91 +524,3 @@ class SOAREngine:
             }
         return sorted(chains.values(), key=lambda c: c["risk"], reverse=True)
 
-
-class SOARScheduler:
-    """Cron-based SOAR task scheduling with croniter.
-
-    Handles:
-      - Auto-unblock after TTL expiry
-      - Periodic threat feed refresh (MISP, AbuseIPDB)
-      - Scheduled STIX IOC exports
-      - Daily/weekly report generation
-
-    Requires: pip install croniter
-    """
-
-    def __init__(self) -> None:
-        self._tasks: list[dict] = []
-        self._running = False
-
-    def add_ttl_unblock(self, ip: str, ttl_seconds: int, callback) -> None:
-        """Schedule auto-unblock after TTL expires."""
-        import time
-        unblock_at = time.time() + ttl_seconds
-        self._tasks.append({
-            "type": "unblock",
-            "ip": ip,
-            "unblock_at": unblock_at,
-            "callback": callback,
-        })
-
-    def add_cron_task(self, cron_expr: str, name: str, callback) -> bool:
-        """Add a cron-scheduled task. Returns True if expression is valid."""
-        try:
-            from datetime import datetime
-
-            from croniter import croniter
-            # Validate the cron expression
-            base = datetime.now(UTC)
-            cron = croniter(cron_expr, base)
-            next_run = cron.get_next(datetime)
-            self._tasks.append({
-                "type": "cron",
-                "name": name,
-                "cron_expr": cron_expr,
-                "cron": cron,
-                "next_run": next_run.timestamp(),
-                "callback": callback,
-            })
-            logger.info("Scheduled cron task '%s': %s (next: %s)", name, cron_expr, next_run)
-            return True
-        except ImportError:
-            logger.debug("croniter not installed — cron scheduling disabled")
-            return False
-        except Exception as exc:
-            logger.error("Invalid cron expression '%s': %s", cron_expr, exc)
-            return False
-
-    async def start(self, check_interval: float = 5.0) -> None:
-        """Start the scheduler loop."""
-        self._running = True
-        logger.info("SOAR scheduler started (interval: %.1fs)", check_interval)
-
-        while self._running:
-            import time
-            now = time.time()
-
-            # Process TTL unblocks
-            due_now = [t for t in self._tasks if t["type"] == "unblock" and t["unblock_at"] <= now]
-            for task in due_now:
-                try:
-                    await task["callback"](task["ip"])
-                    logger.info("Scheduled unblock: %s", task["ip"])
-                except Exception as exc:
-                    logger.error("Scheduled unblock failed for %s: %s", task["ip"], exc)
-                self._tasks.remove(task)
-
-            # Process cron tasks
-            cron_tasks = [t for t in self._tasks if t["type"] == "cron" and t["next_run"] <= now]
-            for task in cron_tasks:
-                try:
-                    await task["callback"]()
-                    task["next_run"] = task["cron"].get_next(float)
-                    logger.info("Cron task '%s' executed", task["name"])
-                except Exception as exc:
-                    logger.error("Cron task '%s' failed: %s", task["name"], exc)
-
-            await asyncio.sleep(check_interval)
-
-    def stop(self) -> None:
-        self._running = False

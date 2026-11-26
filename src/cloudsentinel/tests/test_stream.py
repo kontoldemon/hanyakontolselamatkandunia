@@ -105,11 +105,9 @@ async def test_live_stream(monkeypatch) -> None:
     assert stream._buffer[-1] == {"eventid": "evt"}
     assert sio.emitted
 
-    await stream.emit_coro({"eventid": "evt2"})
     await stream.stop()
     assert not stream._started
 
     idle = LiveStream()
     idle.emit({"eventid": "dropped"})
-    await idle.emit_coro({"eventid": "dropped"})
     assert not idle._buffer

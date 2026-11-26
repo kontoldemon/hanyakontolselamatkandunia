@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import sys
 import types
-from datetime import UTC, datetime
 
 import pytest
 
@@ -14,7 +12,7 @@ import cloudsentinel.pipeline as pipeline_module
 import cloudsentinel.soar as soar_module
 from cloudsentinel.config import load_settings
 from cloudsentinel.pipeline import ClickHouseForwarder, EventEnvelope
-from cloudsentinel.soar import SOAREngine, SOARScheduler
+from cloudsentinel.soar import SOAREngine
 
 
 class FakeRedis:
@@ -201,43 +199,3 @@ async def test_soar_run_firewall(monkeypatch) -> None:
     assert out == "out"
     assert err == "err"
     assert event["block_stdout"] == "out"
-
-
-@pytest.mark.asyncio
-async def test_soar_scheduler(monkeypatch) -> None:
-    cron_module = types.ModuleType("croniter")
-
-    class FakeCron:
-        def __init__(self, expr: str, _base: object) -> None:
-            if expr == "bad":
-                raise ValueError("bad cron")
-            self.expr = expr
-
-        def get_next(self, _type: object) -> datetime:
-            return datetime.now(UTC)
-
-    cron_module.croniter = FakeCron
-    monkeypatch.setitem(sys.modules, "croniter", cron_module)
-
-    scheduler = SOARScheduler()
-    called: list[str] = []
-
-    async def unblock(ip: str) -> None:
-        called.append(f"unblock:{ip}")
-
-    async def cron_job() -> None:
-        called.append("cron")
-        scheduler.stop()
-
-    scheduler.add_ttl_unblock("8.8.8.8", 0, unblock)
-    assert scheduler.add_cron_task("*/5 * * * *", "unit", cron_job) is True
-    assert scheduler.add_cron_task("bad", "bad", cron_job) is False
-    for task in scheduler._tasks:
-        if task["type"] == "cron":
-            task["next_run"] = 0
-    await scheduler.start(check_interval=0)
-    assert "unblock:8.8.8.8" in called
-    assert "cron" in called
-
-    monkeypatch.setitem(sys.modules, "croniter", None)
-    assert scheduler.add_cron_task("* * * * *", "missing", cron_job) is False

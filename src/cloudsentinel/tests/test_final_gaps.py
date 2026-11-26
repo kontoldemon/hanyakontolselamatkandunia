@@ -10,7 +10,6 @@ import types
 import pytest
 
 from cloudsentinel import metrics as metrics_module
-from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.config import LLMSettings, RedisSettings, load_settings
 from cloudsentinel.pipeline import ClickHouseForwarder, EventEnvelope
 from cloudsentinel.sandbox import create_sandbox
@@ -573,30 +572,6 @@ async def test_clickhouse_forwarder_run(tmp_path) -> None:
     assert forwarder._client.rows
 
 
-def test_attack_graph_branches() -> None:
-    graph = AttackGraph(max_nodes=2)
-    graph.add_event({"src_ip": "", "session": "x"})
-    graph.add_event({"src_ip": "10.0.0.1", "session": "x"})
-    graph.add_event(
-        {
-            "src_ip": "8.8.8.8",
-            "session": "s",
-            "hassh_md5": "c" * 32,
-            "eventid": "cloudsentinel.login.failed",
-            "username": "root",
-        }
-    )
-    graph.add_event(
-        {
-            "src_ip": "8.8.4.4",
-            "session": "s2",
-            "eventid": "cloudsentinel.command.input",
-            "input": "ssh root@10.0.0.9",
-            "cloudsentinel_mitre_techniques": ["T1021.004"],
-        }
-    )
-    assert graph.to_cytoscape()["elements"]
-    assert graph.get_subgraph("8.8.8.8")["nodes"]
 
 
 def test_vfs_agent_branches() -> None:

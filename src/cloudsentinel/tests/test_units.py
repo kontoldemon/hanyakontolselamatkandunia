@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 from pydantic import SecretStr
 
-from cloudsentinel._secrets import EnvProvider, SecretsProvider
 from cloudsentinel.admin_api import (
     _display_country,
     _is_allowlisted,
@@ -19,7 +18,6 @@ from cloudsentinel.admin_api import (
     _truth_window_hours,
 )
 from cloudsentinel.anomaly import CommandAnomalyDetector, extract_features
-from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.auth import AuthConfig, JWTAuth
 from cloudsentinel.config import LLMSettings
 from cloudsentinel.event_codec import dumps_text, loads_text
@@ -49,17 +47,6 @@ def test_login_token_pair() -> None:
     assert auth.validate_token(pair["access_token"])["sub"] == "admin"
 
 
-@pytest.mark.asyncio
-async def test_env_secrets_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("CLOUDSENTINEL_UNIT_SECRET", "value")
-    provider = EnvProvider()
-    assert await provider.get("CLOUDSENTINEL_UNIT_SECRET") == "value"
-    assert await provider.get("CLOUDSENTINEL_UNIT_MISSING", "fallback") == "fallback"
-    assert await provider.get_all("CLOUDSENTINEL_UNIT_") == {"CLOUDSENTINEL_UNIT_SECRET": "value"}
-    await provider.close()
-    assert isinstance(SecretsProvider.create("env"), EnvProvider)
-    assert isinstance(SecretsProvider.create("vault"), object)
-    assert isinstance(SecretsProvider.create("infisical"), object)
 
 
 def test_event_codec_round_trip() -> None:
@@ -81,25 +68,6 @@ def test_anomaly_features_and_detector(tmp_path: Path) -> None:
     assert (tmp_path / "anomaly.json").exists()
 
 
-def test_attack_graph_flow() -> None:
-    graph = AttackGraph(max_nodes=50)
-    graph.add_event(
-        {
-            "src_ip": "8.8.8.8",
-            "session": "session-1",
-            "hassh_md5": "a" * 32,
-            "country_code": "US",
-            "cloudsentinel_risk_score": 80,
-            "cloudsentinel_mitre_techniques": ["T1105"],
-            "eventid": "cloudsentinel.command.input",
-            "input": "ssh root@10.0.0.5 -p 2222",
-        }
-    )
-    assert "8.8.8.8" in graph._nodes
-    assert graph._lateral_moves == 1
-    subgraph = graph.get_subgraph("8.8.8.8")
-    assert subgraph["nodes"]
-    assert graph.to_cytoscape()["elements"]
 
 
 @pytest.mark.asyncio

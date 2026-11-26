@@ -22,8 +22,6 @@ redis>=5.0.1,<6.0
 scikit-learn>=1.5.0
 sentry-sdk[fastapi]>=2.0.0
 uvloop>=0.21.0; platform_system != "Windows"
-hvac>=2.0.0
-networkx>=3.0,<4.0
 
 # Runtime services and optional feature adapters
 granian>=2.0.0,<3.0

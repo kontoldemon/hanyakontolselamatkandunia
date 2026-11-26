@@ -7,7 +7,6 @@ import asyncio
 import httpx
 import pytest
 
-from cloudsentinel import exceptions
 from cloudsentinel.commands import Command, CommandAdapter
 from cloudsentinel.http_server import create_http_honeypot
 from cloudsentinel.mitre import score_auth_event, score_event
@@ -52,30 +51,6 @@ def test_command_helpers() -> None:
     assert adapter.flush() == ""
 
 
-def test_exception_classes() -> None:
-    errors = [
-        exceptions.ConnectionRejectedError("8.8.8.8", "limit"),
-        exceptions.SessionLimitExceededError(10, 5),
-        exceptions.FuzzDetectedError("8.8.8.8", "junk"),
-        exceptions.AuthLimitExceededError("8.8.8.8", 6),
-        exceptions.SessionTimeoutError("session-123456", 30),
-        exceptions.ProtocolViolationError("8.8.8.8", "bad"),
-        exceptions.BlockFailedError("8.8.8.8", "denied"),
-        exceptions.BlockTimeoutError("8.8.8.8"),
-        exceptions.RedisUnavailableError("down"),
-        exceptions.AllowlistBlockError("10.0.0.1"),
-        exceptions.ClickHouseWriteError(10, "fail"),
-        exceptions.WALCorruptionError("wal"),
-        exceptions.KafkaPublishError("topic", "fail"),
-        exceptions.NATSPublishError("subject", "fail"),
-        exceptions.ConfigError("field", "bad"),
-        exceptions.MissingSecretError("secret"),
-        exceptions.HASSHParseError("bad"),
-        exceptions.SandboxTimeoutError("id", 1.5),
-        exceptions.SandboxOOMError("128m"),
-    ]
-    assert all(error.code.startswith("CS") for error in errors)
-    assert str(exceptions.CloudSentinelError("x", code="CS999")).startswith("[CS999]")
 
 
 def test_mitre_scoring() -> None:

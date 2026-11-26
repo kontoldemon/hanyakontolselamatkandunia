@@ -133,14 +133,14 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
             <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-xs overflow-hidden flex flex-col">
                 {/* Console Header */}
                 <div className="px-4 py-2.5 sm:px-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.015] flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <Terminal size={14} className="text-blue-500" />
                         <h3 className="font-display font-semibold text-xs tracking-tight text-slate-900 dark:text-white">
                             Live WebSocket Event Stream Console
                         </h3>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         {/* Live Socket Stats */}
                         <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 mr-1">
                             <span className="flex items-center gap-1">
@@ -254,7 +254,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                     >
                         {/* Fullscreen Header */}
                         <div className="px-5 py-3 border-b border-white/10 bg-white/[0.02] flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <Terminal size={15} className="text-blue-500" />
                                 <h3 className="font-display font-semibold text-sm text-white">
                                     WebSocket Debug Console (Fullscreen)
@@ -264,7 +264,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <button
                                     type="button"
                                     onClick={handleCopyLogs}

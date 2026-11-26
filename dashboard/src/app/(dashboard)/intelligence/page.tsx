@@ -136,7 +136,7 @@ export default function IntelligencePage() {
 
     return (
         <div className="h-full flex flex-col gap-3 overflow-hidden pt-1 relative">
-            <div className="flex justify-end items-center gap-2 shrink-0 px-1 pt-0.5">
+            <div className="flex flex-wrap justify-between sm:justify-end items-center gap-2 shrink-0 px-1 pt-0.5">
                 <CustomDropdown
                     options={TIMELINE_OPTIONS}
                     value={timeline}

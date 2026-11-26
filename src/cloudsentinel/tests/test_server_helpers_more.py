@@ -22,8 +22,8 @@ def test_server_helpers() -> None:
     assert _decode_alg_list([b"aes", b"\xff", "hmac"]) == ["aes", "hmac"]
 
     limiter = ConnectionLimiter(max_total=2)
-    assert asyncio.run(limiter.acquire("8.8.8.8")) is True
-    asyncio.run(limiter.release("8.8.8.8"))
+    assert limiter.acquire_nowait("8.8.8.8") is True
+    limiter.release_nowait("8.8.8.8")
     assert limiter.total == 0
 
     class FakeConn:

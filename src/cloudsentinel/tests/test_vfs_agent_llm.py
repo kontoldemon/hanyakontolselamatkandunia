@@ -93,8 +93,6 @@ async def test_vfs_agent_sandbox_cache_and_bounds() -> None:
         assert agent._is_templated_command("history")
         assert agent._is_templated_command("env")
         assert not agent._is_templated_command("ls")
-        assert agent._parse_args("echo 'a b'") == ["echo", "a b"]
-        assert agent._parse_args("echo 'unterminated") == ["echo", "'unterminated"]
     finally:
         await agent.close()
 

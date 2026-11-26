@@ -25,15 +25,15 @@ export default function KpiStrip({ totalEvents, uniqueIps, totalCountries, uniqu
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 shrink-0">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 shrink-0">
       {kpis.map((kpi, i) => (
-        <div key={i} className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 p-3 flex items-center gap-3 shadow-sm">
-          <div className={`p-2 rounded-lg ${kpi.bg}`}>
+        <div key={i} className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 p-3 flex items-center gap-2.5 sm:gap-3 shadow-sm min-w-0">
+          <div className={`p-2 rounded-lg shrink-0 ${kpi.bg}`}>
             <kpi.icon size={16} className={kpi.color} />
           </div>
-          <div>
-            <div className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium leading-none mb-1">{kpi.label}</div>
-            <div className="font-mono text-base font-bold text-slate-900 dark:text-white leading-tight">{kpi.value}</div>
+          <div className="min-w-0">
+            <div className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium leading-none mb-1 truncate">{kpi.label}</div>
+            <div className="font-mono text-base font-bold text-slate-900 dark:text-white leading-tight truncate">{kpi.value}</div>
           </div>
         </div>
       ))}

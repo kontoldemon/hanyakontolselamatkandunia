@@ -11,10 +11,8 @@ from pathlib import Path
 
 import pytest
 
-import cloudsentinel.attack_graph as attack_graph_module
 import cloudsentinel.geoip as geoip
 import cloudsentinel.metrics as metrics_module
-from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.config import ObservabilitySettings
 
 
@@ -157,85 +155,8 @@ def test_geoip_enrichment(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(geoip, "_get_reader", lambda: None)
     monkeypatch.setattr(geoip, "enrich", lambda _ip: {"country_code": "OK"})
-    assert asyncio.run(geoip.enrich_async("8.8.8.8"))["country_code"] == "OK"
 
 
-def test_attack_graph_full(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    prune_graph = AttackGraph(max_nodes=1, prune_after_seconds=-1)
-    prune_graph.add_event({"src_ip": "1.1.1.1", "session": "p"})
-    prune_graph.add_event({"src_ip": "2.2.2.2", "session": "p"})
-    assert prune_graph.get_stats()["total_nodes"] <= 1
-
-    graph = AttackGraph(max_nodes=100)
-    graph.add_event(
-        {
-            "src_ip": "1.2.3.4",
-            "session": "s1",
-            "eventid": "cloudsentinel.login.failed",
-            "username": "root",
-            "password": "toor",
-        }
-    )
-    graph.add_event(
-        {
-            "src_ip": "1.2.3.4",
-            "session": "s2",
-            "hassh_md5": "a" * 32,
-            "eventid": "cloudsentinel.command.input",
-            "input": "ssh root@5.6.7.8",
-            "cloudsentinel_mitre_techniques": ["T1021.004"],
-        }
-    )
-    graph.add_event(
-        {
-            "src_ip": "1.2.3.4",
-            "session": "s3",
-            "eventid": "cloudsentinel.command.input",
-            "input": "scp file 9.9.9.9:/tmp",
-            "cloudsentinel_mitre_techniques": ["T1021.004"],
-        }
-    )
-    for command in ("nc 9.9.9.10 22", "ncat 9.9.9.11 22", "socat tcp:9.9.9.12:22"):
-        graph.add_event(
-            {
-                "src_ip": "1.2.3.4",
-                "session": "s4",
-                "eventid": "cloudsentinel.command.input",
-                "input": command,
-            }
-        )
-    graph.add_event(
-        {
-            "src_ip": "1.2.3.4",
-            "session": "s5",
-            "eventid": "cloudsentinel.login.failed",
-            "username": "root",
-        }
-    )
-    graph.add_event(
-        {
-            "src_ip": "8.8.8.8",
-            "session": "s6",
-            "eventid": "cloudsentinel.command.input",
-            "input": "ssh root@1.2.3.4",
-        }
-    )
-
-    assert graph.get_stats()["lateral_moves"] >= 5
-    assert graph.compute_centrality()
-    assert graph.detect_communities() is not None
-    assert graph.find_pivot_points(min_degree=1)
-    assert graph.shortest_attack_path("1.2.3.4", "5.6.7.8") is not None
-    graph.save(str(tmp_path / "graph.json"))
-    assert (tmp_path / "graph.json").exists()
-
-    fallback = AttackGraph()
-    fallback.add_event({"src_ip": "1.2.3.4", "session": "s", "eventid": "cloudsentinel.command.input"})
-    monkeypatch.setitem(sys.modules, "networkx", None)
-    assert fallback.compute_centrality()
-    assert fallback.detect_communities() == []
-    assert fallback.find_pivot_points() == []
-    assert fallback.shortest_attack_path("1.2.3.4", "8.8.8.8") is None
 
 
 def test_observability_enabled_path(monkeypatch: pytest.MonkeyPatch) -> None:

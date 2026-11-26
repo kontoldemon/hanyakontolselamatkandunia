@@ -5,7 +5,7 @@ import { type RowComponentProps } from "react-window";
 import { cn } from "@/lib/utils";
 import type { CapturedSession } from "@/lib/liveEvents";
 
-export function HighlightText({ text, highlight }: { text: string; highlight: string }) {
+function HighlightText({ text, highlight }: { text: string; highlight: string }) {
     if (!highlight.trim() || !text) {
         return <>{text}</>;
     }
@@ -71,7 +71,7 @@ export function blockStateText(action?: string, effective?: boolean) {
     return "No block applied";
 }
 
-export function formatDurationLive(session: { duration: string; status: string; startedAtEpochMs?: number }, nowMs: number) {
+function formatDurationLive(session: { duration: string; status: string; startedAtEpochMs?: number }, nowMs: number) {
     if ((session.status || "").toLowerCase() !== "active" || !session.startedAtEpochMs) {
         return session.duration;
     }

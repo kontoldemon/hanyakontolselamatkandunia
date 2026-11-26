@@ -7,17 +7,14 @@ import hmac
 import json
 import os
 import time
-from datetime import UTC
 from typing import Any
 
 import structlog
-from pydantic import SecretStr
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .config import Settings, secret_to_str
 from .eventgrid import publish_block
-from .geoip import is_public_ip
 from .pipeline import EventPipeline
 from .api.routers.events import build_events_router
 from .api.routers.analytics import build_analytics_router
@@ -35,7 +32,6 @@ from .api.firewall import (
     _is_allowlisted,
     _manual_block_args,
     _run_command,
-    _schedule_manual_unblock,
     _spawn_manual_unblock,
 )
 from .runtime_config import build_runtime_config_store

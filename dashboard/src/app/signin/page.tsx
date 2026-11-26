@@ -243,7 +243,7 @@ export default function SignInPage() {
               </div>
 
               {/* Turnstile Security Check */}
-              <div className="pt-1.5 flex justify-center">
+              <div className="pt-1.5 flex justify-center max-w-full overflow-x-auto">
                 <Turnstile
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
                   onSuccess={(token) => setTurnstileToken(token)}
@@ -270,7 +270,7 @@ export default function SignInPage() {
                 </p>
               </div>
 
-              <div className="flex justify-center gap-2">
+              <div className="flex justify-center gap-1.5 sm:gap-2">
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -283,7 +283,7 @@ export default function SignInPage() {
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                     onPaste={handlePaste}
-                    className="h-11 w-10 rounded-xl border border-slate-200 bg-slate-50 text-center font-mono text-base font-bold text-slate-900 transition outline-none focus:border-blue-500 focus:bg-white focus:outline-none focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500 dark:focus:bg-white/[0.08]"
+                    className="h-11 w-9 sm:w-10 rounded-xl border border-slate-200 bg-slate-50 text-center font-mono text-base font-bold text-slate-900 transition outline-none focus:border-blue-500 focus:bg-white focus:outline-none focus-visible:outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-blue-500 dark:focus:bg-white/[0.08]"
                     maxLength={1}
                   />
                 ))}

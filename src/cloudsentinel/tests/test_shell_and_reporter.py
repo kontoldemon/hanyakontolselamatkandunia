@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 
 import cloudsentinel.threat_reporter as reporter
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.vfs import VirtualFileSystem
 
 
@@ -33,81 +32,10 @@ class FakeTransport:
         self.closed = True
 
 
-def _protocol(reads: list[bytes] | None = None) -> HoneyPotInteractiveProtocol:
-    vfs = VirtualFileSystem()
-    return HoneyPotInteractiveProtocol(
-        FakeTransport(reads),
-        vfs,
-        session_id="unit-shell",
-        ip="10.0.0.1",
-    )
 
 
-@pytest.mark.asyncio
-async def test_shell_protocol(monkeypatch) -> None:
-    async def no_sleep(_seconds: float) -> None:
-        return None
-
-    monkeypatch.setattr(asyncio, "sleep", no_sleep)
-    session = _protocol([b"id\n", b""])
-    try:
-        await session.run()
-        assert session._tty_dir is not None
-        assert session.transport.writes
-    finally:
-        shutil.rmtree(Path("var/lib/cloudsentinel/tty/unit-shell"), ignore_errors=True)
-
-    session = _protocol()
-    session._exec_command = "id"
-    await session.run_exec()
-    assert session.transport.closed
-    shutil.rmtree(Path("var/lib/cloudsentinel/tty/unit-shell"), ignore_errors=True)
 
 
-def test_shell_editing_and_dispatch() -> None:
-    session = _protocol()
-    session._handle_data(b"\x03")
-    session._handle_data(b"\t")
-    session._handle_data(b"ab\x7f\x08c\r")
-    session._handle_data(b"|")
-    session._handle_data(b">")
-    session._handle_data(b"echo hello | cat")
-    session._handle_data(b"cat < /tmp/missing")
-    session._handle_data(b"nosuchcommand")
-    session._handle_data(b"bad 'quote")
-    session._handle_data(b"\x04")
-
-    class FakeCommand:
-        def handle_CTRL_C(self) -> None:
-            self.interrupted = True
-
-    command = FakeCommand()
-    session.cmdstack.append(command)
-    session._handle_data(b"\x03")
-    assert command.interrupted
-
-    session.fs.mkdir("/tmp")
-    session._handle_cd(["/tmp"])
-    assert session.cwd == "/tmp"
-    session._handle_cd(["-"])
-    assert session.cwd == "/root"
-    session._handle_cd(["/missing"])
-    session.cwd = "/"
-    session.show_prompt()
-    session.cwd = "/root/sub"
-    session.show_prompt()
-
-    session.starttime = time.time() - 90000
-    assert "days" in session.uptime()
-    session.starttime = time.time() - 7200
-    assert ":" in session.uptime()
-    session.starttime = time.time() - 120
-    assert "min" in session.uptime()
-
-    seen: list[dict] = []
-    session._event_handler = seen.append
-    session.emit_event({"eventid": "unit"})
-    assert seen
 
 
 class FakeRedis:

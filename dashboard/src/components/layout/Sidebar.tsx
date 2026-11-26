@@ -217,7 +217,42 @@ export default function Sidebar() {
                     </button>
                 </div>
             </aside>
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[90] bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-white/10 flex items-center justify-around pb-safe overflow-hidden">
+
+            {/* Mobile Top Header (md:hidden) */}
+            <header className="md:hidden shrink-0 h-13 px-4 bg-white/90 dark:bg-[#050505]/95 border-b border-slate-200 dark:border-white/10 backdrop-blur-md flex items-center justify-between z-30">
+                <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+                    <Image
+                        src="/logo.svg"
+                        alt="CloudSentinel"
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 shrink-0"
+                    />
+                    <span className="font-display text-sm font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                        Cloud<span className="text-blue-600 dark:text-blue-400">Sentinel</span>
+                    </span>
+                </Link>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                        aria-label={mounted ? (theme === "dark" ? "Light Mode" : "Dark Mode") : "Theme"}
+                    >
+                        {mounted ? (theme === "dark" ? <Sun size={18} /> : <Moon size={18} />) : <Moon size={18} />}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setShowSignOutConfirm(true)}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer"
+                        aria-label="Sign Out"
+                    >
+                        <LogOut size={18} />
+                    </button>
+                </div>
+            </header>
+
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[90] bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 flex items-center justify-around pb-safe overflow-hidden">
                 {links.map((link) => {
                     const Icon = link.icon;
                     const isActive = pathname === link.href;
@@ -226,12 +261,12 @@ export default function Sidebar() {
                             key={link.href}
                             href={link.href}
                             className={clsx(
-                                "flex flex-col items-center justify-center w-full py-2 gap-1 transition-colors",
+                                "flex flex-col items-center justify-center w-full min-h-[56px] py-2 px-1 gap-1 transition-colors min-w-0",
                                 isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                             )}
                         >
                             <Icon size={20} className={isActive ? "" : "opacity-70"} />
-                            <span className="text-[10px] font-medium">{link.name}</span>
+                            <span className="text-[10px] font-medium truncate max-w-full">{link.name}</span>
                         </Link>
                     );
                 })}

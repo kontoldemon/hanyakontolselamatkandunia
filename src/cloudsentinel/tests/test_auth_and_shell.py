@@ -9,13 +9,11 @@ import pytest
 from pydantic import SecretStr
 
 from cloudsentinel import cli
-from cloudsentinel._secrets import InfisicalProvider, VaultProvider
 from cloudsentinel.auth import AuthConfig, PyJWTAuth
 from cloudsentinel.config import load_settings
 from cloudsentinel.geoip import _enrich_fallback, _enrich_http
 from cloudsentinel.pipeline import EventPipeline
 from cloudsentinel.sandbox import FirecrackerSandbox, GVisorSandbox, create_sandbox
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.stream import LiveStream
 from cloudsentinel.stress_test import StressTest
 from cloudsentinel.threat_reporter import generate_report
@@ -36,25 +34,6 @@ def test_pyjwt_round_trip() -> None:
     assert refresh is not None
 
 
-@pytest.mark.asyncio
-async def test_offline_secret_providers(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("INFISICAL_CLIENT_ID", raising=False)
-    monkeypatch.delenv("INFISICAL_CLIENT_SECRET", raising=False)
-    monkeypatch.delenv("VAULT_ADDR", raising=False)
-    monkeypatch.delenv("VAULT_TOKEN", raising=False)
-    monkeypatch.setenv("CLOUDSENTINEL_OFFLINE_SECRET", "value")
-    infisical = InfisicalProvider()
-    assert await infisical.get("CLOUDSENTINEL_OFFLINE_SECRET") == "value"
-    assert await infisical.get_all("CLOUDSENTINEL_OFFLINE_") == {
-        "CLOUDSENTINEL_OFFLINE_SECRET": "value"
-    }
-    await infisical.close()
-    vault = VaultProvider()
-    assert await vault.get("CLOUDSENTINEL_OFFLINE_SECRET") == "value"
-    assert await vault.get_all("CLOUDSENTINEL_OFFLINE_") == {
-        "CLOUDSENTINEL_OFFLINE_SECRET": "value"
-    }
-    await vault.close()
 
 
 def test_geoip_fallbacks() -> None:
@@ -141,39 +120,6 @@ def test_stress_report_and_snapshot() -> None:
     assert report["resource_snapshot"]["pid"] > 0
 
 
-def test_shell_dispatch_and_close() -> None:
-    class FakeTransport:
-        def __init__(self) -> None:
-            self.output = b""
-            self.closed = False
-
-        def write(self, data: bytes) -> None:
-            self.output += data
-
-        def close(self) -> None:
-            self.closed = True
-
-    transport = FakeTransport()
-    protocol = HoneyPotInteractiveProtocol(
-        transport=transport,
-        vfs=VirtualFileSystem.build_default(),
-        username="root",
-        hostname="unit-host",
-        ip="8.8.8.8",
-    )
-    protocol._handle_data(b"whoami\r\n")
-    assert b"root" in transport.output
-    protocol._handle_data(b"whoami | cat\r\n")
-    assert transport.output.count(b"root") >= 2
-    fresh = HoneyPotInteractiveProtocol(
-        transport=FakeTransport(),
-        vfs=VirtualFileSystem.build_default(),
-        username="root",
-        hostname="unit-host",
-        ip="8.8.8.8",
-    )
-    fresh._handle_data(b"\x04")
-    assert fresh._closed is True
 
 
 def test_stream_stop() -> None:

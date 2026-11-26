@@ -13,7 +13,7 @@ import cloudsentinel.pipeline as pipeline_module
 import cloudsentinel.soar as soar_module
 from cloudsentinel.config import load_settings
 from cloudsentinel.pipeline import EventEnvelope, EventPipeline, LocalWAL
-from cloudsentinel.soar import SOAREngine, SOARScheduler
+from cloudsentinel.soar import SOAREngine
 
 
 class FakeRedis:
@@ -119,13 +119,7 @@ async def test_event_pipeline_transports(monkeypatch) -> None:
     await degraded.start()
     await degraded.stop()
 
-    broken = EventPipeline(settings.redis, settings.nats, settings.kafka)
 
-    async def stop_fail() -> None:
-        raise RuntimeError("stop failed")
-
-    monkeypatch.setattr(broken, "stop", stop_fail)
-    assert await broken.reconnect() is False
 
 
 @pytest.mark.asyncio
@@ -271,24 +265,3 @@ async def test_soar_scoring_and_scheduler(monkeypatch) -> None:
 
     monkeypatch.setattr(failing, "_run_firewall", failed_rule)
     assert await failing._block_ip({"src_ip": "8.8.8.8"}) == "block_failed"
-
-    scheduler = SOARScheduler()
-
-    async def bad_unblock(_ip: str) -> None:
-        scheduler.stop()
-        raise RuntimeError("unblock failed")
-
-    async def bad_cron() -> None:
-        raise RuntimeError("cron failed")
-
-    scheduler.add_ttl_unblock("8.8.8.8", 0, bad_unblock)
-    scheduler._tasks.append(
-        {
-            "type": "cron",
-            "name": "bad",
-            "next_run": 0,
-            "cron": types.SimpleNamespace(get_next=lambda _type: 0),
-            "callback": bad_cron,
-        }
-    )
-    await scheduler.start(check_interval=0)

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from collections import defaultdict
 
@@ -23,7 +22,6 @@ class ConnectionLimiter:
         self.max_entries = max(1, max_entries)
         self._ips: defaultdict[str, list[float]] = defaultdict(list)
         self._total = 0
-        self._lock = asyncio.Lock()
 
     def acquire_nowait(self, ip: str) -> bool:
         now = time.monotonic()
@@ -41,16 +39,8 @@ class ConnectionLimiter:
             self._ips = defaultdict(list, keep)
         return True
 
-    async def acquire(self, ip: str) -> bool:
-        async with self._lock:
-            return self.acquire_nowait(ip)
-
     def release_nowait(self, ip: str) -> None:
         self._total = max(0, self._total - 1)
-
-    async def release(self, ip: str) -> None:
-        async with self._lock:
-            self.release_nowait(ip)
 
     @property
     def total(self) -> int:

@@ -175,7 +175,7 @@ The dashboard never exposes the sensor admin token to the browser. Next.js route
 - On Azure, `eventgrid.py` publishes a CloudEvent to the block topic. The Function validates public/non-allowlisted IPs, rejects malformed events, creates an NSG deny rule, and queues its deletion after the TTL. Malformed unblock messages are ignored, and a five-minute timer trigger deletes expired `cs-block-*` rules if a queue message is lost.
 - The sensor also publishes the block to the local host-agent channel when Redis is available, so the sensor VM still blocks if Event Grid delivery or the Function fails.
 - Manual dashboard blocks use the same Event Grid path when it is enabled, then notify the host agent. They do not bypass the Azure NSG.
-- Secrets can come from environment variables, HashiCorp Vault, or Infisical. On Azure, Key Vault has public access disabled and a private endpoint in the VNet; `deploy/load_secrets.sh` copies secrets into the sensor `.env` through the VM managed identity and private DNS.
+- Secrets come from environment variables. On Azure, Key Vault has public access disabled and a private endpoint in the VNet; `deploy/load_secrets.sh` copies secrets into the sensor `.env` through the VM managed identity and private DNS.
 - The AI response path is optional. Secrets are redacted before the prompt, and calls are limited per session (20) and globally (200 per hour). If the budget is exhausted or no API key is set, the agent falls back to deterministic output.
 - Optional integrations: Webhook alerts, AbuseIPDB, MISP, AI threat summaries.
 

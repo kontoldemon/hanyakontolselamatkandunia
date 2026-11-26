@@ -20,7 +20,7 @@ export function FingerprintsPanel({ expanded, onToggle, fingerprints }: Fingerpr
       title="HASSH Fingerprints"
       summary={`${fingerprints.length} Signatures`}
     >
-      <div className="h-[248px] overflow-y-auto border border-slate-100 dark:border-white/5 rounded-md">
+      <div className="h-[248px] overflow-auto border border-slate-100 dark:border-white/5 rounded-md">
         <table className="w-full text-left">
           <thead className="bg-slate-50 dark:bg-white/5 text-[10px] text-slate-500 sticky top-0 backdrop-blur-md">
             <tr>
@@ -111,7 +111,7 @@ export function CommandsAndPasswordsPanels({
               className="w-full bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="flex-1 overflow-y-auto border border-slate-100 dark:border-white/5 rounded-md">
+          <div className="flex-1 overflow-auto border border-slate-100 dark:border-white/5 rounded-md">
             <table className="w-full text-left">
               <thead className="bg-slate-50 dark:bg-white/5 text-[10px] text-slate-500 sticky top-0 backdrop-blur-md">
                 <tr>

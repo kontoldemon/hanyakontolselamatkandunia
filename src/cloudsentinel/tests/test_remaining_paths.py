@@ -27,7 +27,6 @@ from cloudsentinel.server import (
     start_admin_api,
     start_http_honeypot,
 )
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.soar import SOAREngine
 from cloudsentinel.vfs import VirtualFileSystem
 
@@ -154,68 +153,6 @@ async def test_server_start_functions(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(served) == 2
 
 
-def test_commands_more_paths() -> None:
-    class Transport:
-        def __init__(self) -> None:
-            self.data = b""
-
-        def write(self, data: bytes) -> None:
-            self.data += data
-
-        def close(self) -> None:
-            return None
-
-    commands = [
-        "uname -a",
-        "cat /etc/os-release",
-        "ls /root",
-        "ls /var/log",
-        "grep root /etc/passwd",
-        "head -n 1 /etc/passwd",
-        "tail -n 1 /etc/passwd",
-        "wc -l /etc/passwd",
-        "du -sh /var",
-        "stat /etc/passwd",
-        "file /bin/ls",
-        "md5sum /etc/passwd",
-        "sha256sum /etc/passwd",
-        "base64 /etc/hostname",
-        "which python3",
-        "type ls",
-        "alias",
-        "history",
-        "jobs",
-        "umask",
-        "ulimit -a",
-        "getconf LONG_BIT",
-        "lsof",
-        "top -b -n 1",
-        "vmstat",
-        "lspci",
-        "lsusb",
-        "ping -c 1 8.8.8.8",
-        "ifconfig",
-        "ss -antp",
-        "netstat -antp",
-        "ip addr",
-        "route -n",
-        "arp -a",
-        "crontab -l",
-        "systemctl status ssh",
-    ]
-    executed = 0
-    for command in commands:
-        transport = Transport()
-        protocol = HoneyPotInteractiveProtocol(
-            transport=transport,
-            vfs=VirtualFileSystem.build_default(),
-            username="root",
-            hostname="unit-host",
-            ip="8.8.8.8",
-        )
-        protocol._execute_single(command.encode())
-        executed += 1
-    assert executed == len(commands)
 
 
 @pytest.mark.asyncio

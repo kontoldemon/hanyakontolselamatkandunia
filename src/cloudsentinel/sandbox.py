@@ -145,7 +145,6 @@ class DockerSDKSandbox:
         """Execute a command in an isolated Docker container via SDK."""
         try:
             import docker
-            from docker.errors import DockerException
 
             if self._client is None:
                 self._client = docker.from_env()

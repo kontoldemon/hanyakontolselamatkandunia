@@ -9,7 +9,6 @@ import types
 import pytest
 
 from cloudsentinel.dns_honeypot import DNSHoneypot
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.stream import LiveStream
 from cloudsentinel.vfs import VirtualFileSystem
 
@@ -41,23 +40,6 @@ def test_dns_rate_limit_and_exception() -> None:
     assert DNSHoneypot._parse_qname(b"\xc0\x02\x03www\xc0\x02", 0) == "www"
 
 
-def test_shell_redirect_lines() -> None:
-    class Transport:
-        def write(self, _data: bytes) -> None:
-            return None
-
-        def close(self) -> None:
-            return None
-
-    session = HoneyPotInteractiveProtocol(
-        Transport(),
-        VirtualFileSystem(),
-        session_id="unit-final-99",
-        ip="10.0.0.1",
-    )
-    session._dispatch_line(">")
-    session._dispatch_line("echo hi > /tmp/x")
-    session._execute_single(b"bad 'quote")
 
 
 @pytest.mark.asyncio

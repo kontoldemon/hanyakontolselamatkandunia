@@ -17,11 +17,9 @@ from cloudsentinel.admin_api import (
     _load_attack_graph_from_clickhouse,
     _load_truth_summary_from_clickhouse,
 )
-from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.config import LLMSettings, load_settings
 from cloudsentinel.pipeline import EventEnvelope
 from cloudsentinel.server import CloudSentinelSession
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.stream import LiveStream
 from cloudsentinel.vfs import VirtualFileSystem
 from cloudsentinel.vfs_agent import VFSAgent, VFSContext
@@ -135,25 +133,6 @@ async def test_threat_reporter_llm_paths(monkeypatch: pytest.MonkeyPatch) -> Non
     assert data["commands"] == ["whoami"]
 
 
-def test_attack_graph_credential_and_export() -> None:
-    graph = AttackGraph()
-    graph.add_event(
-        {
-            "src_ip": "8.8.8.8",
-            "session": "s1",
-            "hassh_md5": "b" * 32,
-            "country_code": "US",
-            "cloudsentinel_risk_score": 80,
-            "cloudsentinel_mitre_techniques": ["T1105"],
-            "eventid": "cloudsentinel.login.failed",
-            "username": "root",
-            "input": "ssh root@10.0.0.5",
-        }
-    )
-    subgraph = graph.get_subgraph("8.8.8.8", depth=2)
-    assert subgraph["nodes"]
-    assert graph.to_cytoscape()["elements"]
-    assert graph._lateral_moves == 1
 
 
 def _session_with_fake_server():
@@ -197,65 +176,6 @@ async def test_server_execute_paths() -> None:
         await session.vfs.close()
 
 
-def test_pipeline_envelope_to_row_full() -> None:
-    payload = {
-        "eventid": "cloudsentinel.command.input",
-        "session": "full-1",
-        "sensor": "unit",
-        "src_ip": "8.8.8.8",
-        "src_port": 1234,
-        "dst_ip": "10.0.0.1",
-        "dst_port": 22,
-        "country_code": "US",
-        "country_name": "United States",
-        "city": "Test",
-        "continent": "NA",
-        "latitude": "1.5",
-        "longitude": "2.5",
-        "timezone": "UTC",
-        "username": "root",
-        "password": "toor",
-        "auth_type": "password",
-        "attempt": 2,
-        "hassh_md5": "a" * 32,
-        "hassh_algorithms": "kex;enc;mac;cmp",
-        "kexAlgs": ["kex"],
-        "encCS": ["enc"],
-        "macCS": ["mac"],
-        "compCS": ["cmp"],
-        "version": "SSH-2.0-test",
-        "key_type": "ssh-rsa",
-        "input": "whoami",
-        "reason": "command",
-        "cloudsentinel_risk_score": 77,
-        "cloudsentinel_mitre_techniques": ["T1105"],
-        "cloudsentinel_soar_action": "iptables_block",
-        "detected_at": 1710000000.0,
-        "block_started_at": 1710000001.0,
-        "block_completed_at": 1710000002.0,
-        "mttb_ms": 12.5,
-        "block_command": "iptables",
-        "block_stdout": "ok",
-        "block_stderr": "",
-        "duration": "1.2",
-        "timestamp": 1710000003.0,
-    }
-    envelope = EventEnvelope(
-        event_type="cloudsentinel.command.input",
-        session_id="full-1",
-        src_ip="8.8.8.8",
-        src_port=1234,
-        timestamp=1710000003.0,
-        payload=payload,
-    )
-    row = envelope.to_clickhouse_row()
-    assert row["eventid"] == "cloudsentinel.command.input"
-    assert row["username"] == "root"
-    assert row["password"] == "toor"
-    assert row["hassh_md5"] == "a" * 32
-    assert row["cloudsentinel_risk_score"] == 77
-    assert row["mttb_ms"] == 12.5
-    assert row["block_command"] == "iptables"
 
 
 def test_vfs_agent_helpers() -> None:
@@ -278,42 +198,6 @@ def test_vfs_agent_helpers() -> None:
         asyncio.run(agent.close())
 
 
-def test_commands_batch() -> None:
-    class Transport:
-        def __init__(self) -> None:
-            self.data = b""
-
-        def write(self, data: bytes) -> None:
-            self.data += data
-
-        def close(self) -> None:
-            return None
-
-    commands = [
-        "id",
-        "pwd",
-        "hostname",
-        "date",
-        "uptime",
-        "ps",
-        "free",
-        "df",
-        "cat /etc/passwd",
-        "ls /etc",
-        "which ls",
-        "env",
-    ]
-    for command in commands:
-        transport = Transport()
-        protocol = HoneyPotInteractiveProtocol(
-            transport=transport,
-            vfs=VirtualFileSystem.build_default(),
-            username="root",
-            hostname="unit-host",
-            ip="8.8.8.8",
-        )
-        protocol._execute_single(command.encode())
-        assert transport.data, command
 
 
 @pytest.mark.asyncio

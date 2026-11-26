@@ -29,7 +29,6 @@ def build_analytics_router(
     async def stats() -> dict[str, Any]:
         data: dict[str, Any] = {
             "pending_events": pipeline.pending_count,
-            "session_scores": dict(getattr(pipeline, "session_scores", {})),
         }
         try:
             from ...metrics import get_metrics

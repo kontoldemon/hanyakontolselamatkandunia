@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 
 import cloudsentinel.auth as auth_module
 import cloudsentinel.config as config
-from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.config import load_settings
 from cloudsentinel.http_server import create_http_honeypot
 
@@ -19,28 +18,6 @@ class FakePipeline:
         return None
 
 
-def test_attack_graph_existing_edge_updates() -> None:
-    graph = AttackGraph()
-    graph.add_event(
-        {
-            "src_ip": "1.1.1.1",
-            "session": "s1",
-            "hassh_md5": "a" * 32,
-            "eventid": "cloudsentinel.command.input",
-            "input": "id",
-        }
-    )
-    graph.add_event(
-        {
-            "src_ip": "1.1.1.1",
-            "session": "s2",
-            "hassh_md5": "a" * 32,
-            "eventid": "cloudsentinel.command.input",
-            "input": "id",
-            "cloudsentinel_mitre_techniques": ["T1059"],
-        }
-    )
-    assert graph.get_subgraph("1.1.1.1")["edges"]
 
 
 def test_http_body_exception(monkeypatch) -> None:

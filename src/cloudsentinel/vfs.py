@@ -244,7 +244,7 @@ class VirtualFileSystem:
         return vfs
 
     @classmethod
-    def build_default(cls, data_dir: str | None = None, os_profile_name: str = "ubuntu-22.04") -> VirtualFileSystem:
+    def build_default(cls, os_profile_name: str = "ubuntu-22.04") -> VirtualFileSystem:
         # Try CloudSentinel pickle file
         for candidate in [
             Path(__file__).parent / "cloudsentinel-main" / "var" / "lib" / "cloudsentinel" / "fs.pickle",

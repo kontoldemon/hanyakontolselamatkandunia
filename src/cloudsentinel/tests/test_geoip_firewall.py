@@ -7,7 +7,6 @@ import json
 import pytest
 
 from cloudsentinel import geoip
-from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.config import RedisSettings
 from cloudsentinel.honeyfs_seed import is_text_content
 from cloudsentinel.observability import get_tracer, setup_sentry, setup_structlog
@@ -59,29 +58,8 @@ def test_honeyfs_text_detection() -> None:
     assert is_text_content(b"\xff\xfe\x00") is False
 
 
-def test_attack_graph_prune() -> None:
-    graph = AttackGraph(prune_after_seconds=0)
-    graph.add_event({"src_ip": "8.8.8.8", "session": "s1"})
-    assert graph._nodes
-    graph._prune()
-    assert graph._nodes == {}
 
 
-@pytest.mark.asyncio
-async def test_pipeline_reconnect(monkeypatch: pytest.MonkeyPatch) -> None:
-    pipeline = EventPipeline(RedisSettings())
-    stopped = {"stop": False, "start": False}
-
-    async def fake_stop() -> None:
-        stopped["stop"] = True
-
-    async def fake_start() -> None:
-        stopped["start"] = True
-
-    monkeypatch.setattr(pipeline, "stop", fake_stop)
-    monkeypatch.setattr(pipeline, "start", fake_start)
-    assert await pipeline.reconnect() is True
-    assert stopped == {"stop": True, "start": True}
 
 
 @pytest.mark.asyncio

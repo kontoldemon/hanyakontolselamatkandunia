@@ -134,12 +134,12 @@ function normalizeCountryCode(
   return { code: "XX", name: undefined };
 }
 
-export function numberOrUndefined(value: unknown): number | undefined {
+function numberOrUndefined(value: unknown): number | undefined {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed !== 0 ? parsed : undefined;
 }
 
-export function parseEventTime(raw: unknown): number {
+function parseEventTime(raw: unknown): number {
   if (typeof raw === "number") {
     return raw > 1_000_000_000_000 ? raw : raw * 1000;
   }

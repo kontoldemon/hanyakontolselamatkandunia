@@ -6,9 +6,7 @@ import asyncio
 import sys
 import types
 
-from cloudsentinel._secrets import InfisicalProvider
 from cloudsentinel.dns_honeypot import DNSHoneypot
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.vfs import VirtualFileSystem
 
 
@@ -42,41 +40,5 @@ def test_dns_short_and_send() -> None:
     assert transport.sent
 
 
-def test_shell_redirect_and_bad_quote() -> None:
-    transport = FakeTransport()
-    session = HoneyPotInteractiveProtocol(
-        transport,
-        VirtualFileSystem(),
-        session_id="unit-final-97",
-        ip="10.0.0.1",
-    )
-    session._dispatch_line(">")
-    session._execute_single(b"bad 'quote")
 
 
-def test_infisical_non_200(monkeypatch) -> None:
-    provider = InfisicalProvider()
-    provider._available = True
-    provider._token = "token"
-    provider._last_fetch = 10**18
-
-    class Response:
-        status_code = 500
-
-        def json(self) -> dict:
-            return {}
-
-    class Client:
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *_args):
-            return False
-
-        async def get(self, *_args, **_kwargs):
-            return Response()
-
-    fake = types.ModuleType("httpx")
-    fake.AsyncClient = Client
-    monkeypatch.setitem(sys.modules, "httpx", fake)
-    assert asyncio.run(provider.get("UNIT_KEY", "fallback")) == "fallback"

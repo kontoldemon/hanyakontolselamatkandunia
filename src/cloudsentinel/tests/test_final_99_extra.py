@@ -8,37 +8,10 @@ import types
 import time
 from datetime import UTC, datetime
 
-from cloudsentinel._secrets import InfisicalProvider
 from cloudsentinel.admin_api import _load_recent_sessions_from_clickhouse, _trim_replay_entries
 from cloudsentinel.config import load_settings
 
 
-def test_infisical_non_200(monkeypatch) -> None:
-    provider = InfisicalProvider()
-    provider._available = True
-    provider._token = "token"
-    provider._last_fetch = 10**18
-
-    class Response:
-        status_code = 500
-
-        def json(self) -> dict:
-            return {}
-
-    class Client:
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *_args):
-            return False
-
-        async def get(self, *_args, **_kwargs):
-            return Response()
-
-    fake = types.ModuleType("httpx")
-    fake.AsyncClient = Client
-    monkeypatch.setitem(sys.modules, "httpx", fake)
-    assert asyncio.run(provider.get("UNIT_KEY", "fallback")) == "fallback"
 
 
 def test_replay_echo_and_stream_duplicate(monkeypatch) -> None:

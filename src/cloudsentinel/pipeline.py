@@ -60,8 +60,6 @@ class EventEnvelope:
         data["payload"] = dumps_text(self.payload)
         return {key: dumps_text(value) for key, value in data.items()}
 
-    def to_clickhouse_row(self) -> dict[str, Any]:
-        return ClickHouseForwarder.envelope_to_row(self)
 
     def to_message_bytes(self) -> bytes:
         from .event_codec import dumps_bytes
@@ -134,7 +132,6 @@ class EventPipeline:
         self._wal = LocalWAL("var/lib/cloudsentinel/wal/events.jsonl")
         self._wal_pending = 0
         self._connected = False
-        self._session_scores: dict[str, int] = {}
         self._session_techniques: dict[str, set[str]] = {}
         self._wal_flush_task: asyncio.Task[None] | None = None
 
@@ -145,10 +142,6 @@ class EventPipeline:
     @property
     def pending_count(self) -> int:
         return self._wal_pending
-
-    @property
-    def session_scores(self) -> dict[str, int]:
-        return dict(self._session_scores)
 
     async def start(self) -> None:
         if _TENACITY:
@@ -237,16 +230,6 @@ class EventPipeline:
             return
         await self._publish_optional_safe(envelope)
 
-    async def reconnect(self) -> bool:
-        """Try to restore Redis connection and drain pending events."""
-
-        try:
-            await self.stop()
-            await self.start()
-            return True
-        except Exception as exc:
-            logger.debug("Redis reconnect failed: %s", exc)
-            return False
 
     async def _wal_flush_loop(self) -> None:
         """Background task to continually attempt to flush WAL if connected."""
@@ -334,85 +317,8 @@ class EventPipeline:
         except Exception as exc:
             logger.warning("Optional event publish failed: %s", exc)
 
-    async def emit_login(
-        self,
-        *,
-        session_id: str,
-        src_ip: str,
-        src_port: int,
-        username: str,
-        password: str,
-        hassh: str | None,
-        ja4s: str | None,
-    ) -> None:
-        await self.emit(
-            EventEnvelope(
-                event_type="auth.login",
-                session_id=session_id,
-                src_ip=src_ip,
-                src_port=src_port,
-                timestamp=time.time(),
-                payload={
-                    "username": username,
-                    "password": password,
-                    "hassh": hassh,
-                    "ja4s": ja4s,
-                    "risk_score": 5,
-                    "mitre_techniques": ["T1078"],
-                },
-            )
-        )
 
-    async def emit_command(
-        self,
-        *,
-        session_id: str,
-        src_ip: str,
-        src_port: int,
-        username: str,
-        command: str,
-        output: str,
-        hassh: str | None,
-        ja4s: str | None,
-    ) -> None:
-        annotation = self._annotate_command(session_id, command)
-        await self.emit(
-            EventEnvelope(
-                event_type="shell.command",
-                session_id=session_id,
-                src_ip=src_ip,
-                src_port=src_port,
-                timestamp=time.time(),
-                payload={
-                    "username": username,
-                    "command": command,
-                    "output": output,
-                    "hassh": hassh,
-                    "ja4s": ja4s,
-                    "risk_score": annotation["risk_score"],
-                    "session_risk_score": annotation["session_risk_score"],
-                    "mitre_techniques": annotation["mitre_techniques"],
-                    "mitre_names": annotation["mitre_names"],
-                },
-            )
-        )
 
-    def _annotate_command(self, session_id: str, command: str) -> dict[str, object]:
-        annotation = score_command(command)
-        risk_score = int(annotation["risk_score"])
-        session_score = min(self._session_scores.get(session_id, 0) + risk_score, 100)
-        self._session_scores[session_id] = session_score
-
-        session_techniques = self._session_techniques.setdefault(session_id, set())
-        for tech_id in annotation["mitre_techniques"]:
-            session_techniques.add(str(tech_id))
-
-        return {
-            "risk_score": risk_score,
-            "session_risk_score": session_score,
-            "mitre_techniques": sorted(session_techniques),
-            "mitre_names": annotation["mitre_names"],
-        }
 
 
 class ClickHouseForwarder:

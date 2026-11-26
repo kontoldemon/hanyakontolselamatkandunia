@@ -1,4 +1,4 @@
-export type AgentActionType =
+type AgentActionType =
   | "navigate_session"
   | "navigate_page"
   | "show_threat_map"

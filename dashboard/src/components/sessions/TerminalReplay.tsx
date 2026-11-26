@@ -135,7 +135,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                             : "w-full bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden font-mono text-xs shadow-sm flex flex-col h-full min-h-[280px]"
                 }
             >
-                <div className="bg-slate-50/80 dark:bg-white/[0.02] px-3.5 py-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-white/5 shrink-0">
+                <div className="bg-slate-50/80 dark:bg-white/[0.02] px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-white/5 shrink-0">
                     <div className="flex items-center gap-1.5 min-w-0">
                         <TerminalIcon size={13} className="text-blue-500 shrink-0" />
                         <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
@@ -145,7 +145,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                             &bull; {searchQuery.trim() ? `${filteredEntries.length}/${visibleEntries.length}` : visibleEntries.length} {visibleEntries.length === 1 ? "line" : "lines"}
                         </span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                         {/* Search filter input */}
                         <div className="relative flex items-center">
                             <Search size={11} className="text-slate-400 dark:text-slate-500 absolute left-2 pointer-events-none" />

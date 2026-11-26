@@ -20,7 +20,7 @@ export default function SubsystemLatencyGrid({
 
     return (
         <div className="bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-xs overflow-hidden">
-            <div className="px-4 py-2.5 sm:px-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.015] flex items-center justify-between">
+            <div className="px-4 py-2.5 sm:px-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.015] flex flex-wrap items-center justify-between gap-2">
                 <div>
                     <h3 className="font-display font-semibold text-xs tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                         <Activity size={14} className="text-blue-500" /> Admin API Endpoint Latencies
@@ -47,7 +47,7 @@ export default function SubsystemLatencyGrid({
                         return (
                             <div
                                 key={row.name}
-                                className="px-3.5 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-2 transition hover:border-slate-300 dark:hover:border-white/10"
+                                className="px-3 sm:px-3.5 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-2 min-w-0 transition hover:border-slate-300 dark:hover:border-white/10"
                             >
                                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
                                     {row.name}

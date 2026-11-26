@@ -133,11 +133,3 @@ def is_public_ip(ip: str) -> bool:
         return False
 
 
-async def enrich_async(ip: str) -> dict[str, str]:
-    """Async wrapper for GeoIP enrichment (runs lookup in thread pool).
-
-    Use this instead of enrich() in async contexts to avoid blocking
-    the event loop on geoip2 database reads.
-    """
-    import asyncio
-    return await asyncio.to_thread(enrich, ip)

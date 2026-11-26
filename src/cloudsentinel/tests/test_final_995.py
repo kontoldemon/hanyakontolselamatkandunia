@@ -26,7 +26,6 @@ except ModuleNotFoundError:
 import cloudsentinel.pipeline as pipeline_module
 import cloudsentinel.vfs_agent as vfs_agent_module
 from cloudsentinel.abuseipdb import AbuseIPDBClient
-from cloudsentinel._secrets import InfisicalProvider
 from cloudsentinel.config import LLMSettings
 from cloudsentinel.pipeline import EventEnvelope
 from cloudsentinel.vfs_agent import VFSContext, VFSAgent
@@ -75,29 +74,3 @@ def test_vfs_gemini_branch(monkeypatch) -> None:
         asyncio.run(agent.close())
 
 
-def test_infisical_non_200(monkeypatch) -> None:
-    provider = InfisicalProvider()
-    provider._available = True
-    provider._token = "token"
-    provider._last_fetch = 10**18
-
-    class Response:
-        status_code = 500
-
-        def json(self) -> dict:
-            return {}
-
-    class Client:
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *_args):
-            return False
-
-        async def get(self, *_args, **_kwargs):
-            return Response()
-
-    fake = types.ModuleType("httpx")
-    fake.AsyncClient = Client
-    monkeypatch.setitem(sys.modules, "httpx", fake)
-    assert asyncio.run(provider.get("UNIT_KEY", "fallback")) == "fallback"

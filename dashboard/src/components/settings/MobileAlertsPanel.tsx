@@ -242,12 +242,12 @@ export default function MobileAlertsPanel({
 
                 <div className="divide-y divide-slate-100 dark:divide-white/5">
                     {/* Endpoint Configuration */}
-                    <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                        <div className="min-w-0 pr-2">
-                            <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Sensor Admin API Endpoint</label>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Target gateway URL that companion devices connect to.</p>
+                    <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                        <div className="min-w-0 sm:pr-2">
+                            <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Sensor Admin API Endpoint</label>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Target gateway URL that companion devices connect to.</p>
                         </div>
-                        <div className="w-56 sm:w-72 shrink-0">
+                        <div className="w-full sm:w-72 shrink-0">
                             <input
                                 type="text"
                                 value={serverUrl}
@@ -331,7 +331,7 @@ export default function MobileAlertsPanel({
                                             <span>{copiedLink ? "Pairing Link Copied to Clipboard!" : "Copy One-Click Pairing Link"}</span>
                                         </button>
 
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             <button
                                                 type="button"
                                                 onClick={handleCopyCode}

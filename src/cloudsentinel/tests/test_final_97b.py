@@ -8,10 +8,8 @@ import types
 
 import pytest
 
-from cloudsentinel._secrets import InfisicalProvider
 from cloudsentinel.config import load_settings
 from cloudsentinel.hassh import HASSHDNA
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.vfs import VirtualFileSystem
 from cloudsentinel.server import CloudSentinelSSHServer, ConnectionLimiter
 
@@ -60,29 +58,3 @@ async def test_server_metric_exception_branches(monkeypatch) -> None:
     await asyncio.sleep(0)
 
 
-def test_secret_and_shell_edges() -> None:
-    provider = InfisicalProvider()
-    provider._available = False
-    asyncio.run(provider._ensure_authenticated())
-
-    class Transport:
-        def __init__(self) -> None:
-            self.data = b""
-
-        async def read(self, _size: int) -> bytes:
-            return b""
-
-        def write(self, data: bytes) -> None:
-            self.data += data
-
-        def close(self) -> None:
-            return None
-
-    session = HoneyPotInteractiveProtocol(
-        Transport(),
-        VirtualFileSystem(),
-        session_id="unit-final-shell",
-        ip="10.0.0.1",
-    )
-    session._dispatch_line(">")
-    session._execute_single(b"bad 'quote")

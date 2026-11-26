@@ -6,7 +6,6 @@ import asyncio
 import sys
 
 import cloudsentinel.admin_api as admin_module
-from cloudsentinel.attack_graph import AttackGraph
 from cloudsentinel.config import load_settings
 from cloudsentinel.hassh import HASSHDNA
 from cloudsentinel.server import (
@@ -27,26 +26,6 @@ def test_run_command_success() -> None:
     assert "unit" in stdout
 
 
-def test_attack_graph_existing_target_edge() -> None:
-    graph = AttackGraph()
-    graph.add_event(
-        {
-            "src_ip": "1.1.1.1",
-            "session": "s1",
-            "eventid": "cloudsentinel.command.input",
-            "input": "ssh root@2.2.2.2",
-        }
-    )
-    graph.add_event(
-        {
-            "src_ip": "1.1.1.1",
-            "session": "s2",
-            "eventid": "cloudsentinel.command.input",
-            "input": "ssh root@2.2.2.2",
-            "cloudsentinel_mitre_techniques": ["T1021"],
-        }
-    )
-    assert graph.get_subgraph("1.1.1.1")["edges"]
 
 
 def test_host_key_chmod_failure(monkeypatch, tmp_path) -> None:

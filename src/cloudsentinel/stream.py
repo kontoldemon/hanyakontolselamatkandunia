@@ -159,10 +159,4 @@ class LiveStream:
         # Emit asynchronously
         asyncio.create_task(self._sio.emit("cloudsentinel:event", safe))
 
-    async def emit_coro(self, event: dict[str, Any]) -> None:
-        """Coroutine version of emit."""
-        if not self._started or not self._sio:
-            return
-        safe = self._sanitize(event)
-        self._buffer.append(safe)
-        await self._sio.emit("cloudsentinel:event", safe)
+

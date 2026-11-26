@@ -347,14 +347,6 @@ class HASSHDNA:
     def get_stats(self, hassh: str) -> dict[str, float | int]:
         return dict(self._seen.get(hassh, {}))
 
-    def add_intel(
-        self, hassh: str, client_software: str, botnet_family: str, threat_level: str
-    ) -> None:
-        self._db[hassh] = {
-            "client_software": client_software,
-            "botnet_family": botnet_family,
-            "threat_level": threat_level,
-        }
 
 
 HASSH_THREAT_SCORES: dict[str, int] = {

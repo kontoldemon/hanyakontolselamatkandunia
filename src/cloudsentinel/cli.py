@@ -23,11 +23,9 @@ from typing import Annotated
 
 try:
     import typer
-    from rich import print as rprint
     from rich.console import Console
     from rich.panel import Panel
     from rich.progress import Progress, SpinnerColumn, TextColumn
-    from rich.syntax import Syntax
     from rich.table import Table
     _HAS_CLI = True
 except ImportError:

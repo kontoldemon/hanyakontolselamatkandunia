@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 
 import cloudsentinel.config as config
-from cloudsentinel._secrets import InfisicalProvider
 from cloudsentinel.config import SandboxSettings, SecretStr, load_settings
 
 
@@ -30,7 +29,6 @@ def test_config_final_branches(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setattr(config, "_SETTINGS_CACHE", None)
     assert config.get_settings() is not None
-    assert isinstance(config.get("admin", "token"), str)
 
     settings.soar.active_profile = "local"
     settings.admin.enabled = True
@@ -41,7 +39,3 @@ def test_config_final_branches(monkeypatch, tmp_path) -> None:
         config.validate_settings(settings)
 
 
-def test_infisical_unavailable() -> None:
-    provider = InfisicalProvider()
-    provider._available = False
-    asyncio.run(provider._ensure_authenticated())

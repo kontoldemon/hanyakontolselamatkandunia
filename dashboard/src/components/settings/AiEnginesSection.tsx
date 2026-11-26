@@ -54,12 +54,12 @@ export default function AiEnginesSection({
                         </h3>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-white/5">
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">AI Provider</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Copilot cloud intelligence provider.</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">AI Provider</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Copilot cloud intelligence provider.</p>
                             </div>
-                            <div className="w-48 sm:w-56 shrink-0">
+                            <div className="w-full sm:w-56 shrink-0">
                                 <CustomDropdown
                                     options={[
                                         { label: "Google Gemini (Recommended)", value: "gemini" },
@@ -74,12 +74,12 @@ export default function AiEnginesSection({
                             </div>
                         </div>
 
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Primary Model</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Analyst evaluation model checkpoint.</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Primary Model</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Analyst evaluation model checkpoint.</p>
                             </div>
-                            <div className="w-48 sm:w-56 shrink-0">
+                            <div className="w-full sm:w-56 shrink-0">
                                 <CustomDropdown
                                     options={[
                                         { label: "gemini/gemini-2.0-flash", value: "gemini/gemini-2.0-flash" },
@@ -93,12 +93,12 @@ export default function AiEnginesSection({
                             </div>
                         </div>
 
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">API Key</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Inference authentication key.</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">API Key</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Inference authentication key.</p>
                             </div>
-                            <div className="w-48 sm:w-56 shrink-0 relative flex items-center">
+                            <div className="w-full sm:w-56 shrink-0 relative flex items-center">
                                 <input
                                     type={showCopilotKey ? "text" : "password"}
                                     value={copilotApiKey}
@@ -127,12 +127,12 @@ export default function AiEnginesSection({
                         </h3>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-white/5">
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Emulation Mode</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Terminal output generation mode.</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Emulation Mode</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Terminal output generation mode.</p>
                             </div>
-                            <div className="w-48 sm:w-56 shrink-0">
+                            <div className="w-full sm:w-56 shrink-0">
                                 <CustomDropdown
                                     options={[
                                         { label: "Dynamic VFS Terminal Emulation", value: "dynamic" },
@@ -144,12 +144,12 @@ export default function AiEnginesSection({
                             </div>
                         </div>
 
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Fallback Models</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Failover model sequence (CSV).</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Fallback Models</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Failover model sequence (CSV).</p>
                             </div>
-                            <div className="w-48 sm:w-56 shrink-0">
+                            <div className="w-full sm:w-56 shrink-0">
                                 <input
                                     type="text"
                                     value={fallbackChain}
@@ -170,12 +170,12 @@ export default function AiEnginesSection({
                         </h3>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-white/5">
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Hourly Request Budget</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Prevents runaway API credit depletion.</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Hourly Request Budget</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Prevents runaway API credit depletion.</p>
                             </div>
-                            <div className="w-48 sm:w-56 flex items-center gap-3 shrink-0">
+                            <div className="w-full sm:w-56 flex items-center gap-3 shrink-0">
                                 <input
                                     type="range"
                                     min="10"
@@ -192,10 +192,10 @@ export default function AiEnginesSection({
                             </div>
                         </div>
 
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex items-center justify-between gap-3">
                             <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Prompt Sanitization</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Strips canary tokens and sensitive host fingerprints.</p>
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Prompt Sanitization</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Strips canary tokens and sensitive host fingerprints.</p>
                             </div>
                             <ToggleSwitch checked={promptSanitization} onChange={setPromptSanitization} />
                         </div>

@@ -40,10 +40,3 @@ def test_connection_limiter_evicts_old_entries(monkeypatch) -> None:
     assert "2.2.2.2" in limiter._ips
 
 
-async def test_connection_limiter_async_lock() -> None:
-    limiter = ConnectionLimiter(max_per_ip=10, max_total=1)
-
-    assert await limiter.acquire("1.1.1.1") is True
-    assert await limiter.acquire("2.2.2.2") is False
-    await limiter.release("1.1.1.1")
-    assert await limiter.acquire("2.2.2.2") is True

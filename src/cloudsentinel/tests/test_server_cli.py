@@ -19,7 +19,6 @@ from cloudsentinel.server import (
     CloudSentinelSession,
     ConnectionLimiter,
 )
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.stress_test import StressTest
 from cloudsentinel.threat_reporter import chat_with_agent
 from cloudsentinel.vfs import VirtualFileSystem
@@ -146,66 +145,8 @@ async def test_ssh_server_methods() -> None:
     await session.vfs.close()
 
 
-def test_shell_extra_paths() -> None:
-    class Transport:
-        def __init__(self) -> None:
-            self.data = b""
-            self.closed = False
-
-        def write(self, data: bytes) -> None:
-            self.data += data
-
-        def close(self) -> None:
-            self.closed = True
-
-    transport = Transport()
-    protocol = HoneyPotInteractiveProtocol(
-        transport=transport,
-        vfs=VirtualFileSystem.build_default(),
-        username="root",
-        hostname="unit-host",
-        ip="8.8.8.8",
-    )
-    protocol._execute_single(b"definitely-not-a-command")
-    assert protocol._exit_code == 127
-    protocol._handle_cd(["/tmp"])
-    assert protocol.cwd == "/tmp"
-    protocol.show_prompt()
-    protocol._send_motd()
-    protocol.write_stdout(b"out")
-    protocol.write_stderr(b"err")
-    protocol.emit_event({"eventid": "unit"})
-    protocol._execute_single(b"exit")
-    assert protocol._closed is True
-    assert transport.closed is True
 
 
-@pytest.mark.asyncio
-async def test_shell_run_paths() -> None:
-    class Transport:
-        def __init__(self) -> None:
-            self.data = b""
-            self.closed = False
-
-        def write(self, data: bytes) -> None:
-            self.data += data
-
-        def close(self) -> None:
-            self.closed = True
-
-        async def read(self, _size: int) -> bytes:
-            return b""
-
-    transport = Transport()
-    protocol = HoneyPotInteractiveProtocol(
-        transport=transport,
-        vfs=VirtualFileSystem.build_default(),
-        username="root",
-        hostname="unit-host",
-        ip="8.8.8.8",
-    )
-    await protocol.run()
-    assert protocol._closed is True
 
 
 def test_cli_benchmark_and_validate(monkeypatch: pytest.MonkeyPatch) -> None:

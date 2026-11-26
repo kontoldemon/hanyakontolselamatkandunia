@@ -430,10 +430,3 @@ class VFSAgent:
             self._cache.popitem(last=False)
         self._cache[command] = (time.monotonic(), output)
 
-    @staticmethod
-    def _parse_args(command: str) -> list[str]:
-        import shlex
-        try:
-            return shlex.split(command)
-        except ValueError:
-            return command.split()

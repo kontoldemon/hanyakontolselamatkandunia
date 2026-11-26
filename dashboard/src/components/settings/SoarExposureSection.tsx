@@ -44,8 +44,8 @@ export default function SoarExposureSection({
                         </h3>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-white/5">
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
                                 <div className="flex items-center gap-1.5">
                                     <label className="text-xs font-semibold text-slate-900 dark:text-white">Public Ingress Forwarding</label>
                                     <span
@@ -60,7 +60,7 @@ export default function SoarExposureSection({
                                         title={effectiveExposureEnabled === false ? "Gateway Offline" : effectiveExposureEnabled === true ? "Gateway Active" : "Gateway state unknown"}
                                     />
                                 </div>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">
                                     {sensorOnline
                                         ? "Sensor API active. Toggling offline detaches public IP forwarding rules immediately."
                                         : "Sensor API unreachable. Ingress status cannot be modified."}
@@ -100,12 +100,12 @@ export default function SoarExposureSection({
                         </h3>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-white/5">
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Containment Trigger</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Pattern required for network isolation.</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Containment Trigger</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Pattern required for network isolation.</p>
                             </div>
-                            <div className="w-48 sm:w-56 shrink-0">
+                            <div className="w-full sm:w-56 shrink-0">
                                 <CustomDropdown
                                     options={[
                                         { label: "Risk Score Threshold", value: "risk" },
@@ -119,12 +119,12 @@ export default function SoarExposureSection({
                             </div>
                         </div>
 
-                        <div className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-3">
-                            <div className="min-w-0 pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block truncate">Execution Runtime</label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Async task execution engine.</p>
+                        <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+                            <div className="min-w-0 sm:pr-2">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">Execution Runtime</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Async task execution engine.</p>
                             </div>
-                            <div className="w-48 sm:w-56 shrink-0">
+                            <div className="w-full sm:w-56 shrink-0">
                                 <CustomDropdown
                                     options={[
                                         { label: "Azure Function (Event Grid)", value: "eventgrid" },

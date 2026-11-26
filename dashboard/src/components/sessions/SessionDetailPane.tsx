@@ -164,8 +164,8 @@ export default function SessionDetailPane({
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 xl:grid-cols-3 flex-1 min-h-0 overflow-hidden">
-                            <div className="xl:col-span-2 border-b xl:border-b-0 xl:border-r border-slate-200 dark:border-white/5 flex flex-col h-full min-h-0 overflow-hidden">
+                        <div className="grid grid-cols-1 xl:grid-cols-3 flex-1 min-h-0 overflow-y-auto xl:overflow-hidden">
+                            <div className="xl:col-span-2 border-b xl:border-b-0 xl:border-r border-slate-200 dark:border-white/5 flex flex-col min-h-[260px] max-h-[48vh] xl:max-h-none xl:h-full min-w-0 overflow-hidden">
                                 <TerminalReplay
                                     lines={selectedView.input ?? []}
                                     replay={selectedView.replay}
@@ -175,7 +175,7 @@ export default function SessionDetailPane({
                                 />
                             </div>
 
-                            <div className="xl:col-span-1 bg-slate-50/50 dark:bg-white/[0.01] p-3 flex flex-col h-full overflow-hidden">
+                            <div className="xl:col-span-1 bg-slate-50/50 dark:bg-white/[0.01] p-3 flex flex-col min-h-[320px] xl:h-full xl:overflow-hidden">
                                 {/* Minimalist Icon-only Tab Switcher */}
                                 <div className="grid grid-cols-3 p-1 bg-slate-200/60 dark:bg-[#0c0d10] rounded-lg border border-slate-300/40 dark:border-white/5 shrink-0 mb-3 gap-1">
                                     <button

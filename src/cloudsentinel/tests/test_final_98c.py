@@ -8,7 +8,6 @@ from cloudsentinel.dns_honeypot import DNSHoneypot
 from cloudsentinel.config import load_settings
 from cloudsentinel.hassh import HASSHDNA
 from cloudsentinel.server import CloudSentinelSSHServer, CloudSentinelSession, ConnectionLimiter
-from cloudsentinel.shell import HoneyPotInteractiveProtocol
 from cloudsentinel.vfs import VirtualFileSystem
 
 
@@ -42,15 +41,6 @@ def test_dns_short_and_valid() -> None:
     assert transport.sent
 
 
-def test_shell_redirect() -> None:
-    session = HoneyPotInteractiveProtocol(
-        Transport(),
-        VirtualFileSystem(),
-        session_id="unit-final-98c",
-        ip="10.0.0.1",
-    )
-    session._dispatch_line(">")
-    session._execute_single(b"bad 'quote")
 
 
 def test_session_cd_parent() -> None:

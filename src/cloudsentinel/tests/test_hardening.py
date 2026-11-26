@@ -14,7 +14,6 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-import cloudsentinel._secrets as secrets
 import cloudsentinel.admin_api as admin_api
 from cloudsentinel.admin_api import create_admin_app
 from cloudsentinel.config import RedisSettings, load_settings
@@ -485,29 +484,6 @@ def test_validate_settings_requires_eventgrid_credentials() -> None:
         validate_settings(settings)
 
 
-def test_vault_reads_kv_v2_path(monkeypatch) -> None:
-    monkeypatch.setenv("VAULT_ADDR", "http://vault")
-    monkeypatch.setenv("VAULT_TOKEN", "token")
-    paths: list[str] = []
-
-    class FakeKV:
-        async def read_secret_version(self, **kwargs):
-            paths.append(kwargs["path"])
-            return {"data": {"data": {"value": "vault-value"}}}
-
-    class FakeClient:
-        def __init__(self, **_kwargs) -> None:
-            self.secrets = types.SimpleNamespace(kv=types.SimpleNamespace(v2=FakeKV()))
-
-        async def is_authenticated(self) -> bool:
-            return True
-
-    fake_hvac = types.ModuleType("hvac")
-    fake_hvac.AsyncClient = FakeClient
-    monkeypatch.setitem(sys.modules, "hvac", fake_hvac)
-    provider = secrets.VaultProvider()
-    assert asyncio.run(provider.get("UNIT_KEY", "fallback")) == "vault-value"
-    assert paths[-1] == "cloudsentinel/unit_key"
 
 
 def test_deploy_installs_host_agent() -> None:
