@@ -454,9 +454,44 @@ def build_mobile_router(
     ) -> dict[str, Any]:
         """Mobile AI Security Copilot query endpoint."""
         prompt = str(body.get("prompt") or "").strip()
-        context = str(body.get("context") or "Mobile SOC Companion session")
+        context = str(body.get("context") or "").strip()
         if not prompt:
             raise HTTPException(status_code=400, detail="prompt is required")
+        if not context or context == "Mobile SOC Companion session":
+            metrics = get_metrics()
+            alerts = mobile_service.get_recent_alerts(limit=10)
+            recent = ", ".join(
+                f"{item.get('ip')} ({item.get('country') or '?'}, risk {item.get('riskScore') or 0})"
+                for item in alerts[:5]
+                if item.get("ip")
+            ) or "none"
+            exposure = "unknown"
+            if load_exposure_state:
+                try:
+                    state = await load_exposure_state()
+                    exposure = "active" if bool(state.get("effective_enabled", True)) else "paused"
+                except Exception:
+                    pass
+            mttb_ms = 0.0
+            if soar is not None:
+                mttb_ms = float(getattr(soar, "mttb_ms", 0.0) or 0.0)
+            if mttb_ms <= 0:
+                mttb_ms = float(metrics.mttb_ms or 0.0)
+            soar_mode = "dry-run" if bool(
+                getattr(soar, "firewall_dry_run", settings.soar.firewall_dry_run)
+            ) else "live"
+            context = (
+                "MOBILE SOC COMPANION CONTEXT\n"
+                f"- Sensor: {'ONLINE' if pipeline is not None and getattr(pipeline, 'connected', False) else 'OFFLINE'}\n"
+                f"- Active connections: {int(metrics.active_sessions)}\n"
+                f"- Events since start: {int(getattr(metrics, 'total_events', 0))}\n"
+                f"- Blocked IPs: {len(getattr(metrics, 'blocked_ips', set()) or set())}\n"
+                f"- MTTB: {round(mttb_ms / 1000, 2)}s\n"
+                f"- Deception: {settings.deception.level}; HASSH: {settings.deception.hassh_action}; "
+                f"SOAR: {soar_mode}; SSH ingress: {exposure}\n"
+                f"- Recent alerts: {recent}\n"
+                "Answer as the CloudSentinel SOC copilot using only these facts."
+            )
 
         try:
             from ...threat_reporter import chat_with_agent

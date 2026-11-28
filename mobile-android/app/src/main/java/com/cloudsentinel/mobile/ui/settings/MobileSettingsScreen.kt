@@ -306,7 +306,9 @@ fun MobileSettingsScreen(
                     }
                     DropdownMenu(
                         expanded = showThemeMenu,
-                        onDismissRequest = { showThemeMenu = false }
+                        onDismissRequest = { showThemeMenu = false },
+                        containerColor = ObsidianCard,
+                        tonalElevation = 0.dp
                     ) {
                         ThemeMode.entries.forEach { mode ->
                             DropdownMenuItem(

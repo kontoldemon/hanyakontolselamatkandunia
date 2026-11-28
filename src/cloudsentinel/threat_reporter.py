@@ -231,7 +231,11 @@ async def _call_litellm_raw(prompt: str) -> str:
 async def chat_with_agent(prompt: str, context: str) -> str:
     full_prompt = (
         "You are CloudSentinel AI, an expert cybersecurity agent embedded in a live dashboard.\n"
-        "You help the user understand honeypot telemetry, attacker behavior, and dashboard stats.\n\n"
+        "You help the user understand honeypot telemetry, attacker behavior, and dashboard stats.\n"
+        "STYLE: Be concise, specific and conversational like a senior SOC analyst. "
+        "Use 2 to 4 short paragraphs or bullets. Never use em dashes or en dashes; use commas, "
+        "periods, or 'to'. Do not use markdown tables, headings, or filler. Do not repeat the question. "
+        "Only use facts from the context; if a value is missing, say it is not available.\n\n"
         f"Current Dashboard Context:\n{context}\n\n"
         f"User Query: {prompt}"
     )
