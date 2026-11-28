@@ -27,10 +27,12 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
 
   const displayData = useMemo(() => {
     if (mode === "most") {
-      return [...countries].slice(0, 10);
+      return [...countries];
     }
-    return [...countries].reverse().slice(0, 10);
+    return [...countries].reverse();
   }, [countries, mode]);
+
+  const chartHeight = Math.max(200, displayData.length * 24);
 
   const topCountry = countries.length > 0 ? countries[0].name : "None";
 
@@ -44,7 +46,7 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
       summary={`${countries.length} countries | Top: ${topCountry}`}
     >
       <div className="flex justify-between items-center mb-4">
-        <span className="text-xs text-slate-500">Top 10 Source Countries</span>
+        <span className="text-xs text-slate-500">All Source Countries</span>
         <CustomDropdown
           options={[
             { label: "Most Attacks", value: "most" },
@@ -55,10 +57,11 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
           className="w-32"
         />
       </div>
-      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full text-xs">
+      <div className="w-full text-xs overflow-y-auto terminal-scrollbar" style={{ height: Math.min(560, chartHeight) }}>
         {displayData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-slate-500">No country data available</div>
         ) : (
+          <div style={{ height: chartHeight }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 6, left: 0, bottom: 0 }}>
               <XAxis type="number" hide domain={[0, "dataMax"]} />
@@ -88,6 +91,7 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </div>
         )}
       </div>
     </CollapsiblePanel>
