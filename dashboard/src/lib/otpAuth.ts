@@ -10,8 +10,16 @@ export function parseCookieFailures(value?: string): number {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 }
 
+export function hasOtpSecret(): boolean {
+  return Boolean(process.env.OTP_SECRET?.trim()) || process.env.NODE_ENV !== "production";
+}
+
 export function computeOtpHash(otp: string): string {
-  const otpSecret = process.env.OTP_SECRET || process.env.DASHBOARD_PASSWORD || "default-secret";
+  const otpSecret = process.env.OTP_SECRET?.trim()
+    || (process.env.NODE_ENV !== "production" ? "dev-otp-secret" : "");
+  if (!otpSecret) {
+    throw new Error("OTP_SECRET is not configured");
+  }
   return crypto.createHmac("sha256", otpSecret).update(otp).digest("hex");
 }
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import {
   computeOtpHash,
+  hasOtpSecret,
   OTP_HASH_COOKIE,
   parseCookieFailures,
 } from "@/lib/otpAuth";
@@ -47,6 +48,12 @@ export async function POST(request: Request) {
   if (!hasAuthConfig()) {
     return NextResponse.json(
       { ok: false, error: "dashboard auth is not configured" },
+      { status: 503 },
+    );
+  }
+  if (!hasOtpSecret()) {
+    return NextResponse.json(
+      { ok: false, error: "OTP secret is not configured" },
       { status: 503 },
     );
   }
