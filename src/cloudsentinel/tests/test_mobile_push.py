@@ -802,6 +802,19 @@ def test_mobile_sessions_fall_back_to_alerts_on_clickhouse_error(tmp_path: Path,
     assert body["sessions"][0]["risk_score"] == 88
 
 
+def test_pairing_rejects_wrong_pairing_token(tmp_path: Path) -> None:
+    svc = MobilePushService(storage_path=tmp_path / "pair-token.json")
+    challenge = svc.create_pairing_challenge("http://127.0.0.1:8080")
+    assert (
+        svc.pair_device(
+            challenge["pairingCode"],
+            "Phone",
+            pairing_token="wrong-token",
+        )
+        is None
+    )
+
+
 def test_fcm_service_account_bearer(monkeypatch) -> None:
     import cloudsentinel.mobile_push as mp
 
