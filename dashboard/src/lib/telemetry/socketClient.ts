@@ -42,9 +42,16 @@ function socketUrl(): string | null {
   return configured || null;
 }
 
-function socketAuth(): { token: string } | undefined {
-  const token = process.env.NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN?.trim();
-  return token ? { token } : undefined;
+async function socketAuth(): Promise<{ token: string } | undefined> {
+  try {
+    const response = await fetch("/api/cloudsentinel/socket-token", { cache: "no-store" });
+    if (!response.ok) return undefined;
+    const data = (await response.json().catch(() => ({}))) as { token?: string };
+    const token = typeof data.token === "string" ? data.token.trim() : "";
+    return token ? { token } : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 let globalSocket: ReturnType<typeof io> | null = null;
@@ -166,14 +173,16 @@ async function loadRecentEvents() {
   }
 }
 
-function initSocket(url: string) {
+async function initSocket(url: string) {
+  if (globalSocket) return;
+  const auth = await socketAuth();
   if (globalSocket) return;
 
   globalSocket = io(url, {
     transports: ["polling", "websocket"],
     reconnection: true,
     withCredentials: false,
-    auth: socketAuth(),
+    auth,
   });
   socketTelemetryState.socketUrl = url;
 
@@ -226,7 +235,7 @@ export function useLiveThreatLogs(enabled = true) {
 
     if (!globalSocket) {
       if (url) {
-        initSocket(url);
+        void initSocket(url);
       }
       loadRecentEvents();
       if (!pollInterval) {

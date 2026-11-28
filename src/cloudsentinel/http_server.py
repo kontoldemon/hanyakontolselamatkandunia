@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from collections import deque
 from typing import Any
 
 import structlog
@@ -15,6 +16,9 @@ from .geoip import enrich as geo_enrich
 from .pipeline import EventEnvelope, EventPipeline
 
 logger = structlog.get_logger("cloudsentinel.http")
+
+_HTTP_REQUESTS_PER_MINUTE = 120
+_http_rate: dict[str, deque[float]] = {}
 
 
 def create_http_honeypot(pipeline: EventPipeline, soar: Any = None, stream: Any = None) -> FastAPI:
@@ -28,9 +32,34 @@ def create_http_honeypot(pipeline: EventPipeline, soar: Any = None, stream: Any 
         session_id = uuid.uuid4().hex
         client_host = request.client.host if request.client else "0.0.0.0"
         client_port = request.client.port if request.client else 0
+        rate_now = time.monotonic()
+        window = _http_rate.setdefault(client_host, deque())
+        while window and rate_now - window[0] > 60.0:
+            window.popleft()
+        if len(window) >= _HTTP_REQUESTS_PER_MINUTE:
+            return JSONResponse({"error": "Too Many Requests"}, status_code=429)
+        window.append(rate_now)
+        if len(_http_rate) > 5000:
+            _http_rate.clear()
+            _http_rate[client_host] = window
         body = b""
+        max_body = 64 * 1024
         try:
-            body = await request.body()
+            length = request.headers.get("content-length", "")
+            if not length.isdigit() or int(length) <= max_body:
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in request.stream():
+                    if not chunk:
+                        continue
+                    remaining = max_body - total
+                    if remaining <= 0:
+                        break
+                    chunks.append(chunk[:remaining])
+                    total += len(chunks[-1])
+                    if total >= max_body:
+                        break
+                body = b"".join(chunks)
         except Exception:
             pass
         response = await call_next(request)

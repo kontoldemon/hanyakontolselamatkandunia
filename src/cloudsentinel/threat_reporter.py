@@ -157,6 +157,7 @@ def _litellm_connection_kwargs() -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
     if api_key:
         kwargs["api_key"] = api_key
+    kwargs["timeout"] = float(os.getenv("LLM_TIMEOUT_SECONDS", "8"))
     if api_base:
         kwargs["api_base"] = api_base
         if "opencode.ai" in api_base:

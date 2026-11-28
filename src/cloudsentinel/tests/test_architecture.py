@@ -58,7 +58,7 @@ def test_admin_routes_keep_auth_dependencies() -> None:
     from cloudsentinel.pipeline import EventPipeline
 
     app = create_admin_app(Settings(), EventPipeline(Settings().redis))
-    public = {"/healthz", "/metrics", "/auth/login", "/mobile/pair"}
+    public = {"/healthz", "/auth/login", "/mobile/pair"}
     protected_prefixes = (
         "/admin",
         "/sessions",
@@ -72,7 +72,7 @@ def test_admin_routes_keep_auth_dependencies() -> None:
         "/llm",
         "/runtime-config",
         "/readiness",
-        "/metrics/json",
+        "/metrics",
         "/mobile/config",
         "/mobile/pairing-token",
         "/mobile/test-alert",

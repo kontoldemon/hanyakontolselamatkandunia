@@ -127,11 +127,32 @@ def _exposure_target_ports(settings: Settings) -> list[int]:
                 requested.add(value)
     if not requested:
         requested.add(int(settings.honeypot.ssh_port))
+        if getattr(settings.honeypot, "http_enabled", False):
+            requested.add(int(settings.honeypot.http_port))
     allow_admin_ports = os.getenv("CLOUDSENTINEL_EXPOSURE_ALLOW_ADMIN_PORTS", "0").strip().lower() in {"1", "true", "yes", "on"}
     if allow_admin_ports:
         return sorted(requested)
     admin_ports = _exposure_admin_ports()
     return sorted(port for port in requested if port not in admin_ports)
+
+
+def _exposure_target_udp_ports(settings: Settings) -> list[int]:
+    raw = os.getenv("CLOUDSENTINEL_EXPOSURE_TARGET_UDP_PORTS", "").strip()
+    requested: set[int] = set()
+    if raw:
+        for token in raw.split(","):
+            token = token.strip()
+            if not token:
+                continue
+            try:
+                value = int(token)
+            except ValueError:
+                continue
+            if 1 <= value <= 65535:
+                requested.add(value)
+    if not requested and getattr(settings.honeypot, "dns_enabled", False):
+        requested.add(int(settings.honeypot.dns_port))
+    return sorted(requested)
 
 
 
@@ -438,6 +459,7 @@ def create_admin_app(
             persist_state=_persist_exposure_state,
             provider_name=_exposure_provider,
             target_ports=_exposure_target_ports,
+            target_udp_ports=_exposure_target_udp_ports,
             firewall_paths=_exposure_firewall_paths,
             run_command=_run_command,
             to_bool=_to_bool,
@@ -704,6 +726,7 @@ def create_admin_app(
             _as_int,
             EXPOSURE_TOGGLE_COOLDOWN_MS,
             EXPOSURE_RULE_COMMENT,
+            lambda config: _exposure_target_udp_ports(config),
         )
     )
 

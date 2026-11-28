@@ -324,6 +324,7 @@ class VFSAgent:
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
             "max_tokens": 1600,
+            "timeout": self.settings.timeout_seconds,
         }
         if api_key:
             kwargs["api_key"] = api_key

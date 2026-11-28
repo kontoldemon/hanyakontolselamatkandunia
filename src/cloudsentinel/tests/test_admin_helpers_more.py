@@ -26,6 +26,19 @@ def test_exposure_port_parsing(monkeypatch) -> None:
     monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_ALLOW_ADMIN_PORTS", "true")
     assert admin_module._exposure_target_ports(settings) == [2222]
 
+    monkeypatch.delenv("CLOUDSENTINEL_EXPOSURE_TARGET_PORTS", raising=False)
+    settings.honeypot.http_enabled = True
+    settings.honeypot.http_port = 8081
+    assert admin_module._exposure_target_ports(settings) == [2222, 8081]
+    assert admin_module._exposure_target_udp_ports(settings) == []
+    settings.honeypot.dns_enabled = True
+    settings.honeypot.dns_port = 5353
+    assert admin_module._exposure_target_udp_ports(settings) == [5353]
+    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_TARGET_UDP_PORTS", "53")
+    assert admin_module._exposure_target_udp_ports(settings) == [53]
+    monkeypatch.setenv("CLOUDSENTINEL_EXPOSURE_TARGET_UDP_PORTS", "bad,,0,70000,5353")
+    assert admin_module._exposure_target_udp_ports(settings) == [5353]
+
 
 def test_clickhouse_health(monkeypatch) -> None:
     fake = types.ModuleType("clickhouse_connect")

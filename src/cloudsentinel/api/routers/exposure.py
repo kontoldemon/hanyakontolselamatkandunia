@@ -17,6 +17,7 @@ async def apply_exposure_toggle(
     persist_state: Callable[..., Any],
     provider_name: Callable[[], str],
     target_ports: Callable[[Settings], list[int]],
+    target_udp_ports: Callable[[Settings], list[int]] | None = None,
     firewall_paths: Callable[[Settings], list[str]],
     run_command: Callable[[list[str]], Any],
     to_bool: Callable[[Any], bool],
@@ -44,8 +45,10 @@ async def apply_exposure_toggle(
 
     paths = firewall_paths(settings)
     ports = target_ports(settings)
+    udp_ports = target_udp_ports(settings) if target_udp_ports else []
+    targets = [(port, "tcp") for port in ports] + [(port, "udp") for port in udp_ports]
     actions: list[dict[str, Any]] = []
-    if not ports:
+    if not targets:
         return {
             "ok": False,
             "enabled": enabled,
@@ -54,7 +57,7 @@ async def apply_exposure_toggle(
             "error": "no exposure target ports after admin safety filter",
             "actions": actions,
         }
-    for port in ports:
+    for port, protocol in targets:
         last_error = ""
         applied = False
         not_found_anywhere = True
@@ -64,7 +67,7 @@ async def apply_exposure_toggle(
                 "-C",
                 "INPUT",
                 "-p",
-                "tcp",
+                protocol,
                 "--dport",
                 str(port),
                 "-m",
@@ -81,7 +84,7 @@ async def apply_exposure_toggle(
                     delete[1] = "-D"
                     code, _, stderr = await run_command(delete)
                     if code == 0:
-                        actions.append({"port": port, "action": "removed", "ok": True, "firewallPath": firewall_path})
+                        actions.append({"port": port, "protocol": protocol, "action": "removed", "ok": True, "firewallPath": firewall_path})
                         applied = True
                         break
                     not_found_anywhere = False
@@ -93,7 +96,7 @@ async def apply_exposure_toggle(
                 last_error = check_err[:200]
                 continue
             if check_code == 0:
-                actions.append({"port": port, "action": "already_paused", "ok": True, "firewallPath": firewall_path})
+                actions.append({"port": port, "protocol": protocol, "action": "already_paused", "ok": True, "firewallPath": firewall_path})
                 applied = True
                 break
             if check_code != 1:
@@ -104,15 +107,15 @@ async def apply_exposure_toggle(
             add.insert(3, "1")
             code, _, stderr = await run_command(add)
             if code == 0:
-                actions.append({"port": port, "action": "paused", "ok": True, "firewallPath": firewall_path})
+                actions.append({"port": port, "protocol": protocol, "action": "paused", "ok": True, "firewallPath": firewall_path})
                 applied = True
                 break
             last_error = stderr[:200]
         if not applied and enabled and not_found_anywhere:
-            actions.append({"port": port, "action": "already_open", "ok": True, "firewallPath": paths[0]})
+            actions.append({"port": port, "protocol": protocol, "action": "already_open", "ok": True, "firewallPath": paths[0]})
             applied = True
         if not applied:
-            actions.append({"port": port, "action": "failed", "ok": False, "error": last_error[:200]})
+            actions.append({"port": port, "protocol": protocol, "action": "failed", "ok": False, "error": last_error[:200]})
     paused = not enabled
     if all(item.get("ok") for item in actions):
         try:
@@ -148,6 +151,7 @@ def build_exposure_router(
     as_int: Callable[[Any], int],
     toggle_cooldown_ms: int,
     rule_comment: str,
+    target_udp_ports: Callable[[Settings], list[int]] | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -160,6 +164,7 @@ def build_exposure_router(
             persist_state=persist_state,
             provider_name=provider_name,
             target_ports=target_ports,
+            target_udp_ports=target_udp_ports,
             firewall_paths=firewall_paths,
             run_command=run_command,
             to_bool=to_bool,

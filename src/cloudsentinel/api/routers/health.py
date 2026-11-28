@@ -47,7 +47,7 @@ def build_health_router(
             "deception_mode": settings.llm.deception_mode,
         }
 
-    @router.get("/metrics")
+    @router.get("/metrics", dependencies=[Depends(require_auth)])
     async def metrics_endpoint() -> Response:
         try:
             from ...metrics import get_metrics

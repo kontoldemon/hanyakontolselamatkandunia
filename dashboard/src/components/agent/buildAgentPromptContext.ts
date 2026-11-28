@@ -239,7 +239,8 @@ export function buildAgentPromptContext(params: {
 Current Page: ${pathname}
 Total Active Connections: ${stats.activeSessions}
 Total Captured IPs: ${sessions.length} (Live: ${activeIpCount})
-Total Attacks: ${stats.totalAttacks}
+Total Events: ${stats.totalEvents ?? 0}
+Unique Attacker IPs: ${stats.uniqueIps ?? 0}
 MTTB: ${stats.mttb}
 Top IPs: ${topIps}${focusedSessionContext}
 

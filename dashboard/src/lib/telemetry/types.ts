@@ -31,7 +31,6 @@ export type ThreatLog = {
 
 export type DashboardStats = {
   activeSessions: number;
-  totalAttacks: number;
   totalEvents?: number;
   uniqueIps?: number;
   uniqueCountries?: number;
@@ -234,7 +233,6 @@ export type CloudSentinelEvent = {
 
 export const EMPTY_STATS: DashboardStats = {
   activeSessions: 0,
-  totalAttacks: 0,
   mttb: "offline",
   systemUptime: "offline",
   attackActive: false,

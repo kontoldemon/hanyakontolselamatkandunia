@@ -67,3 +67,19 @@ def test_dns_rate_limit_and_stats() -> None:
     assert honeypot._check_rate_limit("8.8.8.8") is False
     assert honeypot.stats["rate_limited_ips"] == 1
     assert honeypot.stats["active_rate_limiters"] == 1
+
+
+def test_dns_global_rate_limit() -> None:
+    honeypot = DNSHoneypot(max_global_qps=2)
+    assert honeypot._allow_global() is True
+    assert honeypot._allow_global() is True
+    assert honeypot._allow_global() is False
+    honeypot.max_global_qps = 0
+    assert honeypot._allow_global() is True
+
+
+def test_dns_protocol_drops_global_excess(monkeypatch) -> None:
+    honeypot = DNSHoneypot(max_global_qps=1)
+    monkeypatch.setattr(honeypot, '_allow_global', lambda: False)
+    protocol = DNSHoneypot.Protocol(honeypot)
+    protocol.datagram_received(b'', ('1.2.3.4', 53))

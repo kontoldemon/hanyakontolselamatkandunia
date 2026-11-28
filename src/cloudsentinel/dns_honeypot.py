@@ -12,6 +12,7 @@ import asyncio
 import socket
 import struct
 import time
+from collections import deque
 from typing import Any
 
 import structlog
@@ -31,6 +32,7 @@ class DNSHoneypot:
         max_queries_per_ip: int = 60,
         rate_window_seconds: float = 60.0,
         max_response_size: int = 512,
+        max_global_qps: int = 200,
     ) -> None:
         self.host = host
         self.port = port
@@ -39,6 +41,8 @@ class DNSHoneypot:
         self.max_queries_per_ip = max_queries_per_ip
         self.rate_window_seconds = rate_window_seconds
         self.max_response_size = max_response_size
+        self.max_global_qps = max_global_qps
+        self._global_timestamps: deque[float] = deque()
         self._transport: asyncio.DatagramTransport | None = None
         self._event_callback: Any = None
         self._domains_queried: dict[str, int] = {}
@@ -73,6 +77,18 @@ class DNSHoneypot:
         self._rate_limiter[ip].append(now)
         return True
 
+    def _allow_global(self) -> bool:
+        """Return False when the process-wide query rate exceeds the cap."""
+        if self.max_global_qps <= 0:
+            return True
+        now = time.monotonic()
+        while self._global_timestamps and now - self._global_timestamps[0] > 1.0:
+            self._global_timestamps.popleft()
+        if len(self._global_timestamps) >= self.max_global_qps:
+            return False
+        self._global_timestamps.append(now)
+        return True
+
     async def _periodic_cleanup(self, interval: float = 120.0) -> None:
         """Background task to prune stale rate limiter entries."""
         while True:
@@ -97,6 +113,8 @@ class DNSHoneypot:
             logger.info("DNS honeypot listening on UDP %s:%d", self.hp.host, self.hp.port)
 
         def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
+            if not self.hp._allow_global():
+                return
             asyncio.create_task(self.hp._handle_query(data, addr, self.transport))
 
     async def start(self) -> None:

@@ -155,6 +155,7 @@ def test_admin_health_metrics_and_block(monkeypatch: pytest.MonkeyPatch) -> None
     headers = {"Authorization": "Bearer unit-token"}
 
     assert client.get("/healthz").status_code == 200
+    assert client.get("/metrics").status_code == 401
     assert client.get("/metrics", headers=headers).status_code == 200
     assert client.get("/anomaly-stats", headers=headers).status_code == 200
     blocked = client.post(

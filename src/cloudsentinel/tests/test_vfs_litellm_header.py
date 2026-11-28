@@ -50,6 +50,7 @@ def test_vfs_litellm_sends_opencode_session_header(monkeypatch) -> None:
     assert captured["extra_headers"]["x-opencode-session"]
     assert captured["extra_body"]["reasoning_effort"] == "none"
     assert captured["max_tokens"] == 1600
+    assert captured["timeout"] == 8.0
 
 
 def test_vfs_litellm_omits_header_for_other_providers(monkeypatch) -> None:

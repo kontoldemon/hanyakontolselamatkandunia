@@ -155,10 +155,6 @@ export function useDashboardStats() {
         setStats({
           ...EMPTY_STATS,
           activeSessions,
-          totalAttacks:
-            totalAuthFailures +
-            totalConnections +
-            totalCommands,
           totalEvents,
           uniqueIps,
           uniqueCountries,

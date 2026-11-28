@@ -468,19 +468,43 @@ class ClickHouseForwarder:
                 await asyncio.sleep(1)
 
     async def _flush_spill(self) -> None:
-        spilled = await asyncio.to_thread(self._spill_read)
-        if not spilled:
-            return
         try:
-            rows = [self._redis_fields_to_row(fields) for fields in spilled]
-            token = hashlib.sha256(
-                json.dumps(spilled, sort_keys=True, separators=(",", ":")).encode()
-            ).hexdigest()
-            await asyncio.to_thread(self._insert_rows, rows, token)
-            await asyncio.to_thread(self._spill_clear)
-            logger.info("ClickHouse flushed %d spilled events", len(rows))
+            inserted = await asyncio.to_thread(self._flush_spill_sync)
+            if inserted:
+                logger.info("ClickHouse flushed %d spilled events", inserted)
         except Exception as exc:
             logger.warning("ClickHouse spill flush failed: %s", exc)
+
+    def _flush_spill_sync(self, chunk_size: int = 5000) -> int:
+        if not self._spill_path.exists():
+            return 0
+        inserted = 0
+        chunk: list[dict[str, str]] = []
+        with open(self._spill_path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    chunk.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+                if len(chunk) >= chunk_size:
+                    self._insert_spill_chunk(chunk)
+                    inserted += len(chunk)
+                    chunk = []
+        if chunk:
+            self._insert_spill_chunk(chunk)
+            inserted += len(chunk)
+        self._spill_clear()
+        return inserted
+
+    def _insert_spill_chunk(self, chunk: list[dict[str, str]]) -> None:
+        rows = [self._redis_fields_to_row(fields) for fields in chunk]
+        token = hashlib.sha256(
+            json.dumps(chunk, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        self._insert_rows(rows, token)
 
     def _spill_append(self, messages: list[dict[str, str]]) -> None:
         if not messages:

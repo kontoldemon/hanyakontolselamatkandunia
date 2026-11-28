@@ -171,3 +171,25 @@ def test_forwarder_spill_blank_and_row(monkeypatch, tmp_path) -> None:
     )
     row = ClickHouseForwarder.envelope_to_row(envelope)
     assert row["reason"] == "secret output"
+
+
+def test_forwarder_flushes_spill_in_chunks(tmp_path, monkeypatch) -> None:
+    settings = _settings()
+    forwarder = ClickHouseForwarder(settings.redis, settings.clickhouse)
+    forwarder._spill_path = tmp_path / 'spill.jsonl'
+    forwarder._spill_append([
+        EventEnvelope(
+            event_type="test",
+            session_id="s",
+            src_ip="8.8.8.8",
+            src_port=22,
+            timestamp=float(i),
+            payload={"eventid": "test"},
+        ).to_redis_fields()
+        for i in range(5)
+    ])
+    calls: list[int] = []
+    monkeypatch.setattr(forwarder, '_insert_rows', lambda rows, token: calls.append(len(rows)))
+    assert forwarder._flush_spill_sync(chunk_size=2) == 5
+    assert calls == [2, 2, 1]
+    assert not forwarder._spill_path.exists()

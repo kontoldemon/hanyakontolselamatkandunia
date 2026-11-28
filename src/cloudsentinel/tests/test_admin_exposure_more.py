@@ -59,3 +59,27 @@ def test_exposure_outcomes(monkeypatch) -> None:
     assert removed_other_backend.status_code == 200
     assert removed_other_backend.json()["actions"][0]["action"] == "removed"
 
+
+def test_exposure_pauses_udp_dns(monkeypatch) -> None:
+    client, headers = _client()
+    monkeypatch.setattr(admin_module, "_exposure_target_ports", lambda _settings: [22])
+    monkeypatch.setattr(admin_module, "_exposure_target_udp_ports", lambda _settings: [5353])
+    monkeypatch.setattr(admin_module, "_exposure_admin_ports", lambda: {22})
+
+    runs: list[tuple[int, str, str]] = [(1, "", ""), (0, "", ""), (1, "", ""), (0, "", "")]
+    calls: list[list[str]] = []
+
+    async def fake_run(args: list[str], timeout: float = 5.0) -> tuple[int, str, str]:
+        calls.append(args)
+        return runs.pop(0) if runs else (0, "", "")
+
+    monkeypatch.setattr(admin_module, "_run_command", fake_run)
+    response = client.post("/admin/exposure", headers=headers, json={"enabled": False})
+    assert response.status_code == 200
+    actions = response.json()["actions"]
+    assert [(item["port"], item["protocol"], item["action"]) for item in actions] == [
+        (22, "tcp", "paused"),
+        (5353, "udp", "paused"),
+    ]
+    assert any("udp" in args and "5353" in args for args in calls)
+
