@@ -18,7 +18,7 @@ import AgentMessageList, { buildOfflineFallbackMessage } from "./AgentMessageLis
 
 export default function AIChatAgent() {
     const [isOpen, setIsOpen] = useState(false);
-    const [hasUnread, setHasUnread] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [messages, setMessages] = useState<AgentMessage[]>([
         {
             role: "ai",
@@ -106,15 +106,16 @@ export default function AIChatAgent() {
 
     useEffect(() => {
         const aiMsgCount = messages.filter((m) => m.role === "ai").length;
-        if (aiMsgCount > lastAiMsgCountRef.current && !isOpen) {
-            setHasUnread(true);
+        const added = aiMsgCount - lastAiMsgCountRef.current;
+        if (added > 0 && !isOpen) {
+            setUnreadCount((previous) => previous + added);
         }
         lastAiMsgCountRef.current = aiMsgCount;
     }, [messages, isOpen]);
 
     useEffect(() => {
         if (isOpen) {
-            setHasUnread(false);
+            setUnreadCount(0);
             const timer = setTimeout(() => inputRef.current?.focus(), 150);
             return () => clearTimeout(timer);
         }
@@ -254,7 +255,7 @@ export default function AIChatAgent() {
             {/* Floating Launcher Button with Smooth Scale & Fade */}
             <button
                 onClick={() => setIsOpen(true)}
-                aria-label={hasUnread ? "Open CloudSentinel Copilot, new reply" : "Open CloudSentinel Copilot"}
+                aria-label={unreadCount > 0 ? `Open CloudSentinel Copilot, ${unreadCount} unread ${unreadCount === 1 ? "reply" : "replies"}` : "Open CloudSentinel Copilot"}
                 className={cn(
                     "fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white group transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                     isOpen
@@ -266,8 +267,13 @@ export default function AIChatAgent() {
                 {/* Clear curved glass specular shine on top half */}
                 <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-transparent to-transparent pointer-events-none" />
                 <Sparkles size={20} className="text-blue-500 dark:text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
-                {hasUnread && (
-                    <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-rose-500 ring-2 ring-white/90 dark:ring-[#0a0a0a] shadow-[0_0_8px_rgba(244,63,94,0.8)] animate-pulse" />
+                {unreadCount > 0 && (
+                    <span
+                        aria-hidden="true"
+                        className="absolute -top-1.5 -right-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white/90 dark:ring-[#0a0a0a] shadow-[0_0_8px_rgba(244,63,94,0.8)]"
+                    >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
                 )}
             </button>
 
