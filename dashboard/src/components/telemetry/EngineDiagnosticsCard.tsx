@@ -41,81 +41,92 @@ export default function EngineDiagnosticsCard({ operations }: EngineDiagnosticsC
                 </span>
             </div>
 
-            <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {/* 1. MTTB Metric */}
-                <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] space-y-1.5">
+                <div className="p-3 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02] flex flex-col justify-between gap-1.5">
                     <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
                         <span className="flex items-center gap-1.5">
                             <Zap size={13} className="text-emerald-500" /> Mean-Time-To-Block
                         </span>
-                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold border ${mttbMs > 0
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                            : "bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-slate-300/40 dark:border-white/10"}`}>
-                            {mttbMs > 0 ? "MEASURED" : "IDLE"}
+                        <span
+                            title={mttbMs > 0 ? "Measured" : "Idle (no blocks yet)"}
+                            aria-label={mttbMs > 0 ? "Measured" : "Idle"}
+                            className={`w-2 h-2 rounded-full shrink-0 ${mttbMs > 0 ? "bg-emerald-500" : "bg-amber-500"}`}
+                        />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
+                            {mttbMs > 0 ? `${mttbMs.toFixed(2)}ms` : "--"}
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                            {mttbMs > 0 ? "netfilter" : "idle"}
                         </span>
                     </div>
-                    <div className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
-                        {mttbMs > 0 ? `${mttbMs.toFixed(2)}ms` : "No blocks yet"}
-                    </div>
-                    <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                        Sensor-side netfilter trigger latency.
-                    </p>
                 </div>
 
                 {/* 2. Active Sessions & Connections */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02] space-y-1.5">
+                <div className="p-3 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02] flex flex-col justify-between gap-1.5">
                     <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
                         <span className="flex items-center gap-1.5">
                             <Terminal size={13} className="text-blue-500" /> Active Intrusions
                         </span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20">
-                            LIVE
+                        <span
+                            title="Live"
+                            aria-label="Live"
+                            className={`w-2 h-2 rounded-full shrink-0 ${activeSessions > 0 ? "bg-emerald-500 animate-pulse" : "bg-emerald-500"}`}
+                        />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
+                            {activeSessions}
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                            / {totalConnections} total
                         </span>
                     </div>
-                    <div className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
-                        {activeSessions}
-                        <span className="text-xs font-normal text-slate-400 ml-1.5">/ {totalConnections} total</span>
-                    </div>
-                    <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                        SSH clients inside honeypot shell.
-                    </p>
                 </div>
 
                 {/* 3. Firewall Drops */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02] space-y-1.5">
+                <div className="p-3 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02] flex flex-col justify-between gap-1.5">
                     <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
                         <span className="flex items-center gap-1.5">
                             <Shield size={13} className="text-rose-500" /> Active Block Rules
                         </span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/20">
-                            ENFORCED
+                        <span
+                            title={blockedIpsCurrent > 0 ? "Enforced" : "Standby"}
+                            aria-label={blockedIpsCurrent > 0 ? "Enforced" : "Standby"}
+                            className={`w-2 h-2 rounded-full shrink-0 ${blockedIpsCurrent > 0 ? "bg-rose-500" : "bg-emerald-500"}`}
+                        />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
+                            {blockedIpsCurrent}
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                            / {totalBlocks} historical
                         </span>
                     </div>
-                    <div className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
-                        {blockedIpsCurrent}
-                        <span className="text-xs font-normal text-slate-400 ml-1.5">({totalBlocks} historical)</span>
-                    </div>
-                    <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                        IP deny rules with auto-expiry TTL.
-                    </p>
                 </div>
 
                 {/* 4. Intercepted Commands */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02] space-y-1.5">
+                <div className="p-3 rounded-xl border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02] flex flex-col justify-between gap-1.5">
                     <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
                         <span className="flex items-center gap-1.5">
                             <Cpu size={13} className="text-purple-500" /> Commands Captured
                         </span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/20">
-                            INTERCEPTED
+                        <span
+                            title="Intercepted"
+                            aria-label="Intercepted"
+                            className="w-2 h-2 rounded-full shrink-0 bg-emerald-500"
+                        />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
+                            {totalCommands}
                         </span>
-                    </div>
-                    <div className="text-2xl font-mono font-bold text-slate-900 dark:text-white tracking-tight">
-                        {totalCommands}
-                    </div>
-                    <div className="flex items-center justify-between text-[10.5px] text-slate-500 dark:text-slate-400 font-mono">
-                        <span>Failed Logins: {totalAuthFailures}</span>
-                        <span>Accepted: {totalAuthSuccesses}</span>
+                        <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                            {totalAuthFailures} fail &middot; {totalAuthSuccesses} ok
+                        </span>
                     </div>
                 </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { Check, Copy, Maximize2, Pause, Play, Radio, Terminal, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import ScrollDownHint from "@/components/ui/ScrollDownHint";
 import { useAgentCommand } from "@/lib/AgentContext";
 import type { SocketTelemetrySnapshot, SocketTelemetryEvent } from "@/lib/telemetry/types";
 import { cn } from "@/lib/utils";
@@ -18,8 +19,10 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
     const [copiedAll, setCopiedAll] = useState(false);
     const [pausedSnapshot, setPausedSnapshot] = useState<SocketTelemetryEvent[] | null>(null);
     const [clearedAt, setClearedAt] = useState("");
+    const [showInlineScrollDown, setShowInlineScrollDown] = useState(false);
     const inlineTerminalRef = useRef<HTMLDivElement>(null);
     const fullscreenTerminalRef = useRef<HTMLDivElement>(null);
+    const isPinnedToBottomRef = useRef(true);
 
     useAgentCommand("socket.fullscreen", useCallback((value: string) => {
         if (value === "toggle") {
@@ -33,16 +36,28 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
         ? (pausedSnapshot ?? socketTelemetry.recent)
         : (clearedAt ? socketTelemetry.recent.filter((event) => event.timestamp > clearedAt) : socketTelemetry.recent);
 
-    // Auto-scroll ONLY the terminal container internally without affecting outer page scroll
+    const updateInlineScrollHint = useCallback(() => {
+        const el = inlineTerminalRef.current;
+        if (!el) return;
+        const dist = el.scrollHeight - (el.scrollTop + el.clientHeight);
+        const atBottom = dist <= 16;
+        isPinnedToBottomRef.current = atBottom;
+        setShowInlineScrollDown(!atBottom);
+    }, []);
+
+    // Auto-scroll only when not paused and the user hasn't scrolled up
     useEffect(() => {
-        if (isPaused) return;
-        if (inlineTerminalRef.current) {
-            inlineTerminalRef.current.scrollTop = inlineTerminalRef.current.scrollHeight;
+        if (!isPaused && isPinnedToBottomRef.current) {
+            if (inlineTerminalRef.current) {
+                inlineTerminalRef.current.scrollTop = inlineTerminalRef.current.scrollHeight;
+            }
+            if (fullscreenTerminalRef.current) {
+                fullscreenTerminalRef.current.scrollTop = fullscreenTerminalRef.current.scrollHeight;
+            }
         }
-        if (fullscreenTerminalRef.current) {
-            fullscreenTerminalRef.current.scrollTop = fullscreenTerminalRef.current.scrollHeight;
-        }
-    }, [events, isPaused]);
+        const timer = window.setTimeout(updateInlineScrollHint, 50);
+        return () => window.clearTimeout(timer);
+    }, [events, isPaused, updateInlineScrollHint]);
 
     const closeFullScreen = useCallback(() => {
         if (isClosingFullScreen) return;
@@ -221,18 +236,34 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                 </div>
 
                 {/* Console Log Terminal Window */}
-                <div
-                    ref={inlineTerminalRef}
-                    className="p-3 bg-slate-50 text-slate-700 border-t border-slate-200/70 font-mono text-xs h-72 overflow-y-auto terminal-scrollbar space-y-0.5 dark:bg-[#08080a] dark:text-slate-200 dark:border-white/5"
-                >
-                    {filteredEvents.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-1">
-                            <Radio size={16} className="text-slate-400 dark:text-slate-600 animate-pulse" />
-                            <span className="text-xs">Waiting for stream events...</span>
-                        </div>
-                    ) : (
-                        filteredEvents.map(renderLogLine)
-                    )}
+                <div className="relative border-t border-slate-200/70 dark:border-white/5">
+                    <div
+                        ref={inlineTerminalRef}
+                        onScroll={updateInlineScrollHint}
+                        className="p-3 bg-slate-50 text-slate-700 font-mono text-xs h-72 overflow-y-auto terminal-scrollbar space-y-0.5 dark:bg-[#08080a] dark:text-slate-200"
+                    >
+                        {filteredEvents.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-1">
+                                <Radio size={16} className="text-slate-400 dark:text-slate-600 animate-pulse" />
+                                <span className="text-xs">Waiting for stream events...</span>
+                            </div>
+                        ) : (
+                            filteredEvents.map(renderLogLine)
+                        )}
+                    </div>
+                    <ScrollDownHint
+                        visible={showInlineScrollDown}
+                        showButton
+                        className="dark:from-[#08080a] dark:via-[#08080a]/75"
+                        onScrollDown={() => {
+                            if (!inlineTerminalRef.current) return;
+                            isPinnedToBottomRef.current = true;
+                            inlineTerminalRef.current.scrollTo({
+                                top: inlineTerminalRef.current.scrollHeight,
+                                behavior: "smooth",
+                            });
+                        }}
+                    />
                 </div>
             </div>
 
