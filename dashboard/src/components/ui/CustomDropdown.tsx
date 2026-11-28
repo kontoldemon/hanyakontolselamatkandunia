@@ -136,7 +136,7 @@ export default function CustomDropdown({ options, value, onChange, className = "
                     tabIndex={-1}
                     aria-activedescendant={activeIndex >= 0 ? `${menuId}-${activeIndex}` : undefined}
                     onKeyDown={handleMenuKeyDown}
-                    className="fixed z-[90] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl overflow-hidden outline-none animate-in fade-in zoom-in-95 duration-150"
+                    className="fixed z-[500] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl overflow-hidden outline-none animate-in fade-in zoom-in-95 duration-150"
                     style={{
                         left: position.left,
                         width: position.width,

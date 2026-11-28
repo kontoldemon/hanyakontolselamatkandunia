@@ -82,6 +82,7 @@ export default function AiEnginesSection({
                             <div className="w-full sm:w-56 shrink-0">
                                 <CustomDropdown
                                     options={[
+                                        { label: "openai/deepseek-v4.1-flash (OpenCode Go)", value: "openai/deepseek-v4.1-flash" },
                                         { label: "gemini/gemini-2.0-flash", value: "gemini/gemini-2.0-flash" },
                                         { label: "groq/llama-3.3-70b-versatile", value: "groq/llama-3.3-70b-versatile" },
                                         { label: "openai/gpt-4o-mini", value: "openai/gpt-4o-mini" },
@@ -95,7 +96,14 @@ export default function AiEnginesSection({
 
                         <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
                             <div className="min-w-0 sm:pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">API Key</label>
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">
+                                    API Key
+                                    {hasCopilotKey && (
+                                        <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-mono font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 align-middle">
+                                            CONFIGURED
+                                        </span>
+                                    )}
+                                </label>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Inference authentication key.</p>
                             </div>
                             <div className="w-full sm:w-56 shrink-0 relative flex items-center">
@@ -103,7 +111,7 @@ export default function AiEnginesSection({
                                     type={showCopilotKey ? "text" : "password"}
                                     value={copilotApiKey}
                                     onChange={(e) => setCopilotApiKey(e.target.value)}
-                                    placeholder={hasCopilotKey ? "Leave blank to keep key" : "AIzaSy... / gsk_..."}
+                                    placeholder={hasCopilotKey ? "•••••••••••• (configured) — leave blank to keep" : "AIzaSy... / gsk_..."}
                                     className="w-full h-10 sm:h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 pl-3 pr-10 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                                 />
                                 <button

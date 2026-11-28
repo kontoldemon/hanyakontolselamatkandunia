@@ -151,6 +151,21 @@ def _parse_json_response(text: str, model: str) -> dict[str, Any]:
         }
 
 
+def _litellm_connection_kwargs() -> dict[str, Any]:
+    api_key = os.getenv("LLM_API_KEY", "").strip()
+    api_base = os.getenv("LLM_ENDPOINT", "").strip()
+    kwargs: dict[str, Any] = {}
+    if api_key:
+        kwargs["api_key"] = api_key
+    if api_base:
+        kwargs["api_base"] = api_base
+        if "opencode.ai" in api_base:
+            kwargs["extra_headers"] = {
+                "x-opencode-session": os.getenv("LLM_SESSION_ID", "cloudsentinel-sensor")
+            }
+    return kwargs
+
+
 async def _call_litellm(prompt: str) -> dict[str, Any]:
     try:
         from litellm import acompletion
@@ -175,6 +190,7 @@ async def _call_litellm(prompt: str) -> dict[str, Any]:
             temperature=0.2,
             max_tokens=700,
             fallbacks=fallbacks or None,
+            **_litellm_connection_kwargs(),
         )
         text = str(response.choices[0].message.content or "")
         return _parse_json_response(text, model)
@@ -203,6 +219,7 @@ async def _call_litellm_raw(prompt: str) -> str:
             temperature=0.4,
             max_tokens=1024,
             fallbacks=fallbacks or None,
+            **_litellm_connection_kwargs(),
         )
         return str(response.choices[0].message.content or "")
     except Exception as exc:

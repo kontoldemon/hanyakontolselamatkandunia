@@ -29,6 +29,7 @@ export default function AIChatAgent() {
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
     const messagesRef = useRef<AgentMessage[]>(messages);
     const pathname = usePathname();
     const { executeAction, isExecuting } = useAgent();
@@ -119,15 +120,33 @@ export default function AIChatAgent() {
         }
     }, [isOpen]);
 
+    const closeChat = useCallback(() => {
+        setIsOpen(false);
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && panelRef.current?.contains(active)) {
+            active.blur();
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const onPointerDown = (event: PointerEvent) => {
+            if (panelRef.current?.contains(event.target as Node)) return;
+            closeChat();
+        };
+        document.addEventListener("pointerdown", onPointerDown);
+        return () => document.removeEventListener("pointerdown", onPointerDown);
+    }, [isOpen, closeChat]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isOpen) {
-                setIsOpen(false);
+                closeChat();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen]);
+    }, [isOpen, closeChat]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -254,6 +273,7 @@ export default function AIChatAgent() {
 
             {/* Chat Panel Window with Distinct Slide-Up from Below */}
             <div
+                ref={panelRef}
                 className={cn(
                     "fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] max-md:bg-white/95 max-md:dark:bg-[#0a0a0a]/95 border border-slate-900/15 dark:border-white/20 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.2)] rounded-2xl flex flex-col overflow-hidden origin-bottom transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75dvh]",
                     isOpen
@@ -287,7 +307,7 @@ export default function AIChatAgent() {
                 <div className="flex items-center gap-0.5">
                     <button
                         type="button"
-                        onClick={() => setIsOpen(false)}
+                        onClick={closeChat}
                         className="flex h-9 w-9 shrink-0 items-center justify-center hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
                         aria-label="Close copilot"
                     >
