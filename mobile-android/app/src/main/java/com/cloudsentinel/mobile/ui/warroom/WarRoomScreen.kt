@@ -91,7 +91,6 @@ fun WarRoomScreen(
     isSensorReachable: Boolean?,
     onRefresh: () -> Unit,
     onToggleExposure: (Boolean) -> Unit,
-    onSelectSession: (MobileSessionItem) -> Unit,
     onBlockIp: (String, Long?) -> Unit = { _, _ -> }
 ) {
     var showKillswitchConfirm by remember { mutableStateOf(false) }
@@ -417,77 +416,6 @@ fun WarRoomScreen(
                 }
             }
 
-            // 4. Active Threat Sessions
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Active Sessions",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
-                        ),
-                        color = TextMutedDark
-                    )
-                    if (sessions.isNotEmpty()) {
-                        Text(
-                            text = "Tap to inspect",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ElectricBlueSoft
-                        )
-                    }
-                }
-            }
-
-            if (sessions.isEmpty()) {
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = ObsidianCard,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, ObsidianBorder, RoundedCornerShape(20.dp))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 28.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "No active threat sessions",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                color = TextPrimaryDark,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Captured SSH and honeypot sessions will appear here in real time.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextMutedDark,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 18.sp
-                            )
-                        }
-                    }
-                }
-            } else {
-                items(sessions.size) { idx ->
-                    val session = sessions[idx]
-                    SessionQuickCard(
-                        session = session,
-                        onClick = { onSelectSession(session) }
-                    )
-                }
-            }
-
             item { Spacer(modifier = Modifier.height(8.dp)) }
         }
             }
@@ -789,95 +717,5 @@ private fun HealthRow(
             color = valueColor,
             fontSize = 13.sp
         )
-    }
-}
-
-@Composable
-private fun SessionQuickCard(
-    session: MobileSessionItem,
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = ObsidianCard,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, ObsidianBorder, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = session.ip,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = TextPrimaryDark
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = session.country,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextMutedDark
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (session.commands.isNotEmpty()) "${session.commands.size} commands recorded" else "Credential probe",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMutedDark,
-                    fontSize = 12.sp
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val riskColor = when {
-                    session.risk_score >= 90 -> RoseCritical
-                    session.risk_score >= 70 -> AmberWarning
-                    else -> ElectricBlueSoft
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(riskColor.copy(alpha = 0.14f))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text(
-                        text = "${session.risk_score}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontFamily = FontFamily.Monospace
-                        ),
-                        color = riskColor
-                    )
-                }
-
-                if (session.blocked) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(RoseCritical.copy(alpha = 0.18f))
-                            .padding(horizontal = 8.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = "Blocked",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = RoseCritical,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
-        }
     }
 }

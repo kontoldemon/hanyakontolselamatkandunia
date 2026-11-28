@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -85,6 +86,7 @@ import com.cloudsentinel.mobile.core.theme.ObsidianSurfaceElevated
 import com.cloudsentinel.mobile.core.theme.RoseCritical
 import com.cloudsentinel.mobile.core.theme.TextMutedDark
 import com.cloudsentinel.mobile.core.theme.TextPrimaryDark
+import com.cloudsentinel.mobile.core.theme.ThemeMode
 import kotlin.math.roundToInt
 
 private val COOLDOWN_OPTIONS = listOf(
@@ -105,6 +107,8 @@ private enum class SettingsSheet {
 fun MobileSettingsScreen(
     session: PairedSession,
     stats: ClusterStatsResponse? = null,
+    themeMode: ThemeMode = ThemeMode.LIGHT,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
     onUpdatePolicy: (MobileAlertPolicyInfo) -> Unit = {},
     onUpdateRuntimeControls: (String?, Boolean?, String?) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
@@ -251,7 +255,44 @@ fun MobileSettingsScreen(
                 )
             }
 
-            // 3. About
+            // 3. Appearance
+            SettingsGroup(title = "Appearance") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ThemeMode.entries.forEach { mode ->
+                        val selected = themeMode == mode
+                        OutlinedButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onThemeModeChange(mode)
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (selected) ElectricBlue else ObsidianBorder
+                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (selected) ElectricBlue.copy(alpha = 0.14f) else ObsidianCard
+                            ),
+                            contentPadding = PaddingValues(vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = mode.label,
+                                color = if (selected) ElectricBlueSoft else TextMutedDark,
+                                fontSize = 12.sp,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. About
             SettingsGroup(title = "About") {
                 SettingsInfoRow(
                     icon = Icons.Default.Info,
@@ -260,7 +301,7 @@ fun MobileSettingsScreen(
                 )
             }
 
-            // 4. Unlink Device
+            // 5. Unlink Device
             OutlinedButton(
                 onClick = { showUnpairConfirm = true },
                 modifier = Modifier

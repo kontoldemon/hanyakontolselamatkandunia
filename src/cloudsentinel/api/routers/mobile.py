@@ -371,7 +371,7 @@ def build_mobile_router(
             try:
                 from .. import queries
 
-                for row in await queries.load_recent_sessions_async(settings, limit=20):
+                for row in await queries.load_recent_sessions_async(settings, limit=50):
                     sessions.append({
                         "id": row.get("id", ""),
                         "ip": row.get("ip", ""),
