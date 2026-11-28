@@ -326,7 +326,7 @@ export default function AIChatAgent() {
             />
 
                     <div className="relative p-2.5 bg-white/[0.06] dark:bg-black/[0.15] border-t border-white/30 dark:border-white/15 shrink-0">
-                        <div className="relative flex items-center">
+                        <div className="flex items-end gap-2">
                             <textarea
                                 ref={inputRef}
                                 rows={1}
@@ -345,15 +345,17 @@ export default function AIChatAgent() {
                                 }}
                                 placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
                                 disabled={isExecuting}
-                                className="w-full bg-white/40 dark:bg-black/30 border border-white/40 dark:border-white/20 rounded-xl pl-3.5 pr-12 py-2.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/60 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left backdrop-blur-sm"
+                                className="w-full flex-1 min-w-0 bg-white/40 dark:bg-black/30 border border-white/40 dark:border-white/20 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left backdrop-blur-sm"
                                 style={{ minHeight: "36px" }}
                             />
                             <button
+                                type="button"
                                 onClick={handleSend}
                                 disabled={!input.trim() || isLoading || isExecuting}
-                                className="absolute right-1.5 h-9 w-9 flex items-center justify-center rounded-lg text-white transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)] disabled:opacity-30 disabled:bg-slate-400 dark:disabled:bg-slate-700"
+                                aria-label="Send message"
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)] disabled:bg-blue-600/20 disabled:text-blue-500/50 disabled:shadow-none dark:disabled:bg-blue-500/20 dark:disabled:text-blue-200/50"
                             >
-                                <Send size={12} />
+                                <Send size={16} />
                             </button>
                         </div>
                     </div>
