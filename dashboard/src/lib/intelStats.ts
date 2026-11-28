@@ -80,7 +80,7 @@ export function useIntelStats(liveLogs: ThreatLog[], sessions: CapturedSession[]
     };
     for (const l of logs24h) { addIsp(l.org); addIsp(l.isp); }
     for (const s of sessions24h) { addIsp(s.org, s.sessionCount ?? 1); addIsp(s.isp, s.sessionCount ?? 1); }
-    const isps = [...ispMap.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10);
+    const isps = [...ispMap.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 
     const riskBuckets = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
     let riskTotal = 0, riskCount = 0;

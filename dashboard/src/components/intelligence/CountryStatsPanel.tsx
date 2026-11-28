@@ -6,6 +6,12 @@ import CollapsiblePanel from "@/components/ui/CollapsiblePanel";
 import { Globe } from "lucide-react";
 import CustomDropdown from "@/components/ui/CustomDropdown";
 
+const CHART_ROW_HEIGHT = 24;
+const CHART_MIN_HEIGHT = 200;
+const CHART_MAX_HEIGHT = "70vh";
+const LABEL_COLUMN_WIDTH = 120;
+const LABEL_MAX_CHARS = 18;
+
 interface CountryStatsPanelProps {
   expanded: boolean;
   onToggle: () => void;
@@ -32,7 +38,7 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
     return [...countries].reverse();
   }, [countries, mode]);
 
-  const chartHeight = Math.max(200, displayData.length * 24);
+  const chartHeight = Math.max(CHART_MIN_HEIGHT, displayData.length * CHART_ROW_HEIGHT);
 
   const topCountry = countries.length > 0 ? countries[0].name : "None";
 
@@ -57,7 +63,10 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
           className="w-32"
         />
       </div>
-      <div className="w-full text-xs overflow-y-auto terminal-scrollbar" style={{ height: Math.min(560, chartHeight) }}>
+      <div
+        className="w-full text-xs overflow-y-auto terminal-scrollbar"
+        style={{ height: chartHeight, maxHeight: CHART_MAX_HEIGHT }}
+      >
         {displayData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-slate-500">No country data available</div>
         ) : (
@@ -71,10 +80,10 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: "#64748b" }}
-                width={120}
+                width={LABEL_COLUMN_WIDTH}
                 tickFormatter={(value) => {
                   const label = String(value);
-                  const text = label.length > 18 ? `${label.slice(0, 17)}...` : label;
+                  const text = label.length > LABEL_MAX_CHARS ? `${label.slice(0, LABEL_MAX_CHARS - 1)}...` : label;
                   return text.replace(/ /g, "\u00A0");
                 }}
               />

@@ -6,6 +6,12 @@ import { Server } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import CustomDropdown from "@/components/ui/CustomDropdown";
 
+const CHART_ROW_HEIGHT = 24;
+const CHART_MIN_HEIGHT = 200;
+const CHART_MAX_HEIGHT = "70vh";
+const LABEL_COLUMN_WIDTH = 120;
+const LABEL_MAX_CHARS = 18;
+
 interface NetworkStatsPanelProps {
   expanded: boolean;
   onToggle: () => void;
@@ -17,10 +23,12 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
 
   const displayData = useMemo(() => {
     if (mode === "most") {
-      return [...isps].slice(0, 10);
+      return [...isps];
     }
-    return [...isps].reverse().slice(0, 10);
+    return [...isps].reverse();
   }, [isps, mode]);
+
+  const chartHeight = Math.max(CHART_MIN_HEIGHT, displayData.length * CHART_ROW_HEIGHT);
 
   const topIsp = isps.length > 0 ? isps[0].name : "None";
 
@@ -40,11 +48,11 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
       onToggle={onToggle}
       icon={Server}
       iconColor="text-emerald-500"
-      title="Top Attack Networks"
+      title="Attack Networks"
       summary={`Top: ${topIsp}`}
     >
       <div className="flex justify-between items-center mb-4">
-        <span className="text-xs text-slate-500">Top 10 Source Networks</span>
+        <span className="text-xs text-slate-500">All Source Networks</span>
         <CustomDropdown
           options={[
             { label: "Most Attacks", value: "most" },
@@ -55,10 +63,14 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
           className="w-32"
         />
       </div>
-      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full text-xs">
+      <div
+        className="w-full text-xs overflow-y-auto terminal-scrollbar"
+        style={{ height: chartHeight, maxHeight: CHART_MAX_HEIGHT }}
+      >
         {displayData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-slate-500">No network data available</div>
         ) : (
+          <div style={{ height: chartHeight }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 6, left: 0, bottom: 0 }}>
               <XAxis type="number" hide domain={[0, "dataMax"]} />
@@ -68,10 +80,10 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: "#64748b" }}
-                width={120}
+                width={LABEL_COLUMN_WIDTH}
                 tickFormatter={(value) => {
                   const label = String(value);
-                  const text = label.length > 18 ? `${label.slice(0, 17)}...` : label;
+                  const text = label.length > LABEL_MAX_CHARS ? `${label.slice(0, LABEL_MAX_CHARS - 1)}...` : label;
                   return text.replace(/ /g, "\u00A0");
                 }}
               />
@@ -88,6 +100,7 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </div>
         )}
       </div>
     </CollapsiblePanel>
