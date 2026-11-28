@@ -281,7 +281,6 @@ export function useCapturedSessions() {
     }
 
     return [...grouped.values()]
-      .sort((a, b) => (b.lastSeenEpochMs ?? 0) - (a.lastSeenEpochMs ?? 0))
-      .slice(0, 100);
+      .sort((a, b) => (b.lastSeenEpochMs ?? 0) - (a.lastSeenEpochMs ?? 0));
   }, [operations, liveLogs, nowMs]);
 }

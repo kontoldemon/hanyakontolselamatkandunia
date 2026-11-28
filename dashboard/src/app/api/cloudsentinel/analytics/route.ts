@@ -190,7 +190,6 @@ export async function GET(request: Request) {
 
     const series = [...buckets.values()]
       .sort((a, b) => a.time - b.time)
-      .slice(-400)
       .map((bucket) => ({
         time: bucket.time,
         timeLabel: new Date(bucket.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
