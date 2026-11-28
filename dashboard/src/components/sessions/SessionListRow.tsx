@@ -131,7 +131,7 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
                     isSelected
                         ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
                         : isBrandNew
-                            ? "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/[0.08] shadow-[0_0_12px_rgba(16,185,129,0.14)] animate-in fade-in duration-200"
+                            ? "border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/[0.08] shadow-[0_0_12px_rgba(16,185,129,0.14)] animate-in fade-in slide-in-from-top-1 duration-300"
                             : "bg-white dark:bg-[#0a0a0a] border-slate-100 dark:border-white/5 hover:border-blue-300 dark:hover:border-blue-500/30",
                     isFocused && !isSelected && "ring-1 ring-blue-500",
                 )}
@@ -147,9 +147,13 @@ export function SessionRow({ index, style, sessions, selectedSessionId, focusIp,
                             <span className="text-[9.5px] leading-none px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300 font-mono font-medium">
                                 {attackCount} ATK
                             </span>
-                            {(session.status || "").toLowerCase() === "active" && (
-                                <span className="text-[9.5px] leading-none px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 animate-pulse border border-emerald-500/20 font-semibold">
+                            {(session.status || "").toLowerCase() === "active" ? (
+                                <span className="text-[9.5px] leading-none px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 animate-pulse border border-emerald-500/20 font-semibold transition-colors duration-300">
                                     Live
+                                </span>
+                            ) : (
+                                <span className="text-[9.5px] leading-none px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-white/10 font-semibold transition-colors duration-300">
+                                    Closed
                                 </span>
                             )}
                         </div>

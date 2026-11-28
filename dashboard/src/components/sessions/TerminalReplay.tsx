@@ -290,7 +290,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                             ? `${timeLabels[i] ? `${timeLabels[i]} from replay start | ` : ""}${entry.timestamp} (sensor time)`
                             : undefined;
                         return (
-                            <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="group flex items-start gap-2 mb-1 leading-relaxed font-mono hover:bg-slate-100/60 dark:hover:bg-white/[0.03] -mx-1 px-1 py-0.5 rounded transition-colors">
+                            <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="group flex items-start gap-2 mb-1 leading-relaxed font-mono hover:bg-slate-100/60 dark:hover:bg-white/[0.03] -mx-1 px-1 py-0.5 rounded transition-colors animate-in fade-in duration-200">
                                 <span className="select-none text-[10.5px] font-mono text-slate-400/60 dark:text-slate-600 w-7 text-right shrink-0 pt-[1px] tabular-nums">
                                     {i + 1}
                                 </span>

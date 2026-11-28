@@ -104,7 +104,7 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                     isSelected
                         ? "border border-blue-500/70 bg-blue-50/60 dark:bg-blue-500/10 shadow-[0_0_16px_rgba(37,99,235,0.12)]"
                         : isBrandNew
-                            ? "border border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/[0.08] shadow-[0_0_12px_rgba(16,185,129,0.14)] animate-in fade-in duration-200"
+                            ? "border border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/[0.08] shadow-[0_0_12px_rgba(16,185,129,0.14)] animate-in fade-in slide-in-from-top-1 duration-300"
                             : "border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/15 hover:bg-slate-50/70 dark:hover:bg-white/[0.04]",
                     isDimmed ? "opacity-30 grayscale" : "opacity-100",
                 )}

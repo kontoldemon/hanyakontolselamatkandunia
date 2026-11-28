@@ -80,7 +80,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
     const filteredEvents = events.filter((evt) => {
         if (filterLevel === "all") return true;
         return evt.level === filterLevel;
-    });
+    }).reverse();
 
     const handleCopyLogs = async () => {
         const text = filteredEvents
@@ -112,9 +112,9 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
 
         return (
             <div
-                key={`${evt.timestamp}-${index}`}
+                key={`${evt.timestamp}-${evt.level}-${evt.event}-${evt.detail ?? ""}`}
                 className={cn(
-                    "flex items-start gap-2.5 py-0.5 leading-relaxed font-mono text-[11px] select-text hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] px-1.5 rounded transition-colors",
+                    "flex items-start gap-2.5 py-0.5 leading-relaxed font-mono text-[11px] select-text hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] px-1.5 rounded transition-colors animate-in fade-in slide-in-from-top-1 duration-300",
                     isWarn && "text-amber-600 dark:text-amber-400/90",
                     isError && "text-rose-600 dark:text-rose-400 font-semibold",
                     isInfo && "text-slate-600 dark:text-slate-300",
