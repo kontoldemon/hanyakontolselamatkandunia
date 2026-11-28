@@ -46,6 +46,23 @@ const infoTypeClass = (infoType: ReplayInfoType) => {
     return "bg-violet-500/15 text-violet-700 border-violet-500/30 dark:bg-violet-500/20 dark:text-violet-300 dark:border-violet-400/30";
 };
 
+function parseReplayStamp(stamp: string): number | null {
+    const match = /^(\d{1,2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?$/.exec(stamp.trim());
+    if (!match) return null;
+    const fraction = Number((match[4] ?? "").padEnd(3, "0"));
+    return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]) + fraction / 1000;
+}
+
+function formatElapsed(seconds: number): string {
+    const total = Math.max(0, Math.round(seconds));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+    return hours > 0
+        ? `+${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+        : `+${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
 export default function TerminalReplay({ lines, replay, mode = "both", onModeChange, isSeamless = false }: TerminalReplayProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const stickToBottomRef = useRef(true);
@@ -89,6 +106,43 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
             item.text.toLowerCase().includes(q) || (item.timestamp && item.timestamp.toLowerCase().includes(q))
         );
     }, [visibleEntries, searchQuery]);
+
+    const baseStampSeconds = useMemo(() => {
+        for (const entry of entries) {
+            if (!entry.timestamp) continue;
+            const seconds = parseReplayStamp(entry.timestamp);
+            if (seconds !== null) return seconds;
+        }
+        return null;
+    }, [entries]);
+
+    const timeLabels = useMemo(() => {
+        const labels = filteredEntries.map(() => "");
+        if (baseStampSeconds === null) {
+            filteredEntries.forEach((entry, index) => {
+                labels[index] = entry.timestamp ? entry.timestamp.replace(/\.\d+$/, "") : "";
+            });
+            return labels;
+        }
+        let lastShown = -1;
+        filteredEntries.forEach((entry, index) => {
+            if (!entry.timestamp) return;
+            const seconds = parseReplayStamp(entry.timestamp);
+            if (seconds === null) {
+                labels[index] = entry.timestamp.replace(/\.\d+$/, "");
+                return;
+            }
+            let offset = seconds - baseStampSeconds;
+            if (offset < 0) offset += 24 * 3600;
+            if (lastShown < 0 || offset - lastShown >= 1) {
+                labels[index] = formatElapsed(offset);
+                lastShown = offset;
+            }
+        });
+        return labels;
+    }, [filteredEntries, baseStampSeconds]);
+
+    const showTimeColumn = filteredEntries.some((entry) => entry.timestamp);
 
     useEffect(() => {
         if (!scrollRef.current) return;
@@ -232,6 +286,9 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                     )}
                     {filteredEntries.map((entry, i) => {
                         const infoType = getInfoType(entry.text);
+                        const stampTitle = entry.timestamp
+                            ? `${timeLabels[i] ? `${timeLabels[i]} from replay start | ` : ""}${entry.timestamp} (sensor time)`
+                            : undefined;
                         return (
                             <div key={`${entry.role}-${i}-${entry.timestamp ?? "na"}`} className="group flex items-start gap-2 mb-1 leading-relaxed font-mono hover:bg-slate-100/60 dark:hover:bg-white/[0.03] -mx-1 px-1 py-0.5 rounded transition-colors">
                                 <span className="select-none text-[10.5px] font-mono text-slate-400/60 dark:text-slate-600 w-7 text-right shrink-0 pt-[1px] tabular-nums">
@@ -271,9 +328,12 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                                             </>
                                         )}
                                     </div>
-                                    {entry.timestamp && (
-                                        <span className="select-none text-[9.5px] font-mono text-slate-400/80 dark:text-slate-500 shrink-0 tabular-nums ml-auto pt-[1px]">
-                                            {entry.timestamp}
+                                    {showTimeColumn && (
+                                        <span
+                                            className="select-none text-[9.5px] font-mono text-slate-400/80 dark:text-slate-500 shrink-0 tabular-nums ml-auto pt-[1px] min-w-[48px] text-right"
+                                            title={stampTitle}
+                                        >
+                                            {timeLabels[i]}
                                         </span>
                                     )}
                                 </div>
