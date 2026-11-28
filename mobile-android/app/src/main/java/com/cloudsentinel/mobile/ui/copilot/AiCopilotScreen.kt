@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -77,6 +78,7 @@ import com.cloudsentinel.mobile.core.theme.ObsidianBg
 import com.cloudsentinel.mobile.core.theme.ObsidianBorder
 import com.cloudsentinel.mobile.core.theme.ObsidianCard
 import com.cloudsentinel.mobile.core.theme.ObsidianSurfaceElevated
+import com.cloudsentinel.mobile.core.theme.RoseCritical
 import com.cloudsentinel.mobile.core.theme.TextMutedDark
 import com.cloudsentinel.mobile.core.theme.TextPrimaryDark
 import com.cloudsentinel.mobile.data.repository.CopilotMessage
@@ -86,10 +88,11 @@ import com.cloudsentinel.mobile.data.repository.CopilotSender
 @Composable
 fun AiCopilotScreen(
     messages: List<CopilotMessage>,
-    onSendMessage: (String) -> Unit
+    isSending: Boolean,
+    onSendMessage: (String) -> Unit,
+    onStopMessage: () -> Unit
 ) {
     var inputText by rememberSaveable { mutableStateOf("") }
-    var isSending by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -106,7 +109,6 @@ fun AiCopilotScreen(
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             inputText = ""
             dismissInputFocus()
-            isSending = true
             onSendMessage(toSend)
         }
     }
@@ -121,12 +123,6 @@ fun AiCopilotScreen(
         "Cluster MTTB",
         "Top attack origins"
     )
-
-    LaunchedEffect(messages.size) {
-        if (isSending && messages.isNotEmpty() && messages.last().sender == CopilotSender.COPILOT) {
-            isSending = false
-        }
-    }
 
     LaunchedEffect(messages.size, isSending) {
         if (messages.isNotEmpty() || isSending) {
@@ -269,17 +265,26 @@ fun AiCopilotScreen(
                 Spacer(modifier = Modifier.width(10.dp))
 
                 IconButton(
-                    onClick = { submitMessage() },
+                    onClick = {
+                        if (isSending) onStopMessage() else submitMessage()
+                    },
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(if (inputText.isNotBlank()) ElectricBlue else ObsidianSurfaceElevated)
+                        .background(
+                            when {
+                                isSending -> RoseCritical
+                                inputText.isNotBlank() -> ElectricBlue
+                                else -> ObsidianSurfaceElevated
+                            }
+                        )
                 ) {
                     if (isSending) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
+                        Icon(
+                            imageVector = Icons.Default.Stop,
+                            contentDescription = "Stop response",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
                     } else {
                         Icon(

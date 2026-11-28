@@ -18,6 +18,7 @@ import com.cloudsentinel.mobile.core.security.PairedSession
 import com.cloudsentinel.mobile.core.security.SecureSessionStore
 import java.io.IOException
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -241,6 +242,7 @@ class AlertRepository(private val sessionStore: SecureSessionStore) {
         )
         answer
     }.onFailure {
+        if (it is CancellationException) throw it
         _isSensorReachable.value = false
         _copilotMessages.value = _copilotMessages.value + CopilotMessage(
             sender = CopilotSender.COPILOT,

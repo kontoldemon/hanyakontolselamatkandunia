@@ -82,6 +82,7 @@ import com.cloudsentinel.mobile.ui.settings.MobileSettingsScreen
 import com.cloudsentinel.mobile.ui.warroom.WarRoomScreen
 import androidx.core.view.WindowCompat
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -130,6 +131,7 @@ class MainActivity : ComponentActivity() {
                 val isSensorReachable by repo.isSensorReachable.collectAsState()
 
                 var session by remember { mutableStateOf(repo.getActiveSession()) }
+                var copilotJob by remember { mutableStateOf<Job?>(null) }
                 var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0: WarRoom, 1: Sessions, 2: Alerts, 3: Copilot, 4: Settings
                 var isPairing by remember { mutableStateOf(false) }
                 var pairError by remember { mutableStateOf<String?>(null) }
@@ -469,10 +471,15 @@ class MainActivity : ComponentActivity() {
                                 3 -> {
                                     AiCopilotScreen(
                                         messages = copilotMessages,
+                                        isSending = copilotJob?.isActive == true,
                                         onSendMessage = { prompt ->
-                                            scope.launch {
+                                            copilotJob = scope.launch {
                                                 repo.askCopilot(prompt)
                                             }
+                                        },
+                                        onStopMessage = {
+                                            copilotJob?.cancel()
+                                            copilotJob = null
                                         }
                                     )
                                 }
