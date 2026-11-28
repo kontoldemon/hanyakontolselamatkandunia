@@ -147,6 +147,8 @@ data class MobileSessionItem(
     val city: String = "Unknown",
     val isp: String = "",
     val hassh: String = "",
+    val session_count: Int = 1,
+    val session_count_capped: Boolean = false,
     val risk_score: Int = 0,
     val duration: String = "",
     val mitre_techniques: List<String> = emptyList(),

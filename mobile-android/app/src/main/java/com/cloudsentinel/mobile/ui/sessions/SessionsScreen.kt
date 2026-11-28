@@ -205,9 +205,9 @@ fun SessionsScreen(
                         ) {
                             Text(
                                 text = if (filtered.size == sessions.size) {
-                                    "${sessions.size} recent sessions"
+                                    "${sessions.size} recent attacker${if (sessions.size == 1) "" else "s"}"
                                 } else {
-                                    "${filtered.size} of ${sessions.size} sessions"
+                                    "${filtered.size} of ${sessions.size} attacker${if (sessions.size == 1) "" else "s"}"
                                 },
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.SemiBold,
@@ -352,10 +352,19 @@ private fun SessionCard(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (session.commands.isNotEmpty()) {
-                        "${session.commands.size} commands recorded"
-                    } else {
-                        "Credential probe"
+                    text = buildString {
+                        val commandCount = session.commands.size
+                        append(
+                            if (commandCount > 0) {
+                                "$commandCount command${if (commandCount == 1) "" else "s"} recorded"
+                            } else {
+                                "Credential probe"
+                            }
+                        )
+                        if (session.session_count > 1) {
+                            val count = "${session.session_count}${if (session.session_count_capped) "+" else ""}"
+                            append(" · $count sessions")
+                        }
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMutedDark,

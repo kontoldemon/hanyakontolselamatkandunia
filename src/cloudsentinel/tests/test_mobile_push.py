@@ -666,6 +666,61 @@ def test_mobile_sessions_use_clickhouse_rows(tmp_path: Path, monkeypatch) -> Non
     assert body["sessions"][0]["timestamp_ms"] == 123456
 
 
+def test_mobile_sessions_group_by_ip(tmp_path: Path, monkeypatch) -> None:
+    import cloudsentinel.api.queries as queries
+
+    settings = Settings()
+    settings.clickhouse.enabled = True
+    svc, headers = _paired_mobile_service(tmp_path)
+    monkeypatch.setattr(
+        queries,
+        "_load_recent_sessions_from_clickhouse",
+        lambda _settings, limit=20: [
+            {
+                "id": "s1",
+                "ip": "9.9.9.9",
+                "country": "NL",
+                "riskScore": 20,
+                "mitreTechniques": ["T1110"],
+                "input": ["id"],
+                "lastSeenEpochMs": 1000,
+                "fingerprint": "a" * 32,
+            },
+            {
+                "id": "s2",
+                "ip": "9.9.9.9",
+                "country": "NL",
+                "riskScore": 80,
+                "mitreTechniques": ["T1083"],
+                "input": ["whoami"],
+                "lastSeenEpochMs": 2000,
+                "fingerprint": "b" * 32,
+            },
+            {
+                "id": "s3",
+                "ip": "8.8.8.8",
+                "country": "US",
+                "riskScore": 10,
+                "lastSeenEpochMs": 1500,
+            },
+        ],
+    )
+
+    async def block_handler(body: dict) -> dict:
+        return {"blocked": body["ip"]}
+
+    app = FastAPI()
+    app.include_router(build_mobile_router(settings, lambda: True, svc, block_handler))
+    sessions = TestClient(app).get("/mobile/sessions", headers=headers).json()["sessions"]
+    assert len(sessions) == 2
+    assert sessions[0]["ip"] == "9.9.9.9"
+    assert sessions[0]["session_count"] == 2
+    assert sessions[0]["risk_score"] == 80
+    assert sessions[0]["commands"] == ["whoami"]
+    assert sessions[0]["mitre_techniques"] == ["T1083", "T1110"]
+    assert sessions[0]["hassh"] == "b" * 32
+
+
 def test_mobile_copilot_success_error_and_failure(tmp_path: Path, monkeypatch) -> None:
     import cloudsentinel.threat_reporter as threat_reporter
 

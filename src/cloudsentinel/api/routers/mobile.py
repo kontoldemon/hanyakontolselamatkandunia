@@ -371,21 +371,48 @@ def build_mobile_router(
             try:
                 from .. import queries
 
-                for row in await queries.load_recent_sessions_async(settings, limit=50):
-                    sessions.append({
-                        "id": row.get("id", ""),
-                        "ip": row.get("ip", ""),
-                        "country": row.get("country", "Unknown"),
-                        "city": row.get("city", "Unknown"),
-                        "isp": row.get("isp", ""),
-                        "hassh": str(row.get("fingerprint") or ""),
-                        "risk_score": int(row.get("riskScore") or 0),
-                        "duration": row.get("duration", ""),
-                        "mitre_techniques": list(row.get("mitreTechniques") or []),
-                        "commands": list(row.get("input") or [])[:10],
-                        "blocked": bool(row.get("blockEffective", False)),
-                        "timestamp_ms": int(row.get("lastSeenEpochMs") or row.get("startedAtEpochMs") or 0),
+                session_limit = 50
+                grouped: dict[str, list[dict[str, Any]]] = {}
+                for row in await queries.load_recent_sessions_async(settings, limit=session_limit):
+                    ip = str(row.get("ip") or "").strip()
+                    if ip:
+                        grouped.setdefault(ip, []).append(row)
+                collapsed: list[dict[str, Any]] = []
+                for ip, group in grouped.items():
+                    group.sort(
+                        key=lambda item: int(
+                            item.get("lastSeenEpochMs") or item.get("startedAtEpochMs") or 0
+                        ),
+                        reverse=True,
+                    )
+                    latest = group[0]
+                    collapsed.append({
+                        "id": latest.get("id", ""),
+                        "ip": ip,
+                        "country": latest.get("country", "Unknown"),
+                        "city": latest.get("city", "Unknown"),
+                        "isp": latest.get("isp", ""),
+                        "hassh": str(latest.get("fingerprint") or ""),
+                        "risk_score": max(int(item.get("riskScore") or 0) for item in group),
+                        "duration": latest.get("duration", ""),
+                        "mitre_techniques": sorted({
+                            str(technique)
+                            for item in group
+                            for technique in (item.get("mitreTechniques") or [])
+                        }),
+                        "commands": list(latest.get("input") or [])[:10],
+                        "blocked": any(bool(item.get("blockEffective", False)) for item in group),
+                        "timestamp_ms": int(
+                            latest.get("lastSeenEpochMs") or latest.get("startedAtEpochMs") or 0
+                        ),
+                        "session_count": len(group),
+                        "session_count_capped": len(group) >= session_limit,
                     })
+                sessions = sorted(
+                    collapsed,
+                    key=lambda item: int(item.get("timestamp_ms") or 0),
+                    reverse=True,
+                )
             except Exception:
                 sessions = []
 
