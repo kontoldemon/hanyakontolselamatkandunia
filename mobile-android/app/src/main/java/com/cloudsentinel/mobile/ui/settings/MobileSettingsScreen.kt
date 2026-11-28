@@ -17,12 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.view.WindowCompat
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.rememberScrollState
@@ -115,14 +112,7 @@ private enum class SettingsSheet {
     GATEWAY
 }
 
-private fun Context.findActivity(): Activity? {
-    var current: Context = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
-}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -385,10 +375,9 @@ fun MobileSettingsScreen(
             contentWindowInsets = { WindowInsets(0) },
             dragHandle = null
         ) {
-            val context = LocalContext.current
-            DisposableEffect(Unit) {
-                val window = context.findActivity()?.window
-                val controller = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+            val sheetView = LocalView.current
+            DisposableEffect(sheetView) {
+                val controller = ViewCompat.getWindowInsetsController(sheetView)
                 controller?.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 controller?.hide(WindowInsetsCompat.Type.navigationBars())
