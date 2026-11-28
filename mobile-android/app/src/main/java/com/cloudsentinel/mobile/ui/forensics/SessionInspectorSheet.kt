@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -92,11 +94,16 @@ fun SessionInspectorSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = ObsidianPanel,
-        dragHandle = null
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                color = TextMutedDark.copy(alpha = 0.4f)
+            )
+        }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
@@ -167,7 +174,7 @@ fun SessionInspectorSheet(
                         .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Text(
-                        text = "Risk ${session.risk_score}",
+                        text = "Risk ${session.risk_score.coerceIn(0, 100)}",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = RoseCritical
                     )

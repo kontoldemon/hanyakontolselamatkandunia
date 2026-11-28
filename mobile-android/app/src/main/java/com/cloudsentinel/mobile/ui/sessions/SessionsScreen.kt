@@ -373,9 +373,10 @@ private fun SessionCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val riskScore = session.risk_score.coerceIn(0, 100)
                 val riskColor = when {
-                    session.risk_score >= 90 -> RoseCritical
-                    session.risk_score >= 70 -> AmberWarning
+                    riskScore >= 90 -> RoseCritical
+                    riskScore >= 70 -> AmberWarning
                     else -> ElectricBlueSoft
                 }
                 Box(
@@ -385,7 +386,7 @@ private fun SessionCard(
                         .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Text(
-                        text = "${session.risk_score}",
+                        text = "$riskScore",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.SemiBold,
                             fontFamily = FontFamily.Monospace
