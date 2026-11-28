@@ -489,6 +489,7 @@ def build_mobile_router(
                 f"- MTTB: {round(mttb_ms / 1000, 2)}s\n"
                 f"- Deception: {settings.deception.level}; HASSH: {settings.deception.hassh_action}; "
                 f"SOAR: {soar_mode}; SSH ingress: {exposure}\n"
+                f"- Mobile killswitch: SSH ingress is {exposure}; pause/resume uses this control.\n"
                 f"- Recent alerts: {recent}\n"
                 "Answer as the CloudSentinel SOC copilot using only these facts."
             )

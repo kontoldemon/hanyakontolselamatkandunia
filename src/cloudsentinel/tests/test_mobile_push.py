@@ -798,6 +798,57 @@ def test_mobile_copilot_success_error_and_failure(tmp_path: Path, monkeypatch) -
     assert offline["ok"] is False
 
 
+def test_mobile_copilot_uses_live_context(tmp_path: Path, monkeypatch) -> None:
+    import cloudsentinel.threat_reporter as threat_reporter
+
+    settings = Settings()
+    svc, headers = _paired_mobile_service(tmp_path)
+
+    async def block_handler(body: dict) -> dict:
+        return {"blocked": body["ip"]}
+
+    async def load_state() -> dict:
+        return {"effective_enabled": False}
+
+    class Soar:
+        mttb_ms = 1200.0
+        firewall_dry_run = True
+
+    class Pipe:
+        connected = True
+
+    captured: dict[str, str] = {}
+
+    async def capture_agent(prompt: str, context: str) -> str:
+        captured["prompt"] = prompt
+        captured["context"] = context
+        return "ok"
+
+    monkeypatch.setattr(threat_reporter, "chat_with_agent", capture_agent)
+    app = FastAPI()
+    app.include_router(
+        build_mobile_router(
+            settings,
+            lambda: True,
+            svc,
+            block_handler,
+            load_exposure_state=load_state,
+            soar=Soar(),
+            pipeline=Pipe(),
+        )
+    )
+    body = TestClient(app).post(
+        "/mobile/ai-copilot", headers=headers, json={"prompt": "status"}
+    ).json()
+    assert body["ok"] is True
+    context = captured["context"]
+    assert "MOBILE SOC COMPANION CONTEXT" in context
+    assert "Sensor: ONLINE" in context
+    assert "SSH ingress: paused" in context
+    assert "MTTB: 1.2s" in context
+    assert "SOAR: dry-run" in context
+
+
 def test_mobile_sessions_fall_back_to_alerts_on_clickhouse_error(tmp_path: Path, monkeypatch) -> None:
     import cloudsentinel.api.queries as queries
 
