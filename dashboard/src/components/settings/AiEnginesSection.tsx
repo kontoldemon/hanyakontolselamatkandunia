@@ -96,32 +96,29 @@ export default function AiEnginesSection({
 
                         <div className="px-4 py-3 sm:py-2.5 sm:px-5 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
                             <div className="min-w-0 sm:pr-2">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">
-                                    API Key
-                                    {hasCopilotKey && (
-                                        <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-mono font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 align-middle">
-                                            CONFIGURED
-                                        </span>
-                                    )}
-                                </label>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">Inference authentication key.</p>
+                                <label className="text-xs font-semibold text-slate-900 dark:text-white block sm:truncate">API Key</label>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 sm:truncate">
+                                    {hasCopilotKey ? "Key saved. Type a new key only to replace it." : "Inference authentication key."}
+                                </p>
                             </div>
                             <div className="w-full sm:w-56 shrink-0 relative flex items-center">
                                 <input
                                     type={showCopilotKey ? "text" : "password"}
                                     value={copilotApiKey}
                                     onChange={(e) => setCopilotApiKey(e.target.value)}
-                                    placeholder={hasCopilotKey ? "•••••••••••• (configured) — leave blank to keep" : "AIzaSy... / gsk_..."}
+                                    placeholder={hasCopilotKey ? "Saved — type to replace" : "AIzaSy... / gsk_..."}
                                     className="w-full h-10 sm:h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 pl-3 pr-10 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCopilotKey(!showCopilotKey)}
-                                    className="absolute right-0.5 flex h-9 w-9 items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                                    title={showCopilotKey ? "Hide key" : "Show key"}
-                                >
-                                    {showCopilotKey ? <EyeOff size={13} /> : <Eye size={13} />}
-                                </button>
+                                {(!hasCopilotKey || copilotApiKey) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCopilotKey(!showCopilotKey)}
+                                        className="absolute right-0.5 flex h-9 w-9 items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                                        title={showCopilotKey ? "Hide key" : "Show key"}
+                                    >
+                                        {showCopilotKey ? <EyeOff size={13} /> : <Eye size={13} />}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
