@@ -149,8 +149,11 @@ export default function SessionDetailPane({
                                 <h2 className="font-mono text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-none truncate">
                                     {selectedView.ip}
                                 </h2>
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-white/10 shrink-0">
-                                    Port 2222/TCP
+                                <span
+                                    title="Public entry is 22/TCP; it redirects to the internal honeypot listener on 2222."
+                                    className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-white/10 shrink-0"
+                                >
+                                    Port 22/TCP <span className="text-slate-400 dark:text-slate-500">→ 2222</span>
                                 </span>
                             </div>
                             <button

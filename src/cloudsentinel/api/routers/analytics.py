@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from ...config import Settings
 from ...pipeline import EventPipeline
 from .. import queries
+from ..block_state import count_active_blocks
 
 
 def build_analytics_router(
@@ -35,6 +36,10 @@ def build_analytics_router(
 
             metrics = get_metrics()
             mttb_value = metrics.mttb_ms or await queries.load_latest_mttb_async(settings)
+            blocked_current = await count_active_blocks(
+                settings.redis.url,
+                len(metrics.blocked_ips),
+            )
             data.update(
                 {
                     "active_sessions": metrics.active_sessions,
@@ -45,7 +50,7 @@ def build_analytics_router(
                     "total_blocks": metrics.total_blocks,
                     "total_blocks_iptables": metrics.total_blocks_iptables,
                     "mttb_ms": mttb_value,
-                    "blocked_ips_current": len(metrics.blocked_ips),
+                    "blocked_ips_current": blocked_current,
                     "uptime_seconds": time.time() - metrics.start_time,
                 }
             )

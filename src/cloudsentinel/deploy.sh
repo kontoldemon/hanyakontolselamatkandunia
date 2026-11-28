@@ -21,6 +21,7 @@ ADMIN_IP="${ADMIN_IP:-$(printf '%s' "${SSH_CONNECTION:-}" | awk '{print $1}')}"
 SOAR_ALLOWLIST="${SOAR_ALLOWLIST:-${ADMIN_IP:+${ADMIN_IP},}127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
 VERCEL_DASHBOARD_ORIGIN="${VERCEL_DASHBOARD_ORIGIN:?Set VERCEL_DASHBOARD_ORIGIN to the dashboard HTTPS origin}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
+STREAM_AUTH_TOKEN="${STREAM_AUTH_TOKEN:-}"
 CLICKHOUSE_VERSION="24.12"
 CLICKHOUSE_HOST="${CLICKHOUSE_HOST:-127.0.0.1}"
 CLICKHOUSE_INSTALL="${CLICKHOUSE_INSTALL:-true}"
@@ -95,6 +96,14 @@ fi
 
 if [ -z "${ADMIN_TOKEN}" ]; then
     ADMIN_TOKEN="$(openssl rand -hex 32)"
+fi
+
+if [ -z "${STREAM_AUTH_TOKEN}" ] && [ -f /root/cloudsentinel-stream-token ]; then
+    STREAM_AUTH_TOKEN="$(cat /root/cloudsentinel-stream-token)"
+fi
+
+if [ -z "${STREAM_AUTH_TOKEN}" ]; then
+    STREAM_AUTH_TOKEN="$(openssl rand -hex 32)"
 fi
 
 echo "[1b/7] Configuring memory guardrails..."
@@ -396,6 +405,7 @@ Environment=STREAM_ENABLED=true
 Environment=STREAM_HOST=0.0.0.0
 Environment=STREAM_PORT=3001
 Environment=STREAM_CORS_ORIGIN=${VERCEL_DASHBOARD_ORIGIN}
+Environment=STREAM_AUTH_TOKEN=${STREAM_AUTH_TOKEN}
 Environment=ADMIN_ENABLED=true
 Environment=ADMIN_PORT=8080
 Environment=ADMIN_SERVER=uvicorn
@@ -467,6 +477,8 @@ fi
 
 install -m 0600 /dev/null /root/cloudsentinel-admin-token
 printf '%s\n' "${ADMIN_TOKEN}" > /root/cloudsentinel-admin-token
+install -m 0600 /dev/null /root/cloudsentinel-stream-token
+printf '%s\n' "${STREAM_AUTH_TOKEN}" > /root/cloudsentinel-stream-token
 
 systemctl daemon-reload
 systemctl enable cloudsentinel
@@ -501,4 +513,5 @@ echo " SOAR allowlist: ${SOAR_ALLOWLIST}"
 echo " Host agent: cloudsentinel-host-agent.service"
 echo " Backup cron: /etc/cron.d/cloudsentinel-backup"
 echo " Admin token saved at: /root/cloudsentinel-admin-token"
+echo " Stream auth token saved at: /root/cloudsentinel-stream-token"
 echo "============================================================"

@@ -31,13 +31,14 @@ const TIMELINE_TO_MS: Record<Exclude<GlobalTimeline, "all">, number> = {
     "7d": 7 * 24 * 60 * 60 * 1000,
 };
 
+// Cap raw-event pulls; long windows are aggregated by the truth/analytics endpoints.
 const TIMELINE_FETCH_LIMIT: Record<GlobalTimeline, number> = {
     "15m": 500,
-    "1h": 1500,
-    "6h": 5000,
-    "24h": 10000,
-    "7d": 20000,
-    "all": 20000,
+    "1h": 1000,
+    "6h": 2000,
+    "24h": 3000,
+    "7d": 5000,
+    "all": 5000,
 };
 
 function toNumber(value: unknown): number {

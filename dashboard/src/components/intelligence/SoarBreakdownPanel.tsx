@@ -32,7 +32,7 @@ export default function SoarBreakdownPanel({ expanded, onToggle, soar }: SoarBre
       icon={Shield}
       iconColor="text-red-500"
       title="SOAR Response Breakdown"
-      summary={`Block Rate: ${soar.blockRate}%`}
+      summary={`Block Rate: ${Number(soar.blockRate.toFixed(1))}%`}
     >
       <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60vh] w-full flex flex-col items-center justify-center gap-4 relative" ref={containerRef} onMouseLeave={() => setHovered(null)}>
         <div className="relative h-32 w-32 group-data-[fullscreen=true]/fs:h-64 group-data-[fullscreen=true]/fs:w-64 transition-all duration-300 shrink-0">

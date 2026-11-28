@@ -1,0 +1,12 @@
+/.git
+/.vercel
+/.opencode
+/docs
+/infra
+/azure
+/src
+/mobile-android
+/dashboard/node_modules
+/dashboard/.next
+/dashboard/out
+*.log

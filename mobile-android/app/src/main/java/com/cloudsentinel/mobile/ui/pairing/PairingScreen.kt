@@ -98,7 +98,7 @@ fun PairingScreen(
     onDemoBypass: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    var serverUrl by remember { mutableStateOf("http://127.0.0.1:8080") }
+    var serverUrl by remember { mutableStateOf("https://cloudsentinel-4nxdgq72ncekc.eastasia.cloudapp.azure.com") }
     var pairingCode by remember { mutableStateOf("") }
     var pairingToken by remember { mutableStateOf("") }
     var isCameraActive by remember { mutableStateOf(false) }

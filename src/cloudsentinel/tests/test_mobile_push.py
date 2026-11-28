@@ -818,6 +818,36 @@ def test_mobile_dashboard_uses_metrics_mttb_fallback(tmp_path: Path) -> None:
     assert dashboard["mttb_seconds"] == 0.25
 
 
+def test_mobile_dashboard_uses_clickhouse_mttb_fallback(tmp_path: Path, monkeypatch) -> None:
+    from cloudsentinel.metrics import get_metrics
+
+    settings = Settings()
+    settings.clickhouse.enabled = False
+    svc, headers = _paired_mobile_service(tmp_path)
+
+    async def block_handler(body: dict) -> dict:
+        return {"blocked": body["ip"]}
+
+    async def fake_latest_mttb(_settings) -> float:
+        return 117.35
+
+    monkeypatch.setattr(
+        "cloudsentinel.api.routers.mobile.load_latest_mttb_async",
+        fake_latest_mttb,
+    )
+    app = FastAPI()
+    app.include_router(build_mobile_router(settings, lambda: True, svc, block_handler))
+
+    metrics = get_metrics()
+    previous = metrics.mttb_ms
+    metrics.set_mttb(0.0)
+    try:
+        dashboard = TestClient(app).get("/mobile/dashboard", headers=headers).json()
+    finally:
+        metrics.set_mttb(previous)
+    assert dashboard["mttb_seconds"] == 0.117
+
+
 def test_mobile_runtime_controls_persist_to_runtime_config(tmp_path: Path) -> None:
     from cloudsentinel.runtime_config import RuntimeConfigStore
 

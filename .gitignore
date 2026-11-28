@@ -45,3 +45,5 @@ src/cloudsentinel/**/__pycache__/
 *.key
 !*.example.key
 certs/
+
+.vercel

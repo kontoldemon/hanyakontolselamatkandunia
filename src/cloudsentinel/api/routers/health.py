@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Response
 from ...config import Settings
 from ...pipeline import EventPipeline
 from .. import queries
+from ..block_state import count_active_blocks
 
 
 def build_health_router(
@@ -66,6 +67,10 @@ def build_health_router(
 
             metrics = get_metrics()
             mttb_value = metrics.mttb_ms or await queries.load_latest_mttb_async(settings)
+            blocked_current = await count_active_blocks(
+                settings.redis.url,
+                len(metrics.blocked_ips),
+            )
             return {
                 "active_sessions": metrics.active_sessions,
                 "mttb_ms": mttb_value,
@@ -75,7 +80,7 @@ def build_health_router(
                 "total_commands": metrics.total_commands,
                 "total_blocks": metrics.total_blocks,
                 "total_blocks_iptables": metrics.total_blocks_iptables,
-                "blocked_ips_current": len(metrics.blocked_ips),
+                "blocked_ips_current": blocked_current,
                 "uptime_seconds": time.time() - metrics.start_time,
             }
         except Exception:

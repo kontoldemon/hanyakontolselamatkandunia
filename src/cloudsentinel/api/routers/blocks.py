@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import ipaddress
 import json
 import time
@@ -104,6 +105,7 @@ def build_blocks_router(
                 if ttl > 0:
                     spawn_unblock(ip, reason, ttl, firewall_path)
 
+        mttb_ms = (time.time() - started) * 1000
         try:
             from ...metrics import get_metrics
 
@@ -111,16 +113,34 @@ def build_blocks_router(
             metrics.record_block("manual_block")
             metrics.blocked_ips.add(ip)
             metrics.set_blocked_count(len(metrics.blocked_ips))
-            metrics.set_mttb((time.time() - started) * 1000)
+            metrics.set_mttb(mttb_ms)
         except Exception:
             pass
+
+        recorded_action = {"blocked": "iptables_block"}.get(action, action)
+        if settings.clickhouse.enabled and recorded_action:
+            try:
+                from ..queries import record_manual_block
+
+                await asyncio.to_thread(
+                    record_manual_block,
+                    settings,
+                    ip=ip,
+                    reason=reason,
+                    action=recorded_action,
+                    mttb_ms=mttb_ms,
+                    started_at=started,
+                )
+            except Exception as exc:
+                logger.warning("manual_block_clickhouse_failed", ip=ip, error=str(exc))
+
         return {
             "ok": True,
             "ip": ip,
             "ttl": ttl,
             "reason": reason,
             "action": action,
-            "mttb_ms": round((time.time() - started) * 1000, 3),
+            "mttb_ms": round(mttb_ms, 3),
         }
 
     return router, manual_block_ip

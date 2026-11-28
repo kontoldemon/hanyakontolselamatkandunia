@@ -99,30 +99,30 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
             <div
                 key={`${evt.timestamp}-${index}`}
                 className={cn(
-                    "flex items-start gap-2.5 py-0.5 leading-relaxed font-mono text-[11px] select-text hover:bg-white/[0.03] px-1.5 rounded transition-colors",
-                    isWarn && "text-amber-400/90",
-                    isError && "text-rose-400 font-semibold",
-                    isInfo && "text-slate-300 dark:text-slate-300",
-                    !isWarn && !isError && !isInfo && "text-slate-400"
+                    "flex items-start gap-2.5 py-0.5 leading-relaxed font-mono text-[11px] select-text hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] px-1.5 rounded transition-colors",
+                    isWarn && "text-amber-600 dark:text-amber-400/90",
+                    isError && "text-rose-600 dark:text-rose-400 font-semibold",
+                    isInfo && "text-slate-600 dark:text-slate-300",
+                    !isWarn && !isError && !isInfo && "text-slate-500 dark:text-slate-400"
                 )}
             >
-                <span className="text-slate-600 select-none text-[10px] w-6 text-right shrink-0">
+                <span className="text-slate-400 dark:text-slate-600 select-none text-[10px] w-6 text-right shrink-0">
                     {index + 1}
                 </span>
                 <span className="text-slate-500 shrink-0">{evt.timestamp}</span>
                 <span
                     className={cn(
                         "text-[9px] font-bold px-1 rounded uppercase tracking-wider shrink-0",
-                        isError && "bg-rose-500/20 text-rose-400",
-                        isWarn && "bg-amber-500/20 text-amber-400",
-                        isInfo && "bg-blue-500/20 text-blue-400"
+                        isError && "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400",
+                        isWarn && "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
+                        isInfo && "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
                     )}
                 >
                     {evt.level}
                 </span>
                 <span className="break-all">
                     {evt.event}
-                    {evt.detail && <span className="text-slate-400 ml-1.5">({evt.detail})</span>}
+                    {evt.detail && <span className="text-slate-500 dark:text-slate-400 ml-1.5">({evt.detail})</span>}
                 </span>
             </div>
         );
@@ -223,11 +223,11 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                 {/* Console Log Terminal Window */}
                 <div
                     ref={inlineTerminalRef}
-                    className="p-3 bg-[#08080a] text-slate-200 font-mono text-xs h-72 overflow-y-auto terminal-scrollbar space-y-0.5"
+                    className="p-3 bg-slate-50 text-slate-700 border-t border-slate-200/70 font-mono text-xs h-72 overflow-y-auto terminal-scrollbar space-y-0.5 dark:bg-[#08080a] dark:text-slate-200 dark:border-white/5"
                 >
                     {filteredEvents.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-1">
-                            <Radio size={16} className="text-slate-600 animate-pulse" />
+                            <Radio size={16} className="text-slate-400 dark:text-slate-600 animate-pulse" />
                             <span className="text-xs">Waiting for stream events...</span>
                         </div>
                     ) : (

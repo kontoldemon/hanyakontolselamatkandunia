@@ -281,6 +281,72 @@ def test_manual_block_uses_eventgrid(monkeypatch) -> None:
     assert fake_redis.published
 
 
+def test_manual_block_records_clickhouse_truth(monkeypatch) -> None:
+    recorded: list[dict] = []
+
+    def fake_record(_settings, **kwargs):
+        recorded.append(kwargs)
+
+    async def fake_publish(**_kwargs):
+        return True, ""
+
+    monkeypatch.setattr("cloudsentinel.api.queries.record_manual_block", fake_record)
+    monkeypatch.setattr("cloudsentinel.admin_api.publish_block", fake_publish)
+    settings = _settings()
+    settings.clickhouse.enabled = True
+    settings.admin.token = SecretStr("unit-token")
+    soar = types.SimpleNamespace(
+        eventgrid_enabled=True,
+        eventgrid_endpoint="https://topic.example.com/api/events",
+        eventgrid_key="unit-key",
+        _redis=_FakeRedis(),
+    )
+    client = TestClient(create_admin_app(settings, EventPipeline(settings.redis), soar))
+    response = client.post(
+        "/admin/block-ip",
+        headers={"Authorization": "Bearer unit-token"},
+        json={"ip": "8.8.8.8", "ttl": 60, "reason": "unit"},
+    )
+    assert response.status_code == 200
+    assert recorded
+    assert recorded[0]["ip"] == "8.8.8.8"
+    assert recorded[0]["action"] == "eventgrid_published"
+
+
+def test_manual_block_survives_clickhouse_write_failure(monkeypatch) -> None:
+    def boom(_settings, **_kwargs):
+        raise RuntimeError("clickhouse down")
+
+    async def fake_publish(**_kwargs):
+        return True, ""
+
+    monkeypatch.setattr("cloudsentinel.api.queries.record_manual_block", boom)
+    monkeypatch.setattr("cloudsentinel.admin_api.publish_block", fake_publish)
+    settings = _settings()
+    settings.clickhouse.enabled = True
+    settings.admin.token = SecretStr("unit-token")
+    soar = types.SimpleNamespace(
+        eventgrid_enabled=True,
+        eventgrid_endpoint="https://topic.example.com/api/events",
+        eventgrid_key="unit-key",
+        _redis=_FakeRedis(),
+    )
+    client = TestClient(create_admin_app(settings, EventPipeline(settings.redis), soar))
+    response = client.post(
+        "/admin/block-ip",
+        headers={"Authorization": "Bearer unit-token"},
+        json={"ip": "8.8.4.4", "ttl": 60, "reason": "unit"},
+    )
+    assert response.status_code == 200
+    assert response.json()["action"] == "eventgrid_published"
+
+
+def test_deploy_requires_stream_auth() -> None:
+    deploy = Path("src/cloudsentinel/deploy.sh").read_text(encoding="utf-8")
+    assert "STREAM_AUTH_TOKEN" in deploy
+    assert "/root/cloudsentinel-stream-token" in deploy
+
+
 def test_bicep_mounts_sensor_disk_and_private_vault() -> None:
     main = Path("infra/main.bicep").read_text(encoding="utf-8")
     assert "sensor-cloud-init.sh" in main

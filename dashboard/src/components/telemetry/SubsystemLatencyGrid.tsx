@@ -39,9 +39,10 @@ export default function SubsystemLatencyGrid({
             <div className="p-4 sm:p-5">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {latencyRows.map((row) => {
-                        const isFast = row.value > 0 && row.value < 25;
-                        const isModerate = row.value >= 25 && row.value <= 50;
-                        const isHigh = row.value > 50;
+                        // Cross-region dashboard→sensor RTT; sub-250ms is healthy.
+                        const isFast = row.value > 0 && row.value < 250;
+                        const isModerate = row.value >= 250 && row.value < 600;
+                        const isHigh = row.value >= 600;
                         const isZero = row.value === 0;
 
                         return (

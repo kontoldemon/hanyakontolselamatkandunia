@@ -188,7 +188,7 @@ class MainActivity : ComponentActivity() {
                         },
                         onDemoBypass = {
                             val devSession = com.cloudsentinel.mobile.core.security.PairedSession(
-                                serverUrl = "http://127.0.0.1:8080",
+                                serverUrl = "https://cloudsentinel-4nxdgq72ncekc.eastasia.cloudapp.azure.com",
                                 deviceId = "dev-tester-01",
                                 deviceName = "Developer Companion",
                                 deviceToken = "cs_mob_dev_bypass"

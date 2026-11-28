@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import time
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -851,6 +851,81 @@ def _load_truth_summary_from_clickhouse(settings: Settings) -> dict[str, Any] | 
         }
     except Exception:
         return None
+
+
+def record_manual_block(
+    settings: Settings,
+    *,
+    ip: str,
+    reason: str,
+    action: str,
+    mttb_ms: float,
+    started_at: float,
+) -> None:
+    """Persist a dashboard/mobile block so the ClickHouse truth summary counts it."""
+    if not settings.clickhouse.enabled:
+        return
+    import clickhouse_connect
+
+    completed = datetime.now(UTC)
+    started = datetime.fromtimestamp(started_at, tz=UTC)
+    row = {
+        "eventid": "cloudsentinel.block.manual",
+        "session": "manual",
+        "sensor": "CloudSentinel",
+        "src_ip": ip,
+        "src_port": 0,
+        "dst_ip": "",
+        "dst_port": 0,
+        "country_code": "",
+        "country_name": "",
+        "city": "",
+        "continent": "",
+        "latitude": "0",
+        "longitude": "0",
+        "timezone": "UTC",
+        "username": "",
+        "password": "",
+        "auth_type": "password",
+        "attempt": 0,
+        "hassh_md5": "",
+        "hassh_algorithms": "",
+        "kexAlgs": [],
+        "encCS": [],
+        "macCS": [],
+        "compCS": [],
+        "version": "",
+        "key_type": "",
+        "input": "",
+        "reason": reason,
+        "cloudsentinel_risk_score": 0,
+        "cloudsentinel_mitre_techniques": [],
+        "cloudsentinel_soar_action": action,
+        "detected_at": started,
+        "block_started_at": started,
+        "block_completed_at": completed,
+        "mttb_ms": float(mttb_ms),
+        "block_command": "",
+        "block_stdout": "",
+        "block_stderr": "",
+        "duration": "",
+        "timestamp": completed,
+    }
+    client = clickhouse_connect.get_client(
+        host=settings.clickhouse.host,
+        port=settings.clickhouse.port,
+        username=settings.clickhouse.username,
+        password=secret_to_str(settings.clickhouse.password),
+        database=settings.clickhouse.database,
+    )
+    try:
+        client.insert(
+            settings.clickhouse.table,
+            [list(row.values())],
+            column_names=list(row),
+        )
+    finally:
+        client.close()
 
 
 def _load_war_room_evidence_from_clickhouse(settings: Settings) -> dict[str, Any]:

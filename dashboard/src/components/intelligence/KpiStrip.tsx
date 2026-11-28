@@ -14,6 +14,7 @@ interface KpiStripProps {
 export default function KpiStrip({ totalEvents, uniqueIps, totalCountries, uniqueCommands, avgRisk, blockRate }: KpiStripProps) {
   const safeAvgRisk = Math.min(100, Math.max(0, Number.isFinite(avgRisk) ? avgRisk : 0));
   const safeBlockRate = Math.min(100, Math.max(0, Number.isFinite(blockRate) ? blockRate : 0));
+  const blockRateLabel = `${Number(safeBlockRate.toFixed(1))}%`;
 
   const kpis = [
     { label: "Total Events", value: totalEvents.toLocaleString(), icon: Activity, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -21,7 +22,7 @@ export default function KpiStrip({ totalEvents, uniqueIps, totalCountries, uniqu
     { label: "Countries", value: totalCountries.toLocaleString(), icon: Network, color: "text-indigo-500", bg: "bg-indigo-500/10" },
     { label: "Unique Cmds", value: uniqueCommands.toLocaleString(), icon: ShieldAlert, color: "text-amber-500", bg: "bg-amber-500/10" },
     { label: "Avg Risk", value: safeAvgRisk.toFixed(1), icon: Zap, color: "text-orange-500", bg: "bg-orange-500/10" },
-    { label: "Block Rate", value: `${safeBlockRate}%`, icon: ShieldCheck, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Block Rate", value: blockRateLabel, icon: ShieldCheck, color: "text-emerald-500", bg: "bg-emerald-500/10" },
   ];
 
   return (

@@ -46,6 +46,11 @@ from .mitre import score_command
 logger = structlog.get_logger("cloudsentinel.pipeline")
 
 
+def _redis_socket_timeout(flush_interval_seconds: float) -> float:
+    """Keep the socket alive longer than the blocking XREAD."""
+    return max(2.0, float(flush_interval_seconds) + 2.0)
+
+
 @dataclass(slots=True)
 class EventEnvelope:
     event_type: str
@@ -143,6 +148,10 @@ class EventPipeline:
     def pending_count(self) -> int:
         return self._wal_pending
 
+    def _redis_timeout(self) -> float:
+        settings = getattr(self, "clickhouse_settings", None)
+        return _redis_socket_timeout(getattr(settings, "flush_interval_seconds", 5.0))
+
     async def start(self) -> None:
         if _TENACITY:
             @retry(
@@ -157,7 +166,7 @@ class EventPipeline:
                     self.settings.url,
                     encoding="utf-8",
                     decode_responses=True,
-                    socket_timeout=2,
+                    socket_timeout=self._redis_timeout(),
                     socket_connect_timeout=2,
                 )
                 await self._redis.ping()
@@ -167,7 +176,7 @@ class EventPipeline:
                 self.settings.url,
                 encoding="utf-8",
                 decode_responses=True,
-                socket_timeout=2,
+                socket_timeout=self._redis_timeout(),
                 socket_connect_timeout=2,
             )
             await self._redis.ping()

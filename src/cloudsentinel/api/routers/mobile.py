@@ -14,6 +14,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ...config import Settings
 from ...metrics import get_metrics
 from ...mobile_push import MobilePushService, PairedDevice
+from ..block_state import count_active_blocks
+from ..queries import load_latest_mttb_async
 
 logger = structlog.get_logger("cloudsentinel.api.routers.mobile")
 mobile_security = HTTPBearer(auto_error=False)
@@ -234,6 +236,7 @@ def build_mobile_router(
         blocked_ips = set(getattr(metrics, "blocked_ips", set()) or set())
         if soar is not None:
             blocked_ips |= set(getattr(soar, "_mem_blocked_ips", set()) or set())
+        blocked_ips_count = await count_active_blocks(settings.redis.url, len(blocked_ips))
 
         mttb_seconds = 0.0
         if soar is not None:
@@ -242,6 +245,10 @@ def build_mobile_router(
                 mttb_seconds = round(soar_mttb_ms / 1000, 3)
         if mttb_seconds <= 0 and metrics.mttb_ms > 0:
             mttb_seconds = round(metrics.mttb_ms / 1000, 3)
+        if mttb_seconds <= 0:
+            latest_mttb_ms = await load_latest_mttb_async(settings)
+            if latest_mttb_ms > 0:
+                mttb_seconds = round(latest_mttb_ms / 1000, 3)
 
         mitre_ids: set[str] = set()
         for alert in alerts:
@@ -274,7 +281,7 @@ def build_mobile_router(
             "connections": int(metrics.active_sessions),
             "mttb_seconds": mttb_seconds,
             "mitre_count": len(mitre_ids),
-            "blocked_ips_count": len(blocked_ips),
+            "blocked_ips_count": blocked_ips_count,
             "sensor_status": "ONLINE" if pipeline_connected else "OFFLINE",
             "sensor_uptime_seconds": int(max(0.0, time.time() - metrics.start_time)),
             "ingress_exposure": {
