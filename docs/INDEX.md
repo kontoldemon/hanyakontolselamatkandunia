@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last reviewed: 2026-11-26.
+Last reviewed: 2026-11-28.
 
 ## Authoritative documents
 
@@ -33,8 +33,11 @@ Last reviewed: 2026-11-26.
 |---|---|
 | `docs/working-paper/report/FYP Pitching Content.docx` | Current report source |
 | `docs/working-paper/report/FYP_content.txt` | Plain-text working copy of the report |
+| `docs/fyp-report-guide.md` | IT FYP report writing guide with AI-agent instructions |
 | `docs/working-paper/slides/slidecontent.txt` | Current slide content |
 | `docs/working-paper/slides/CloudSentinel-slides.pptx` | Current slide deck source |
+
+Report-writing skill: `.opencode/skills/fyp-report/SKILL.md` (reads the guide above).
 
 ## Rule
 

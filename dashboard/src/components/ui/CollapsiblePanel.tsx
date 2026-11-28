@@ -56,7 +56,7 @@ export default function CollapsiblePanel({
                     <button
                         type="button"
                         onClick={toggleFullscreen}
-                        className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer p-0.5"
+                        className="flex h-8 w-8 items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                         title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                         aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >

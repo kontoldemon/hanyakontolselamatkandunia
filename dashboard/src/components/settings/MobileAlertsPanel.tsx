@@ -233,7 +233,7 @@ export default function MobileAlertsPanel({
                         type="button"
                         onClick={handleSendTestAlert}
                         disabled={sendingTest}
-                        className="h-7.5 inline-flex items-center gap-1.5 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
+                        className="h-9 sm:h-7.5 inline-flex items-center gap-1.5 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
                     >
                         <BellRing size={12} />
                         <span>{sendingTest ? "Sending..." : "Test Alert"}</span>
@@ -253,7 +253,7 @@ export default function MobileAlertsPanel({
                                 value={serverUrl}
                                 onChange={(e) => setServerUrl(e.target.value)}
                                 placeholder="http://127.0.0.1:8080"
-                                className="w-full h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-full h-10 sm:h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                     </div>
@@ -261,7 +261,7 @@ export default function MobileAlertsPanel({
                     {/* Pairing Execution Area */}
                     <div className="px-4 py-3 sm:px-5">
                         {!challenge ? (
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.01]">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.01]">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
                                         <QrCode size={18} />
@@ -275,7 +275,7 @@ export default function MobileAlertsPanel({
                                     type="button"
                                     onClick={handleGeneratePairing}
                                     disabled={loadingPair}
-                                    className="h-8 inline-flex items-center gap-1.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition active:scale-95 disabled:opacity-50 cursor-pointer shrink-0 shadow-xs"
+                                    className="h-10 sm:h-8 shrink-0 inline-flex items-center gap-1.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs"
                                 >
                                     <RefreshCw size={12} className={loadingPair ? "animate-spin" : ""} />
                                     <span>Generate Pairing</span>
@@ -315,7 +315,7 @@ export default function MobileAlertsPanel({
                                                 type="button"
                                                 onClick={handleGeneratePairing}
                                                 disabled={loadingPair}
-                                                className="h-6 inline-flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-400 font-medium cursor-pointer"
+                                                className="h-9 px-1 inline-flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-400 font-medium cursor-pointer sm:h-6"
                                             >
                                                 <RefreshCw size={11} className={loadingPair ? "animate-spin" : ""} />
                                                 Regenerate
@@ -325,7 +325,7 @@ export default function MobileAlertsPanel({
                                         <button
                                             type="button"
                                             onClick={handleCopyLink}
-                                            className="w-full h-8.5 flex items-center justify-center gap-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition active:scale-95 cursor-pointer shadow-xs"
+                                            className="w-full h-10 sm:h-8.5 flex items-center justify-center gap-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition active:scale-95 cursor-pointer shadow-xs"
                                         >
                                             {copiedLink ? <Check size={13} className="text-emerald-300" /> : <Link2 size={13} />}
                                             <span>{copiedLink ? "Pairing Link Copied to Clipboard!" : "Copy One-Click Pairing Link"}</span>
@@ -335,7 +335,7 @@ export default function MobileAlertsPanel({
                                             <button
                                                 type="button"
                                                 onClick={handleCopyCode}
-                                                className="h-8 flex items-center justify-between px-3 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:bg-slate-50 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-200 text-xs font-mono font-medium transition cursor-pointer"
+                                                className="h-10 sm:h-8 flex items-center justify-between px-3 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:bg-slate-50 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-200 text-xs font-mono font-medium transition cursor-pointer"
                                             >
                                                 <span className="truncate">Code: <strong className="text-blue-500">{challenge.pairingCode}</strong></span>
                                                 {copiedCode ? <Check size={12} className="text-emerald-500 shrink-0" /> : <Copy size={12} className="text-slate-400 shrink-0" />}
@@ -343,7 +343,7 @@ export default function MobileAlertsPanel({
                                             <button
                                                 type="button"
                                                 onClick={handleCopyToken}
-                                                className="h-8 flex items-center justify-between px-3 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:bg-slate-50 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-200 text-xs font-mono font-medium transition cursor-pointer"
+                                                className="h-10 sm:h-8 flex items-center justify-between px-3 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:bg-slate-50 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-200 text-xs font-mono font-medium transition cursor-pointer"
                                             >
                                                 <span className="truncate">Token: <strong className="text-purple-500">{challenge.pairingToken.slice(0, 6)}...</strong></span>
                                                 {copiedToken ? <Check size={12} className="text-emerald-500 shrink-0" /> : <Copy size={12} className="text-slate-400 shrink-0" />}
@@ -397,7 +397,7 @@ export default function MobileAlertsPanel({
                                         <button
                                             type="button"
                                             onClick={() => void handleRevokeDevice(dev.deviceId)}
-                                            className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-md transition cursor-pointer shrink-0"
+                                            className="flex h-9 w-9 items-center justify-center text-rose-500 hover:bg-rose-500/10 rounded-md transition cursor-pointer shrink-0"
                                             title="Unlink device"
                                         >
                                             <Trash2 size={13} />
@@ -433,7 +433,7 @@ export default function MobileAlertsPanel({
                         <button
                             type="button"
                             onClick={closeQrModal}
-                            className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                             title="Close"
                         >
                             <X size={15} />
@@ -477,7 +477,7 @@ export default function MobileAlertsPanel({
                             <button
                                 type="button"
                                 onClick={handleCopyLink}
-                                className="w-full inline-flex h-9.5 items-center justify-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer"
+                                className="w-full inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer"
                             >
                                 {copiedLink ? <Check size={13} className="text-emerald-300" /> : <Link2 size={13} />}
                                 <span>{copiedLink ? "Link Copied!" : "Copy One-Click Link"}</span>

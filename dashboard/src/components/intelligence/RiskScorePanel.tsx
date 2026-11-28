@@ -39,7 +39,7 @@ export default function RiskScorePanel({ expanded, onToggle, risk }: RiskScorePa
       title="Risk Score Distribution"
       summary={`Avg Score: ${risk.avg.toFixed(1)}`}
     >
-      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60vh] w-full text-xs pt-4">
+      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full text-xs pt-4">
         {risk.buckets.every((b) => b === 0) ? (
           <div className="h-full flex items-center justify-center text-slate-500">No risk scores calculated</div>
         ) : (

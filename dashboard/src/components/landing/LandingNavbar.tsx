@@ -37,7 +37,7 @@ export default function LandingNavbar({
             <button
               type="button"
               onClick={() => scrollToId("top")}
-              className="group flex items-center gap-2 py-1 text-left focus-visible:outline-none"
+              className="group flex min-h-11 items-center gap-2 py-1 text-left focus-visible:outline-none"
             >
               <Image
                 src="/logo.svg"
@@ -72,7 +72,7 @@ export default function LandingNavbar({
               type="button"
               onClick={onToggleTheme}
               aria-label={activeTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-line/10 bg-border-line/[0.04] text-text-muted transition hover:bg-border-line/[0.08] hover:text-text-primary focus-visible:outline-none active:scale-95"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border-line/10 bg-border-line/[0.04] text-text-muted transition hover:bg-border-line/[0.08] hover:text-text-primary focus-visible:outline-none active:scale-95 sm:h-8 sm:w-8"
             >
               <span
                 key={activeTheme}
@@ -95,7 +95,7 @@ export default function LandingNavbar({
               onClick={onToggleMobileMenu}
               aria-label="Toggle navigation menu"
               aria-expanded={mobileMenuOpen}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-line/10 bg-border-line/[0.04] text-text-muted transition hover:bg-border-line/[0.08] hover:text-text-primary md:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border-line/10 bg-border-line/[0.04] text-text-muted transition hover:bg-border-line/[0.08] hover:text-text-primary md:hidden"
             >
               {mobileMenuOpen ? <X size={15} /> : <Menu size={15} />}
             </button>
@@ -129,7 +129,7 @@ export default function LandingNavbar({
                 onCloseMobileMenu();
                 scrollToId(item.id);
               }}
-              className="flex h-9 w-full items-center rounded-xl px-3 text-left text-xs font-medium text-text-muted transition hover:bg-border-line/10 hover:text-text-primary active:scale-[0.98]"
+              className="flex h-11 w-full items-center rounded-xl px-3 text-left text-xs font-medium text-text-muted transition hover:bg-border-line/10 hover:text-text-primary active:scale-[0.98]"
             >
               {item.label}
             </button>
@@ -137,7 +137,7 @@ export default function LandingNavbar({
           <Link
             href="/signin"
             onClick={onCloseMobileMenu}
-            className="mt-1.5 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-[0.98]"
+            className="mt-1.5 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-[0.98]"
           >
             <Lock size={13} />
             <span>Enter War Room</span>

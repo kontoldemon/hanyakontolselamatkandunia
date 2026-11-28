@@ -102,7 +102,7 @@ export default function AgentMessageList({
                                         <button
                                             onClick={() => onApprove(i)}
                                             disabled={isExecuting}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-500 transition-all disabled:opacity-50 shadow-[0_0_10px_rgba(37,99,235,0.3)]"
+                                            className="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-semibold hover:bg-blue-500 transition-all disabled:opacity-50 shadow-[0_0_10px_rgba(37,99,235,0.3)]"
                                         >
                                             <ShieldCheck size={12} />
                                             {msg.actions.length > 1 ? "Allow All" : "Allow"}
@@ -110,7 +110,7 @@ export default function AgentMessageList({
                                         <button
                                             onClick={() => onDeny(i)}
                                             disabled={isExecuting}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50 border border-slate-200 dark:border-white/10"
+                                            className="flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50 border border-slate-200 dark:border-white/10"
                                         >
                                             <ShieldX size={12} />
                                             {msg.actions.length > 1 ? "Deny All" : "Deny"}

@@ -86,7 +86,7 @@ export default function SessionDepthPanel({ expanded, onToggle, sessions }: Sess
             title="Session Depth & Dwell Time"
             summary={`Avg Dwell: ${depthData.avgDwellS}s`}
         >
-            <div className="flex flex-col h-[280px] group-data-[fullscreen=true]/fs:h-[60vh] w-full">
+            <div className="flex flex-col h-[280px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full">
                 <div className="grid grid-cols-2 gap-4 mb-6 shrink-0">
                     <div className="bg-slate-50 dark:bg-white/[0.02] p-3 rounded-lg border border-slate-100 dark:border-white/5">
                         <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider mb-1">Average Dwell Time</p>

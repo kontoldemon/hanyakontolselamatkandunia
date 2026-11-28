@@ -164,7 +164,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                                     type="button"
                                     onClick={() => setFilterLevel(lvl)}
                                     className={cn(
-                                        "px-2 py-0.5 rounded capitalize transition cursor-pointer",
+                                        "px-2 py-1.5 rounded capitalize transition cursor-pointer sm:py-0.5",
                                         filterLevel === lvl
                                             ? "bg-white dark:bg-white/15 text-slate-900 dark:text-white font-bold shadow-xs"
                                             : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
@@ -180,7 +180,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                             type="button"
                             onClick={togglePause}
                             className={cn(
-                                "h-7 px-2 rounded-lg border text-xs flex items-center gap-1 transition cursor-pointer",
+                                "h-8 px-2 rounded-lg border text-xs flex items-center gap-1 transition cursor-pointer sm:h-7",
                                 isPaused
                                     ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
                                     : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -194,7 +194,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                         <button
                             type="button"
                             onClick={handleCopyLogs}
-                            className="h-7 w-7 rounded-lg border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
+                            className="h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 sm:h-7 sm:w-7 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
                             title="Copy logs"
                         >
                             {copiedAll ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
@@ -203,7 +203,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                         <button
                             type="button"
                             onClick={handleClearLogs}
-                            className="h-7 w-7 rounded-lg border border-slate-200 dark:border-white/10 text-slate-500 hover:text-rose-500 flex items-center justify-center transition cursor-pointer"
+                            className="h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 sm:h-7 sm:w-7 text-slate-500 hover:text-rose-500 flex items-center justify-center transition cursor-pointer"
                             title="Clear console"
                         >
                             <Trash2 size={12} />
@@ -212,7 +212,7 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                         <button
                             type="button"
                             onClick={() => setIsFullScreen(true)}
-                            className="h-7 w-7 rounded-lg border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
+                            className="h-8 w-8 rounded-lg border border-slate-200 dark:border-white/10 sm:h-7 sm:w-7 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
                             title="Fullscreen"
                         >
                             <Maximize2 size={12} />
@@ -248,18 +248,18 @@ export default function LiveStreamConsole({ socketTelemetry }: LiveStreamConsole
                     <div
                         onClick={(e) => e.stopPropagation()}
                         className={cn(
-                            "relative max-w-5xl w-full h-[85vh] rounded-2xl border border-slate-200/80 bg-[#08080a] shadow-2xl overflow-hidden flex flex-col dark:border-white/10",
+                            "relative max-w-5xl w-full h-[85dvh] rounded-2xl border border-slate-200/80 bg-[#08080a] shadow-2xl overflow-hidden flex flex-col dark:border-white/10",
                             isClosingFullScreen ? "animate-modal-out" : "animate-modal-in"
                         )}
                     >
                         {/* Fullscreen Header */}
-                        <div className="px-5 py-3 border-b border-white/10 bg-white/[0.02] flex items-center justify-between shrink-0">
-                            <div className="flex flex-wrap items-center gap-2">
+                        <div className="px-4 sm:px-5 py-3 border-b border-white/10 bg-white/[0.02] flex flex-wrap items-center justify-between gap-2 shrink-0">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
                                 <Terminal size={15} className="text-blue-500" />
-                                <h3 className="font-display font-semibold text-sm text-white">
+                                <h3 className="font-display font-semibold text-xs sm:text-sm text-white truncate">
                                     WebSocket Debug Console (Fullscreen)
                                 </h3>
-                                <span className="text-xs font-mono text-slate-400 ml-2">
+                                <span className="hidden sm:inline text-xs font-mono text-slate-400 ml-2">
                                     {filteredEvents.length} events logged
                                 </span>
                             </div>

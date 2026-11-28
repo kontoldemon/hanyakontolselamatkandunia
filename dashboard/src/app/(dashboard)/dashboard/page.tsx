@@ -34,7 +34,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-4 lg:h-full">
       <div className="flex items-center justify-between shrink-0">
-        <div className="flex bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-lg shadow-sm text-xs overflow-x-auto w-full sm:w-auto scrollbar-hide">
+        <div className="flex bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-lg shadow-sm text-xs overflow-x-auto w-full sm:w-auto hide-scrollbar">
           <div className="px-3 py-1.5 border-r border-slate-200 dark:border-white/5 shrink-0">
             <span className="text-slate-500 text-[11px] mr-2">Connections</span>
             <span className="font-mono font-semibold text-slate-900 dark:text-white">{displayConnections.toLocaleString()}</span>

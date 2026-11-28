@@ -174,7 +174,7 @@ export default function AnomalyDetectionPanel({ expanded, onToggle, logs, anomal
             title="Anomaly Detection"
             summary={anomalyData.status === "gathering" ? "Gathering Baseline" : `${anomalyData.deviation > 0 ? "+" : ""}${anomalyData.deviation.toFixed(0)}% Deviation`}
         >
-            <div className="h-[280px] group-data-[fullscreen=true]/fs:h-[60vh] w-full">
+            <div className="h-[280px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full">
                 {renderIndicator()}
             </div>
         </CollapsiblePanel>

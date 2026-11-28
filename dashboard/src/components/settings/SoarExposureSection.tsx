@@ -71,7 +71,7 @@ export default function SoarExposureSection({
                                 disabled={exposureBusy || exposureSyncing || exposureCooldownActive || !sensorOnline}
                                 onClick={openExposureConfirm}
                                 className={cn(
-                                    "h-7 inline-flex items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-medium transition-all shadow-xs disabled:opacity-50 cursor-pointer shrink-0",
+                                    "h-9 sm:h-7 inline-flex items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-medium transition-all shadow-xs disabled:opacity-50 cursor-pointer shrink-0",
                                     exposurePaused
                                         ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                                         : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20"

@@ -154,12 +154,12 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Filter..."
-                                className="w-18 sm:w-24 focus:w-32 h-6.5 pl-5 pr-5 py-0.5 text-[11px] font-sans rounded-md bg-slate-200/50 dark:bg-white/[0.06] border border-slate-300/40 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all focus:border-blue-500/50"
+                                className="w-28 sm:w-24 focus:w-36 sm:focus:w-32 h-9 sm:h-6.5 pl-5 pr-5 py-0.5 text-[11px] font-sans rounded-md bg-slate-200/50 dark:bg-white/[0.06] border border-slate-300/40 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all focus:border-blue-500/50"
                             />
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery("")}
-                                className="absolute right-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+                                className="absolute right-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                                 title="Clear filter"
                             >
                                 <X size={10} />
@@ -199,7 +199,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                     <div className="flex items-center gap-0.5">
                         <button
                             onClick={handleCopy}
-                            className="inline-flex h-6.5 w-6.5 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10"
+                            className="inline-flex h-9 w-9 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10 sm:h-6.5 sm:w-6.5"
                             title="Copy replay"
                             aria-label="Copy replay"
                         >
@@ -207,7 +207,7 @@ export default function TerminalReplay({ lines, replay, mode = "both", onModeCha
                         </button>
                         <button
                             onClick={() => setIsFullScreen(!isFullScreen)}
-                            className="inline-flex h-6.5 w-6.5 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10"
+                            className="inline-flex h-9 w-9 items-center justify-center text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition-colors rounded hover:bg-slate-200/70 dark:hover:bg-white/10 sm:h-6.5 sm:w-6.5"
                             title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
                             aria-label={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
                         >

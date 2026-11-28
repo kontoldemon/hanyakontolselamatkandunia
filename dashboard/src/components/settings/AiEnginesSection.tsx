@@ -104,12 +104,12 @@ export default function AiEnginesSection({
                                     value={copilotApiKey}
                                     onChange={(e) => setCopilotApiKey(e.target.value)}
                                     placeholder={hasCopilotKey ? "Leave blank to keep key" : "AIzaSy... / gsk_..."}
-                                    className="w-full h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 pl-3 pr-8 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                                    className="w-full h-10 sm:h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 pl-3 pr-10 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowCopilotKey(!showCopilotKey)}
-                                    className="absolute right-2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                                    className="absolute right-0.5 flex h-9 w-9 items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
                                     title={showCopilotKey ? "Hide key" : "Show key"}
                                 >
                                     {showCopilotKey ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -154,7 +154,7 @@ export default function AiEnginesSection({
                                     type="text"
                                     value={fallbackChain}
                                     onChange={(e) => setFallbackChain(e.target.value)}
-                                    className="w-full h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                                    className="w-full h-10 sm:h-8 rounded-lg bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 px-3 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                                 />
                             </div>
                         </div>

@@ -144,7 +144,7 @@ export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, o
                                 event.stopPropagation();
                                 onBlock(log.ip);
                             }}
-                            className="inline-flex h-5 w-5 items-center justify-center rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
+                            className="inline-flex h-9 w-9 -my-2 -mr-2 items-center justify-center rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 disabled:opacity-40 transition-colors sm:h-5 sm:w-5 sm:my-0 sm:mr-0"
                         >
                             <Ban size={11} />
                         </button>

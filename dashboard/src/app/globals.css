@@ -52,7 +52,11 @@ body {
   background: #ffffff;
   color: #171717;
   font-family: var(--font-sans), 'Inter', system-ui, sans-serif;
-  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .dark body {
@@ -305,6 +309,8 @@ html:not(.dark) .input-minimal:focus-visible {
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body::-webkit-scrollbar,
@@ -409,4 +415,29 @@ input[type="range"]::-moz-range-thumb {
   background: currentColor;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* iOS Safari zooms any focused field under 16px and touch needs a bigger range thumb. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
+
+  input[type="range"] {
+    height: 20px;
+    padding: 8px 0;
+    background-clip: content-box;
+  }
 }

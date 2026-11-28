@@ -237,7 +237,7 @@ export default function AIChatAgent() {
                 onClick={() => setIsOpen(true)}
                 aria-label="Open CloudSentinel Copilot"
                 className={cn(
-                    "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white group overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    "fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white group overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                     isOpen
                         ? "opacity-0 scale-75 translate-y-2 pointer-events-none"
                         : "opacity-100 scale-100 translate-y-0 pointer-events-auto hover:scale-105 active:scale-95 hover:border-blue-400/60"
@@ -255,7 +255,7 @@ export default function AIChatAgent() {
             {/* Chat Panel Window with Distinct Slide-Up from Below */}
             <div
                 className={cn(
-                    "fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] border border-slate-900/15 dark:border-white/20 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.2)] rounded-2xl flex flex-col overflow-hidden origin-bottom transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75vh]",
+                    "fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 z-[75] bg-slate-900/[0.06] dark:bg-black/[0.38] max-md:bg-white/95 max-md:dark:bg-[#0a0a0a]/95 border border-slate-900/15 dark:border-white/20 shadow-[0_24px_50px_rgba(15,23,42,0.16),0_4px_12px_rgba(15,23,42,0.08),inset_0_1px_1px_rgba(255,255,255,0.2)] rounded-2xl flex flex-col overflow-hidden origin-bottom transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] w-[calc(100vw-32px)] md:w-96 h-[500px] max-h-[75dvh]",
                     isOpen
                         ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                         : "opacity-0 scale-95 translate-y-14 pointer-events-none"
@@ -288,7 +288,7 @@ export default function AIChatAgent() {
                     <button
                         type="button"
                         onClick={() => setIsOpen(false)}
-                        className="p-1.5 hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
                         aria-label="Close copilot"
                     >
                         <X size={14} />
@@ -325,13 +325,13 @@ export default function AIChatAgent() {
                                 }}
                                 placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
                                 disabled={isExecuting}
-                                className="w-full bg-white/40 dark:bg-black/30 border border-white/40 dark:border-white/20 rounded-xl pl-3.5 pr-10 py-2.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/60 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left backdrop-blur-sm"
+                                className="w-full bg-white/40 dark:bg-black/30 border border-white/40 dark:border-white/20 rounded-xl pl-3.5 pr-12 py-2.5 text-xs outline-none focus:ring-1 focus:ring-blue-500/60 focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left backdrop-blur-sm"
                                 style={{ minHeight: "36px" }}
                             />
                             <button
                                 onClick={handleSend}
                                 disabled={!input.trim() || isLoading || isExecuting}
-                                className="absolute right-1.5 w-7 h-7 flex items-center justify-center rounded-lg text-white transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)] disabled:opacity-30 disabled:bg-slate-400 dark:disabled:bg-slate-700"
+                                className="absolute right-1.5 h-9 w-9 flex items-center justify-center rounded-lg text-white transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)] disabled:opacity-30 disabled:bg-slate-400 dark:disabled:bg-slate-700"
                             >
                                 <Send size={12} />
                             </button>

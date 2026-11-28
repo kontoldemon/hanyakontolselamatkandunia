@@ -256,7 +256,7 @@ export default function SettingsPage() {
     return (
         <div className="h-full flex flex-col overflow-hidden relative">
             {(toast || savedToast) && (
-                <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[160] px-4 py-2 rounded-lg border shadow-lg text-xs font-semibold bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="fixed top-16 md:top-5 left-1/2 -translate-x-1/2 z-[160] max-w-[calc(100vw-2rem)] px-4 py-2 rounded-lg border shadow-lg text-xs font-semibold text-center bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
                     {typeof savedToast === "string"
                         ? savedToast
                         : savedToast
@@ -350,7 +350,7 @@ export default function SettingsPage() {
                         <button
                             type="button"
                             onClick={cancelExposureConfirm}
-                            className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                             aria-label="Close"
                         >
                             <X size={15} />
@@ -373,7 +373,7 @@ export default function SettingsPage() {
                             <button
                                 type="button"
                                 onClick={cancelExposureConfirm}
-                                className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
+                                className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -381,7 +381,7 @@ export default function SettingsPage() {
                                 type="button"
                                 onClick={confirmExposureToggle}
                                 className={cn(
-                                    "inline-flex h-9.5 flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer",
+                                    "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer",
                                     pendingExposurePaused ? "bg-amber-600 hover:bg-amber-500" : "bg-emerald-600 hover:bg-emerald-500"
                                 )}
                             >

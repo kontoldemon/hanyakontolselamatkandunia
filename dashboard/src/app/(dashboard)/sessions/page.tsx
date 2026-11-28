@@ -69,12 +69,12 @@ export default function SessionsPage() {
                             placeholder="Search IP, HASSH..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-8 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg pl-8 pr-7 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full transition-all shadow-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
+                            className="h-10 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg pl-8 pr-9 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full transition-all shadow-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 sm:h-8 sm:pr-7"
                         />
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery("")}
-                                className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                className="absolute right-0.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 sm:right-2 sm:h-auto sm:w-auto"
                             >
                                 <X size={13} />
                             </button>
@@ -111,7 +111,7 @@ export default function SessionsPage() {
                             type="button"
                             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                             disabled={currentPage <= 1}
-                            className="p-1 rounded hover:bg-slate-200/60 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                            className="flex h-9 w-9 items-center justify-center rounded hover:bg-slate-200/60 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
                             title="Previous Page"
                             aria-label="Previous Page"
                         >
@@ -121,7 +121,7 @@ export default function SessionsPage() {
                             type="button"
                             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             disabled={currentPage >= totalPages}
-                            className="p-1 rounded hover:bg-slate-200/60 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                            className="flex h-9 w-9 items-center justify-center rounded hover:bg-slate-200/60 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
                             title="Next Page"
                             aria-label="Next Page"
                         >

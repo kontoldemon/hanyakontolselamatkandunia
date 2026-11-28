@@ -108,7 +108,7 @@ export function CommandsAndPasswordsPanels({
               value={commandSearch}
               onChange={(e) => onCommandSearchChange(e.target.value)}
               placeholder="Search..."
-              className="w-full bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 sm:py-1"
             />
           </div>
           <div className="flex-1 overflow-auto border border-slate-100 dark:border-white/5 rounded-md">
@@ -140,7 +140,7 @@ export function CommandsAndPasswordsPanels({
                 <button
                   key={page}
                   onClick={() => onCommandPageChange(page)}
-                  className={`w-5 h-5 rounded text-[10px] font-medium ${page === commandCurrentPage ? "bg-blue-600 text-white" : "bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 text-slate-500"}`}
+                  className={`h-8 w-8 sm:h-5 sm:w-5 rounded text-[10px] font-medium ${page === commandCurrentPage ? "bg-blue-600 text-white" : "bg-white dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/10 text-slate-500"}`}
                 >
                   {page}
                 </button>

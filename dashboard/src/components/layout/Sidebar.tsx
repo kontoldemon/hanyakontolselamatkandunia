@@ -76,7 +76,7 @@ export default function Sidebar() {
         <>
             <aside
                 className={clsx(
-                    "hidden md:flex flex-col bg-white/70 dark:bg-[#050505]/90 border-r border-slate-200 dark:border-white/10 transition-[width] duration-200 ease-in-out backdrop-blur-md h-screen sticky top-0 will-change-[width] z-30",
+                    "hidden md:flex flex-col bg-white/70 dark:bg-[#050505]/90 border-r border-slate-200 dark:border-white/10 transition-[width] duration-200 ease-in-out backdrop-blur-md h-dvh sticky top-0 will-change-[width] z-30",
                     isCollapsed ? "w-16" : "w-52"
                 )}
             >
@@ -291,7 +291,7 @@ export default function Sidebar() {
                         <button
                             type="button"
                             onClick={closeSignOutModal}
-                            className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                             aria-label="Close"
                         >
                             <X size={15} />
@@ -315,14 +315,14 @@ export default function Sidebar() {
                             <button
                                 type="button"
                                 onClick={closeSignOutModal}
-                                className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
+                                className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
                                 onClick={signOut}
-                                className="inline-flex h-9.5 flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600 hover:bg-rose-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer"
+                                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600 hover:bg-rose-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 cursor-pointer"
                             >
                                 <LogOut size={12} />
                                 <span>Sign Out</span>

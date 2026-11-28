@@ -34,7 +34,7 @@ export default function SoarBreakdownPanel({ expanded, onToggle, soar }: SoarBre
       title="SOAR Response Breakdown"
       summary={`Block Rate: ${Number(soar.blockRate.toFixed(1))}%`}
     >
-      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60vh] w-full flex flex-col items-center justify-center gap-4 relative" ref={containerRef} onMouseLeave={() => setHovered(null)}>
+      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full flex flex-col items-center justify-center gap-4 relative" ref={containerRef} onMouseLeave={() => setHovered(null)}>
         <div className="relative h-32 w-32 group-data-[fullscreen=true]/fs:h-64 group-data-[fullscreen=true]/fs:w-64 transition-all duration-300 shrink-0">
           <svg viewBox="-1 -1 2 2" className="w-full h-full" style={{ transform: "rotate(-90deg)" }}>
             {totalActions > 0 ? (() => {

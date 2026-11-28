@@ -232,14 +232,14 @@ export default function TimeSeriesPanel({ expanded, onToggle, timelineWindow }: 
             title="Time-Series Analytics"
             summary={`${timelineLabels[timelineWindow]} | ${source} | sync ${lastSync}`}
         >
-            <div className="flex flex-col h-[280px] group-data-[fullscreen=true]/fs:h-[60vh] w-full">
-                <div className="flex justify-between items-center mb-4 shrink-0">
+            <div className="flex flex-col h-[280px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4 shrink-0">
                     <span className="text-xs text-slate-500">Bucketed from stored events: {timelineLabels[timelineWindow]}</span>
                     <CustomDropdown
                         options={viewOptions}
                         value={activeView}
                         onChange={(val) => setActiveView(val as ChartView)}
-                        className="w-[180px]"
+                        className="w-full sm:w-[180px]"
                     />
                 </div>
                 <div className="flex-1 min-h-0">

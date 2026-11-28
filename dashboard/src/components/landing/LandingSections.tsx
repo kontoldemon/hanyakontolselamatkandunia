@@ -57,7 +57,7 @@ export function HeroSection() {
         >
           <Link
             href="/signin"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-transparent bg-blue-600 px-5 sm:px-6 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-95 box-border"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-transparent bg-blue-600 px-5 sm:px-6 text-xs sm:text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-95 box-border sm:h-10"
           >
             <span>Enter War Room</span>
             <ArrowRight size={14} />
@@ -65,7 +65,7 @@ export function HeroSection() {
           <button
             type="button"
             onClick={() => scrollToId("how-it-works")}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-border-line/20 bg-surface-card px-5 sm:px-6 text-xs sm:text-sm font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel hover:border-border-line/30 active:scale-95 box-border"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border-line/20 bg-surface-card px-5 sm:px-6 text-xs sm:text-sm font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel hover:border-border-line/30 active:scale-95 box-border sm:h-10"
           >
             <span>How It Works</span>
           </button>
@@ -238,7 +238,7 @@ export function CtaSection() {
           <div className="mt-5 flex justify-center">
             <Link
               href="/signin"
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition hover:from-blue-500 hover:to-indigo-500 active:scale-95"
+              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition hover:from-blue-500 hover:to-indigo-500 active:scale-95 sm:h-9"
             >
               <Lock size={12} />
               <span>Launch War Room</span>

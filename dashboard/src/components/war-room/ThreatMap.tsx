@@ -461,6 +461,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                             if (!cc) return;
                                             const val = matchedSource?.topIp || cc;
                                             onRegionClick?.(selectedRegion === val ? null : val);
+                                            setTooltipContent(null);
                                         }}
                                         onMouseEnter={(event) =>
                                             setTooltipContent(
@@ -495,6 +496,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                             }
                             onMouseMove={(event) => setTooltipContent((previous) => previous ? { ...previous, x: event.clientX, y: event.clientY } : null)}
                             onMouseLeave={() => setTooltipContent(null)}
+                            onClick={() => setTooltipContent(null)}
                             className="cursor-pointer outline-none focus:outline-none"
                         >
                             {hasAnyActiveArc && (

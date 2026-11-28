@@ -145,7 +145,7 @@ export default function IntelligencePage() {
                 />
                 <button
                     onClick={downloadIntelligenceReport}
-                    className="h-8 flex items-center gap-1.5 px-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm"
+                    className="h-10 sm:h-8 flex items-center gap-1.5 px-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm"
                     title="Export Intelligence Data"
                 >
                     <Download size={14} />
@@ -153,7 +153,7 @@ export default function IntelligencePage() {
                 </button>
                 <button
                     onClick={() => toggleAllPanels(!isAllExpanded)}
-                    className="h-8 flex items-center gap-1.5 px-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm"
+                    className="h-10 sm:h-8 flex items-center gap-1.5 px-3 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm"
                 >
                     {isAllExpanded ? (
                         <><ChevronUp size={14} /> Collapse All</>

@@ -55,7 +55,7 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
           className="w-32"
         />
       </div>
-      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60vh] w-full text-xs">
+      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full text-xs">
         {displayData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-slate-500">No network data available</div>
         ) : (

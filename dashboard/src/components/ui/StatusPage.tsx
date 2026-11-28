@@ -26,7 +26,7 @@ export default function StatusPage({
   onRetry,
 }: StatusPageProps) {
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface-bg px-4 py-8 text-text-primary antialiased selection:bg-blue-500/20">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-surface-bg px-4 py-8 text-text-primary antialiased selection:bg-blue-500/20">
       {/* Top-left Brand Anchor */}
       <div className="absolute top-5 left-5 sm:top-6 sm:left-8 z-20">
         <Link
@@ -74,7 +74,7 @@ export default function StatusPage({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Link
               href={primaryHref}
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-95 sm:flex-1"
+              className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-500 active:scale-95 sm:flex-1"
             >
               <Home size={13} />
               <span>{primaryLabel}</span>
@@ -84,7 +84,7 @@ export default function StatusPage({
               <button
                 type="button"
                 onClick={() => window.history.back()}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-border-line/15 bg-surface-panel/50 px-4 text-xs font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel active:scale-95 sm:flex-1"
+                className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-border-line/15 bg-surface-panel/50 px-4 text-xs font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel active:scale-95 sm:flex-1"
               >
                 <ArrowLeft size={13} />
                 <span>Go Back</span>
@@ -95,7 +95,7 @@ export default function StatusPage({
               <button
                 type="button"
                 onClick={() => (onRetry ? onRetry() : window.location.reload())}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-border-line/15 bg-surface-panel/50 px-4 text-xs font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel active:scale-95 sm:flex-1"
+                className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-border-line/15 bg-surface-panel/50 px-4 text-xs font-semibold text-text-primary shadow-sm transition hover:bg-surface-panel active:scale-95 sm:flex-1"
               >
                 <RefreshCw size={13} />
                 <span>Retry</span>

@@ -50,7 +50,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-bg font-sans text-text-primary antialiased selection:bg-blue-500/20 selection:text-text-primary">
+    <div className="min-h-dvh bg-surface-bg font-sans text-text-primary antialiased selection:bg-blue-500/20 selection:text-text-primary">
       <ScrollProgressBar />
       <ScrollToTopButton />
 

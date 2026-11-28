@@ -34,7 +34,7 @@ export default function ScrollDownHint({
                     aria-label={label || "Scroll down"}
                     className={cn(
                         "font-sans mb-2 inline-flex items-center justify-center rounded-full border border-slate-200/90 dark:border-white/15 bg-white/90 dark:bg-[#111318]/90 text-slate-600 dark:text-slate-300 shadow-md backdrop-blur-md transition-all duration-300 hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 active:scale-95 cursor-pointer",
-                        label ? "gap-1.5 px-3 py-1 text-[10.5px] font-medium leading-none" : "w-7 h-7 p-0",
+                        label ? "min-h-9 gap-1.5 px-3.5 py-2 text-[10.5px] font-medium leading-none" : "w-9 h-9 p-0",
                         visible ? "pointer-events-auto scale-100" : "pointer-events-none scale-90"
                     )}
                 >

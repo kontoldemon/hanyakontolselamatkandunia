@@ -196,12 +196,12 @@ export default function AttackLog({ selectedRegion, threatLogs: externalLogs }: 
                         placeholder="Search IP, HASSH..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="h-8 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg py-1 pl-7 pr-6 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 transition-all shadow-sm"
+                        className="h-10 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-lg py-1 pl-7 pr-9 text-xs w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 transition-all shadow-sm sm:h-8 sm:pr-6"
                     />
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery("")}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            className="absolute right-0.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-slate-400 hover:text-slate-600 sm:right-1 sm:h-auto sm:w-auto"
                         >
                             <X size={12} />
                         </button>
@@ -272,7 +272,7 @@ export default function AttackLog({ selectedRegion, threatLogs: externalLogs }: 
                         <button
                             type="button"
                             onClick={handleCloseBlockModal}
-                            className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                             aria-label="Close"
                         >
                             <X size={15} />
@@ -296,7 +296,7 @@ export default function AttackLog({ selectedRegion, threatLogs: externalLogs }: 
                             <button
                                 type="button"
                                 onClick={handleCloseBlockModal}
-                                className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
+                                className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -308,7 +308,7 @@ export default function AttackLog({ selectedRegion, threatLogs: externalLogs }: 
                                     handleCloseBlockModal();
                                 }}
                                 disabled={blockingIp === activeBlockIp}
-                                className="inline-flex h-9.5 flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600 hover:bg-rose-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600 hover:bg-rose-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer"
                             >
                                 <Ban size={12} />
                                 <span>{blockingIp === activeBlockIp ? "Blocking..." : "Confirm"}</span>

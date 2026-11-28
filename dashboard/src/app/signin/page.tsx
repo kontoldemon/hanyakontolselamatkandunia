@@ -146,7 +146,7 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 py-8 text-slate-900 antialiased dark:bg-[#050505] dark:text-slate-100">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-slate-50 px-4 py-8 text-slate-900 antialiased dark:bg-[#050505] dark:text-slate-100">
       {/* Ambient Radial Lighting & Subtle Grid Background */}
       <div
         aria-hidden="true"
@@ -162,7 +162,7 @@ export default function SignInPage() {
         <div className="mb-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/70 px-3 py-1 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-md transition hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-[#0a0a0c]/70 dark:text-slate-400 dark:hover:border-white/20 dark:hover:text-white"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/70 px-3 py-1 text-xs font-medium text-slate-500 shadow-sm backdrop-blur-md transition hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-[#0a0a0c]/70 dark:text-slate-400 dark:hover:border-white/20 dark:hover:text-white"
           >
             <ArrowLeft size={13} />
             <span>Back to Home</span>
@@ -212,7 +212,7 @@ export default function SignInPage() {
                   onChange={(event) => setUsername(event.target.value)}
                   autoComplete="username"
                   placeholder="Username"
-                  className="input-minimal mt-1 h-9.5 w-full rounded-xl bg-slate-50/80 px-3 text-xs text-slate-900 transition placeholder:font-normal placeholder:text-slate-400 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500"
+                  className="input-minimal mt-1 h-11 w-full rounded-xl bg-slate-50/80 px-3 text-xs text-slate-900 transition placeholder:font-normal placeholder:text-slate-400 sm:h-9.5 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500"
                   required
                 />
               </div>
@@ -228,13 +228,13 @@ export default function SignInPage() {
                     autoComplete="current-password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
-                    className="input-minimal h-9.5 w-full rounded-xl bg-slate-50/80 px-3 pr-9 text-xs text-slate-900 transition placeholder:font-normal placeholder:text-slate-400 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500"
+                    className="input-minimal h-11 w-full rounded-xl bg-slate-50/80 px-3 pr-11 text-xs text-slate-900 transition placeholder:font-normal placeholder:text-slate-400 sm:h-9.5 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 right-2.5 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute top-1/2 right-0.5 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -253,7 +253,7 @@ export default function SignInPage() {
 
               <button
                 disabled={loading || !turnstileToken}
-                className="mt-3 inline-flex h-9.5 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:h-9.5"
               >
                 <Lock size={12} />
                 <span>{loading ? "Authenticating..." : "Sign In"}</span>
@@ -291,7 +291,7 @@ export default function SignInPage() {
 
               <button
                 disabled={loading || otp.join("").length !== 6}
-                className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-blue-600 px-4 text-xs font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "Verifying..." : "Verify Code"}
               </button>

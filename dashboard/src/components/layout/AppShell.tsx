@@ -9,9 +9,9 @@ import { AgentProvider } from "@/lib/AgentContext";
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <AgentProvider>
-      <div className="flex h-dvh md:h-screen overflow-hidden flex-col bg-slate-50 text-slate-900 antialiased selection:bg-blue-500/30 transition-colors duration-300 dark:bg-[#050505] dark:text-slate-100 md:flex-row relative">
+      <div className="flex h-dvh overflow-hidden flex-col bg-slate-50 text-slate-900 antialiased selection:bg-blue-500/30 transition-colors duration-300 dark:bg-[#050505] dark:text-slate-100 md:flex-row relative">
         <Sidebar />
-        <main className="flex-1 min-w-0 h-full overflow-y-auto bg-slate-50 p-4 pb-20 dark:bg-[#050505] md:p-6 md:pb-6 lg:p-8 relative">
+        <main className="flex-1 min-w-0 h-full overflow-y-auto overscroll-contain bg-slate-50 p-4 pb-[calc(4.5rem_+_env(safe-area-inset-bottom))] dark:bg-[#050505] md:p-6 md:pb-6 lg:p-8 relative">
           {children}
         </main>
       </div>

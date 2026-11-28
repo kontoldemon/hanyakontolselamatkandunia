@@ -195,7 +195,7 @@ export default function SessionDetailPane({
                                         title="Forensic Profile"
                                         aria-label="Forensic Profile"
                                         className={cn(
-                                            "flex items-center justify-center py-2 px-2 rounded-md transition-all",
+                                            "flex items-center justify-center py-2.5 px-2 rounded-md transition-all",
                                             activeTab === "forensics"
                                                 ? "bg-white dark:bg-white/10 text-indigo-500 shadow-sm"
                                                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
@@ -210,7 +210,7 @@ export default function SessionDetailPane({
                                         title="MITRE ATT&CK Techniques"
                                         aria-label="MITRE ATT&CK Techniques"
                                         className={cn(
-                                            "flex items-center justify-center py-2 px-2 rounded-md transition-all",
+                                            "flex items-center justify-center py-2.5 px-2 rounded-md transition-all",
                                             activeTab === "mitre"
                                                 ? "bg-white dark:bg-white/10 text-red-500 shadow-sm"
                                                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
@@ -244,7 +244,7 @@ export default function SessionDetailPane({
                                         title="SOAR Response & Defense"
                                         aria-label="SOAR Response & Defense"
                                         className={cn(
-                                            "flex items-center justify-center py-2 px-2 rounded-md transition-all",
+                                            "flex items-center justify-center py-2.5 px-2 rounded-md transition-all",
                                             activeTab === "soar"
                                                 ? "bg-white dark:bg-white/10 text-blue-500 shadow-sm"
                                                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
