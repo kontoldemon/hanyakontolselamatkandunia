@@ -27,6 +27,8 @@ export type ThreatLog = {
   mitreTechniques?: string[];
   role?: "attacker" | "honeypot";
   responseMode?: string;
+  riskScore?: number;
+  soarAction?: string;
 };
 
 export type DashboardStats = {
