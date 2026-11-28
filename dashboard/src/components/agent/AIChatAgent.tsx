@@ -254,9 +254,9 @@ export default function AIChatAgent() {
             {/* Floating Launcher Button with Smooth Scale & Fade */}
             <button
                 onClick={() => setIsOpen(true)}
-                aria-label="Open CloudSentinel Copilot"
+                aria-label={hasUnread ? "Open CloudSentinel Copilot, new reply" : "Open CloudSentinel Copilot"}
                 className={cn(
-                    "fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white group overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    "fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] md:bottom-6 right-4 md:right-6 z-[75] w-12 h-12 md:w-13 md:h-13 rounded-full bg-transparent border border-white/40 dark:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center text-slate-800 dark:text-white group transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                     isOpen
                         ? "opacity-0 scale-75 translate-y-2 pointer-events-none"
                         : "opacity-100 scale-100 translate-y-0 pointer-events-auto hover:scale-105 active:scale-95 hover:border-blue-400/60"
@@ -267,7 +267,7 @@ export default function AIChatAgent() {
                 <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/20 via-transparent to-transparent pointer-events-none" />
                 <Sparkles size={20} className="text-blue-500 dark:text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
                 {hasUnread && (
-                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-blue-500 rounded-full ring-2 ring-white/80 dark:ring-[#0a0a0a]/80 animate-pulse" />
+                    <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-rose-500 ring-2 ring-white/90 dark:ring-[#0a0a0a] shadow-[0_0_8px_rgba(244,63,94,0.8)] animate-pulse" />
                 )}
             </button>
 
