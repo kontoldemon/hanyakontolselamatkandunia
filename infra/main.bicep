@@ -699,6 +699,7 @@ resource vaultPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDns
 resource sensorKeyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, sensorVm.id, 'kv-secrets-user')
   scope: keyVault
+  dependsOn: [keyVault]
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
@@ -712,6 +713,7 @@ resource sensorKeyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01'
 resource sensorBlobRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storage.id, sensorVm.id, 'blob-contributor')
   scope: storage
+  dependsOn: [storage]
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
@@ -726,11 +728,20 @@ module nsgRole 'nsg-role.bicep' = {
   name: 'cloudsentinel-nsg-role'
   scope: subscription()
   params: {
-    resourceGroupName: resourceGroup().name
-    nsgName: sensorNsgName
     roleName: 'CloudSentinel NSG Rule Operator'
     assignableScope: resourceGroup().id
+  }
+}
+
+// Role assignment lives here: Bicep can only deploy an NSG-scoped extension
+// resource from a template whose scope matches the NSG's resource group.
+resource functionNsgRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(sensorNsg.id, functionApp.id, 'nsg-rule-operator')
+  scope: sensorNsg
+  properties: {
+    roleDefinitionId: nsgRole.outputs.roleDefinitionId
     principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 

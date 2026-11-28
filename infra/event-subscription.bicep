@@ -22,7 +22,9 @@ resource blockSubscription 'Microsoft.EventGrid/topics/eventSubscriptions@2022-0
   properties: {
     destination: {
       endpointType: 'AzureFunction'
-      resourceId: resourceId('Microsoft.Web/sites/functions', functionAppName, functionName)
+      properties: {
+        resourceId: resourceId('Microsoft.Web/sites/functions', functionAppName, functionName)
+      }
     }
     filter: {
       includedEventTypes: [
