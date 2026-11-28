@@ -22,11 +22,33 @@ def test_metrics_methods() -> None:
     metrics.record_command()
     metrics.record_block("unit")
     metrics.record_event("unit.event")
+    assert metrics.total_events >= 1
     metrics.set_mttb(1.5)
     metrics.set_blocked_count(2)
     metrics.set_pipeline_status(True, 0)
     assert metrics.render()
     assert "cloudsentinel_" in metrics.content_type or "text/plain" in metrics.content_type
+
+
+def test_total_events_reads_labelled_counter(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Sample:
+        def __init__(self, name: str, value: float) -> None:
+            self.name = name
+            self.value = value
+
+    class Family:
+        def __init__(self) -> None:
+            self.samples = [
+                Sample("cloudsentinel_events_total", 4.0),
+                Sample("cloudsentinel_events_total_created", 1.0),
+            ]
+
+    class FakeCounter:
+        def collect(self) -> list[Family]:
+            return [Family()]
+
+    monkeypatch.setattr("cloudsentinel.metrics.events_total", FakeCounter())
+    assert get_metrics().total_events == 4.0
 
 
 @pytest.mark.asyncio

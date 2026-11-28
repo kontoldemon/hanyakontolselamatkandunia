@@ -60,9 +60,21 @@ export default function CountryStatsPanel({ expanded, onToggle, countries }: Cou
           <div className="h-full flex items-center justify-center text-slate-500">No country data available</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 6, left: -25, bottom: 0 }}>
+            <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 6, left: 0, bottom: 0 }}>
               <XAxis type="number" hide domain={[0, "dataMax"]} />
-              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#64748b" }} width={80} />
+              <YAxis
+                dataKey="name"
+                type="category"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fill: "#64748b" }}
+                width={120}
+                tickFormatter={(value) => {
+                  const label = String(value);
+                  const text = label.length > 18 ? `${label.slice(0, 17)}...` : label;
+                  return text.replace(/ /g, "\u00A0");
+                }}
+              />
               <Tooltip
                 cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}
                 contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "11px" }}

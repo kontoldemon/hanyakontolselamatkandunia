@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import random
 import re
 import time
@@ -271,16 +272,21 @@ class VFSAgent:
     async def _call_openai_compatible(self, prompt: str) -> str:
         endpoint = self.settings.endpoint or "https://api.openai.com/v1/chat/completions"
         api_key = secret_to_str(self.settings.api_key)
+        headers = {"Authorization": f"Bearer {api_key}"}
+        if "opencode.ai" in endpoint:
+            headers["x-opencode-session"] = os.getenv("LLM_SESSION_ID", "cloudsentinel-sensor")
         payload = {
             "model": self.settings.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
-            "max_tokens": 800,
+            "max_tokens": 1600,
         }
+        if "opencode.ai" in endpoint:
+            payload["reasoning_effort"] = "none"
         response = await self._client.post(
             endpoint,
             json=payload,
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers=headers,
         )
         response.raise_for_status()
         data = response.json()
@@ -317,12 +323,17 @@ class VFSAgent:
             "model": self.settings.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
-            "max_tokens": 800,
+            "max_tokens": 1600,
         }
         if api_key:
             kwargs["api_key"] = api_key
         if self.settings.endpoint:
             kwargs["api_base"] = self.settings.endpoint
+            if "opencode.ai" in self.settings.endpoint:
+                kwargs["extra_headers"] = {
+                    "x-opencode-session": os.getenv("LLM_SESSION_ID", "cloudsentinel-sensor")
+                }
+                kwargs["extra_body"] = {"reasoning_effort": "none"}
 
         # Build fallback chain from config
         fallback_chain: list[dict[str, Any]] = [

@@ -21,7 +21,7 @@ async def start_http_honeypot(
     stream: Any = None,
 ) -> None:
     try:
-        import granian as _granian_http
+        from granian import serve as _granian_serve
         from granian.constants import Interfaces
         from granian.constants import Loops as GranianLoops
         _USE_GRANIAN_HTTP = True
@@ -46,8 +46,8 @@ async def start_http_honeypot(
 
     proto = "https" if tls_kwargs else "http"
     if _USE_GRANIAN_HTTP:
-        logger.info("HTTP honeypot (granian) listening on %s://%s:%s", proto, settings.honeypot.listen_host, http_port)
-        await _granian_http.serve(
+        logger.info("HTTP honeypot (granian) starting on %s://%s:%s", proto, settings.honeypot.listen_host, http_port)
+        await _granian_serve(
             app,
             host=settings.honeypot.listen_host,
             port=http_port,

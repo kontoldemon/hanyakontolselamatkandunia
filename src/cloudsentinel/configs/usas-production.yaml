@@ -3,7 +3,7 @@ honeypot:
   os_version: Ubuntu 22.04 LTS
   ssh_port: 2222
   listen_host: 0.0.0.0
-  server_version: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
+  server_version: OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
   banner: Ubuntu 22.04 LTS
   prompt_user: root
   prompt_path: "~"

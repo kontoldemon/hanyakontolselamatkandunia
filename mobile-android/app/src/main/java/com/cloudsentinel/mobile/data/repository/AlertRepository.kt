@@ -16,6 +16,7 @@ import com.cloudsentinel.mobile.core.network.RuntimeControlsResponse
 import com.cloudsentinel.mobile.core.network.ThreatAlertItem
 import com.cloudsentinel.mobile.core.security.PairedSession
 import com.cloudsentinel.mobile.core.security.SecureSessionStore
+import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import retrofit2.HttpException
 
 enum class CopilotSender {
     USER, COPILOT
@@ -64,6 +68,22 @@ class AlertRepository(private val sessionStore: SecureSessionStore) {
         )
     )
     val copilotMessages: StateFlow<List<CopilotMessage>> = _copilotMessages.asStateFlow()
+
+    private fun apiErrorMessage(error: Throwable): String {
+        val body = (error as? HttpException)?.response()?.errorBody()?.string()
+        val detail = body?.let {
+            runCatching {
+                ApiClient.json.parseToJsonElement(it).jsonObject["detail"]?.jsonPrimitive?.content
+            }.getOrNull()
+        }
+        return detail?.takeIf { it.isNotBlank() } ?: error.message ?: "Request failed"
+    }
+
+    private fun <T> failureResult(error: Throwable): Result<T> {
+        // A rejected request still proves the sensor is reachable; only transport errors are outages.
+        if (error is IOException) _isSensorReachable.value = false
+        return Result.failure(IllegalStateException(apiErrorMessage(error), error))
+    }
 
     fun getActiveSession(): PairedSession? = sessionStore.getSession()
 
@@ -158,9 +178,10 @@ class AlertRepository(private val sessionStore: SecureSessionStore) {
         _isSensorReachable.value = true
         syncDashboardStats()
         response
-    }.onFailure {
-        _isSensorReachable.value = false
-    }
+    }.fold(
+        onSuccess = { Result.success(it) },
+        onFailure = { failureResult(it) }
+    )
 
     suspend fun syncSessions(): Result<List<MobileSessionItem>> = runCatching {
         val session = sessionStore.getSession() ?: error("Not paired")
@@ -185,10 +206,10 @@ class AlertRepository(private val sessionStore: SecureSessionStore) {
         }
         _isSensorReachable.value = true
         syncDashboardStats()
-        Unit
-    }.onFailure {
-        _isSensorReachable.value = false
-    }
+    }.fold(
+        onSuccess = { Result.success(Unit) },
+        onFailure = { failureResult(it) }
+    )
 
     suspend fun askCopilot(prompt: String): Result<String> = runCatching {
         val trimmed = prompt.trim()

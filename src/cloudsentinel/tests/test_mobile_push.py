@@ -486,6 +486,7 @@ def test_mobile_dashboard_uses_live_metrics_and_exposure(tmp_path: Path) -> None
 
     dashboard = client.get("/mobile/dashboard", headers=headers).json()
     assert dashboard["sensor_status"] == "ONLINE"
+    assert isinstance(dashboard["events_total"], int)
     assert dashboard["mttb_seconds"] == 1.2
     assert dashboard["blocked_ips_count"] >= 1
     assert dashboard["mitre_count"] == 1
@@ -641,6 +642,7 @@ def test_mobile_sessions_use_clickhouse_rows(tmp_path: Path, monkeypatch) -> Non
                 "country": "Malaysia",
                 "city": "Kuala Lumpur",
                 "isp": "ISP",
+                "fingerprint": "abcdef0123456789abcdef0123456789",
                 "riskScore": 77,
                 "duration": "1m 2s",
                 "mitreTechniques": ["T1110"],
@@ -658,6 +660,7 @@ def test_mobile_sessions_use_clickhouse_rows(tmp_path: Path, monkeypatch) -> Non
     app.include_router(build_mobile_router(settings, lambda: True, svc, block_handler))
     body = TestClient(app).get("/mobile/sessions", headers=headers).json()
     assert body["sessions"][0]["risk_score"] == 77
+    assert body["sessions"][0]["hassh"] == "abcdef0123456789abcdef0123456789"
     assert body["sessions"][0]["commands"] == ["id", "whoami"]
     assert body["sessions"][0]["blocked"] is True
     assert body["sessions"][0]["timestamp_ms"] == 123456
@@ -696,6 +699,50 @@ def test_mobile_copilot_success_error_and_failure(tmp_path: Path, monkeypatch) -
         "/mobile/ai-copilot", headers=headers, json={"prompt": "status?"}
     ).json()
     assert failed["ok"] is False
+
+    async def offline_agent(*_args: object, **_kwargs: object) -> str:
+        return "I am currently offline or cannot reach the LLM provider."
+
+    monkeypatch.setattr(threat_reporter, "chat_with_agent", offline_agent)
+    offline = client.post(
+        "/mobile/ai-copilot", headers=headers, json={"prompt": "status?"}
+    ).json()
+    assert offline["ok"] is False
+
+
+def test_mobile_sessions_fall_back_to_alerts_on_clickhouse_error(tmp_path: Path, monkeypatch) -> None:
+    import cloudsentinel.api.queries as queries
+
+    settings = Settings()
+    settings.clickhouse.enabled = True
+    svc, headers = _paired_mobile_service(tmp_path)
+
+    def broken_loader(_settings, limit=20):
+        raise RuntimeError("clickhouse down")
+
+    monkeypatch.setattr(queries, "_load_recent_sessions_from_clickhouse", broken_loader)
+    asyncio.run(
+        svc.dispatch_alert(
+            {
+                "id": "alert-1",
+                "ip": "1.2.3.4",
+                "country": "Malaysia",
+                "riskScore": 88,
+                "risk_score": 88,
+                "eventType": "TEST",
+                "summary": "fallback",
+                "timestampMs": 123456,
+            },
+            force=True,
+        )
+    )
+    app = FastAPI()
+    app.include_router(
+        build_mobile_router(settings, lambda: True, svc, lambda body: {"blocked": body["ip"]})
+    )
+    body = TestClient(app).get("/mobile/sessions", headers=headers).json()
+    assert body["sessions"][0]["ip"] == "1.2.3.4"
+    assert body["sessions"][0]["risk_score"] == 88
 
 
 def test_mobile_alert_state_round_trip_preserves_details(tmp_path: Path) -> None:

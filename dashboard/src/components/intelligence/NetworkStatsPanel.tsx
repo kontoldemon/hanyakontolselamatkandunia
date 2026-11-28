@@ -60,7 +60,7 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
           <div className="h-full flex items-center justify-center text-slate-500">No network data available</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 6, left: -25, bottom: 0 }}>
+            <BarChart data={displayData} layout="vertical" margin={{ top: 0, right: 6, left: 0, bottom: 0 }}>
               <XAxis type="number" hide domain={[0, "dataMax"]} />
               <YAxis
                 dataKey="name"
@@ -68,8 +68,12 @@ export default function NetworkStatsPanel({ expanded, onToggle, isps }: NetworkS
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: "#64748b" }}
-                width={100}
-                tickFormatter={(value) => (value.length > 15 ? value.substring(0, 15) + "..." : value)}
+                width={120}
+                tickFormatter={(value) => {
+                  const label = String(value);
+                  const text = label.length > 18 ? `${label.slice(0, 17)}...` : label;
+                  return text.replace(/ /g, "\u00A0");
+                }}
               />
               <Tooltip
                 cursor={{ fill: "rgba(255, 255, 255, 0.05)" }}

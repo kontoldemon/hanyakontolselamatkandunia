@@ -34,7 +34,7 @@ export default function CollapsiblePanel({
     };
 
     const content = (
-        <div className={`bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col h-full ${isFullscreen ? 'fixed inset-4 z-[200] shadow-2xl' : 'overflow-hidden'}`}>
+        <div className={`bg-white dark:bg-[#0a0a0a] rounded-xl border border-slate-200 dark:border-white/5 shadow-sm flex flex-col ${isFullscreen ? 'fixed inset-4 z-[200] shadow-2xl' : 'overflow-hidden'}`}>
             <div
                 role="button"
                 tabIndex={isFullscreen ? -1 : 0}

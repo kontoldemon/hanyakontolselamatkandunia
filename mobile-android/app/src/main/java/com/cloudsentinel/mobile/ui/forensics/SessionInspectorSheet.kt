@@ -231,6 +231,32 @@ fun SessionInspectorSheet(
                 }
             }
 
+            if (session.hassh.isNotBlank()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(ObsidianCard)
+                        .border(1.dp, ObsidianBorder, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "HASSH",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = TextMutedDark
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = session.hassh,
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        color = ElectricBlueSoft,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             // Forensics Terminal Console with 1-tap Copy
@@ -423,7 +449,7 @@ fun SessionInspectorSheet(
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onBlockIp(session.ip, null)
+                        onBlockIp(session.ip, 7L * 24 * 60 * 60)
                         onDismiss()
                     },
                     modifier = Modifier
@@ -440,7 +466,7 @@ fun SessionInspectorSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Permanent Azure NSG Block",
+                        text = "Azure NSG Block (7 Days)",
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White,
                         fontSize = 14.sp

@@ -34,7 +34,7 @@ class HoneypotSettings(BaseModel):
     os_version: str = "Ubuntu 22.04 LTS"
     ssh_port: int = Field(default=2222, ge=1, le=65535)
     listen_host: str = "0.0.0.0"
-    server_version: str = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
+    server_version: str = "OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
     banner: str = "Ubuntu 22.04 LTS"
     prompt_user: str = "root"
     prompt_path: str = "~"
@@ -302,6 +302,8 @@ class EnvOverrides(BaseSettings):
     cloudsentinel_ssh_port: int | None = None
     cloudsentinel_http_enabled: bool | None = None
     cloudsentinel_http_port: int | None = None
+    cloudsentinel_dns_enabled: bool | None = None
+    cloudsentinel_dns_port: int | None = None
     cloudsentinel_tls_enabled: bool | None = None
     cloudsentinel_tls_cert_file: str | None = None
     cloudsentinel_tls_key_file: str | None = None
@@ -446,6 +448,8 @@ def load_settings(
     _set_if_present(settings.honeypot, "ssh_port", env.cloudsentinel_ssh_port)
     _set_if_present(settings.honeypot, "http_enabled", env.cloudsentinel_http_enabled)
     _set_if_present(settings.honeypot, "http_port", env.cloudsentinel_http_port)
+    _set_if_present(settings.honeypot, "dns_enabled", env.cloudsentinel_dns_enabled)
+    _set_if_present(settings.honeypot, "dns_port", env.cloudsentinel_dns_port)
     _set_if_present(settings.tls, "enabled", env.cloudsentinel_tls_enabled)
     _set_if_present(settings.tls, "cert_file", env.cloudsentinel_tls_cert_file)
     _set_if_present(settings.tls, "key_file", env.cloudsentinel_tls_key_file)

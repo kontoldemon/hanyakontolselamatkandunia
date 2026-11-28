@@ -23,6 +23,7 @@ export default function TimingHeatmapPanel({ expanded, onToggle, heatmap }: Timi
   };
 
   const peakFormat = formatHour(heatmap.peakHour);
+  const hasData = heatmap.grid.some((row) => row.some((value) => value > 0));
 
   return (
     <CollapsiblePanel
@@ -31,12 +32,13 @@ export default function TimingHeatmapPanel({ expanded, onToggle, heatmap }: Timi
       icon={Clock}
       iconColor="text-purple-500"
       title="Attack Timing Heatmap"
-      summary={`Peak activity: ${peakFormat}`}
+      summary={hasData ? `Peak activity: ${peakFormat}` : "No timing data"}
     >
       <div className="flex justify-between items-center mb-4 h-7">
         <span className="text-xs text-slate-500">Hourly Activity (selected window)</span>
       </div>
-      <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full overflow-x-auto terminal-scrollbar pb-2 relative flex flex-col justify-center">
+      {hasData ? (
+        <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full overflow-x-auto terminal-scrollbar pb-2 relative flex flex-col justify-center">
         <div className="min-w-[600px] flex flex-col gap-1 relative h-full" onMouseLeave={() => setHovered(null)}>
           <div className="grid grid-cols-[30px_repeat(24,1fr)] gap-1 mb-1">
             <div />
@@ -91,7 +93,12 @@ export default function TimingHeatmapPanel({ expanded, onToggle, heatmap }: Timi
             </div>
           )}
         </div>
-      </div>
+        </div>
+      ) : (
+        <div className="h-[200px] group-data-[fullscreen=true]/fs:h-[60dvh] w-full flex items-center justify-center text-xs text-slate-500">
+          No timing data available
+        </div>
+      )}
     </CollapsiblePanel>
   );
 }

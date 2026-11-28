@@ -108,6 +108,23 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
 
     def connection_lost(self, exc: Exception | None) -> None:
         duration = time.time() - self.started_at
+        if self.hassh is None and self.conn is not None:
+            try:
+                version = str(self.conn.get_extra_info("client_version", "") or "")
+                if version and not self.client_version:
+                    self.client_version = version
+                self.hassh, self.hassh_algorithms = extract_hassh(self.conn)
+            except Exception:
+                self.hassh = None
+            if self.hassh:
+                self.hassh_dna.record_sighting(self.hassh, self.src_ip)
+                asyncio.create_task(self._emit_event("cloudsentinel.client.version", {
+                    "version": self.client_version or "",
+                    "hassh_md5": self.hassh,
+                    "hassh_algorithms": self.hassh_algorithms or "",
+                    "client": infer_client_software(self.client_version or "", self.hassh),
+                    "reason": "hassh_kex_capture",
+                }))
         if self._accepted:
             self.limiter.release_nowait(self.src_ip)
             self._accepted = False

@@ -183,12 +183,12 @@ export default function IntelligencePage() {
                     mitreData={mitreData}
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
                     <CountryStatsPanel expanded={panels.countries} onToggle={() => togglePanel("countries")} countries={stats.countries} />
                     <TimingHeatmapPanel expanded={panels.timing} onToggle={() => togglePanel("timing")} heatmap={stats.heatmap} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 items-start">
                     <NetworkStatsPanel expanded={panels.network} onToggle={() => togglePanel("network")} isps={stats.isps} />
                     <FingerprintsPanel expanded={panels.fingerprints} onToggle={() => togglePanel("fingerprints")} fingerprints={fingerprints} />
                 </div>

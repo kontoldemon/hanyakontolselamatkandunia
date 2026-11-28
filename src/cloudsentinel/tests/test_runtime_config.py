@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 from pathlib import Path
 
 import pytest
 from cloudsentinel.admin_api import create_admin_app
-from cloudsentinel.config import Settings
+from cloudsentinel.config import Settings, secret_to_str
 from cloudsentinel.hassh import hassh_action_applies
 from cloudsentinel.pipeline import EventPipeline
 from cloudsentinel.runtime_config import RuntimeConfigStore
@@ -83,6 +85,33 @@ def test_runtime_config_persists_and_applies(tmp_path: Path) -> None:
     assert reloaded_soar.trigger == "mitre"
 
 
+def test_runtime_config_persists_api_key_and_restricts_file(tmp_path: Path) -> None:
+    settings = Settings()
+    path = tmp_path / "runtime.json"
+    store = RuntimeConfigStore(settings, path=str(path))
+
+    store.update({"llm": {"api_key": "sk-secret"}})
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["llm"]["api_key"] == "sk-secret"
+    if os.name == "posix":
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+    reloaded = RuntimeConfigStore(Settings(), path=str(path))
+    assert secret_to_str(reloaded.settings.llm.api_key) == "sk-secret"
+
+
+def test_runtime_config_save_survives_chmod_error(tmp_path: Path, monkeypatch) -> None:
+    def fail_chmod(*args, **kwargs) -> None:
+        raise OSError("chmod not supported")
+
+    monkeypatch.setattr("cloudsentinel.runtime_config.os.chmod", fail_chmod)
+    path = tmp_path / "runtime.json"
+    store = RuntimeConfigStore(Settings(), path=str(path))
+    store.update({"llm": {"api_key": "sk-chmod"}})
+    assert json.loads(path.read_text(encoding="utf-8"))["llm"]["api_key"] == "sk-chmod"
+
+
 def test_runtime_config_rejects_unknown_values(tmp_path: Path) -> None:
     store = RuntimeConfigStore(Settings(), path=str(tmp_path / "runtime.json"))
     with pytest.raises(ValueError, match="deception.level"):
@@ -133,7 +162,7 @@ def test_runtime_config_and_llm_endpoints(tmp_path: Path, monkeypatch) -> None:
     body = fetched.json()
     assert body["model"] == "gemini/test"
     assert body["has_api_key"] is True
-    assert "sk-test-key" not in json.dumps(body)
+    assert body["api_key"] == "sk-test-key"  # admin-authenticated: prefills settings input
 
     rejected = client.post("/runtime-config", headers=headers, json={"deception": {"level": "off"}})
     assert rejected.status_code == 400

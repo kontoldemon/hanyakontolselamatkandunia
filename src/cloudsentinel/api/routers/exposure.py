@@ -57,6 +57,7 @@ async def apply_exposure_toggle(
     for port in ports:
         last_error = ""
         applied = False
+        not_found_anywhere = True
         for firewall_path in paths:
             rule = [
                 firewall_path,
@@ -83,12 +84,12 @@ async def apply_exposure_toggle(
                         actions.append({"port": port, "action": "removed", "ok": True, "firewallPath": firewall_path})
                         applied = True
                         break
+                    not_found_anywhere = False
                     last_error = stderr[:200]
                     continue
                 if check_code == 1:
-                    actions.append({"port": port, "action": "already_open", "ok": True, "firewallPath": firewall_path})
-                    applied = True
-                    break
+                    continue
+                not_found_anywhere = False
                 last_error = check_err[:200]
                 continue
             if check_code == 0:
@@ -107,6 +108,9 @@ async def apply_exposure_toggle(
                 applied = True
                 break
             last_error = stderr[:200]
+        if not applied and enabled and not_found_anywhere:
+            actions.append({"port": port, "action": "already_open", "ok": True, "firewallPath": paths[0]})
+            applied = True
         if not applied:
             actions.append({"port": port, "action": "failed", "ok": False, "error": last_error[:200]})
     paused = not enabled

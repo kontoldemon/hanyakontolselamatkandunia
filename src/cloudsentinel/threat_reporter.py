@@ -163,6 +163,7 @@ def _litellm_connection_kwargs() -> dict[str, Any]:
             kwargs["extra_headers"] = {
                 "x-opencode-session": os.getenv("LLM_SESSION_ID", "cloudsentinel-sensor")
             }
+            kwargs["extra_body"] = {"reasoning_effort": "none"}
     return kwargs
 
 

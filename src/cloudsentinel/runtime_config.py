@@ -74,6 +74,10 @@ class RuntimeConfigStore:
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(self._stored, indent=2, sort_keys=True), encoding="utf-8")
+        try:
+            os.chmod(self.path, 0o600)
+        except OSError:
+            pass
 
     def snapshot(self) -> dict[str, dict[str, Any]]:
         llm = self.settings.llm
@@ -116,7 +120,9 @@ class RuntimeConfigStore:
                 raise ValueError(f"{section} must be an object")
             staged[section] = self._validate(section, values)
 
-        api_key = staged.get("llm", {}).pop("api_key", "")
+        api_key = str(staged.get("llm", {}).get("api_key") or "")
+        if not api_key:
+            staged.get("llm", {}).pop("api_key", None)
         for section, values in staged.items():
             merged = {**self._stored.get(section, {}), **values}
             if merged:
@@ -174,6 +180,9 @@ class RuntimeConfigStore:
             llm.prompt_sanitization = bool(llm_cfg["prompt_sanitization"])
         if "deception_mode" in llm_cfg:
             llm.deception_mode = str(llm_cfg["deception_mode"])
+        if llm_cfg.get("api_key"):
+            llm.api_key = SecretStr(str(llm_cfg["api_key"]))
+            os.environ["LLM_API_KEY"] = str(llm_cfg["api_key"])
 
         api_key = secret_to_str(llm.api_key)
         if api_key:

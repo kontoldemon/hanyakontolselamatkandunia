@@ -16,6 +16,7 @@ import logging
 import os
 import signal
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import asyncssh
@@ -54,6 +55,17 @@ logger = structlog.get_logger("cloudsentinel.server")
 PACKAGE_ROOT = Path(__file__).resolve().parent
 DEFAULT_STAGE1_CONFIG = str(PACKAGE_ROOT / "configs" / "usas-production.yaml")
 DEFAULT_STAGE1_ENV = str(PACKAGE_ROOT / ".env")
+
+
+def report_honeypot_failure(name: str) -> Callable[[asyncio.Task[None]], None]:
+    def report(task: asyncio.Task[None]) -> None:
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger.error("%s honeypot stopped: %s", name, exc)
+
+    return report
 
 
 async def _start_metrics() -> None:
@@ -249,14 +261,22 @@ async def main() -> None:
     dns_task: asyncio.Task[None] | None = None
     if getattr(settings.honeypot, "dns_enabled", False):
         from .dns_honeypot import DNSHoneypot
-        dns_hp = DNSHoneypot(host=settings.honeypot.listen_host)
+        dns_hp = DNSHoneypot(
+            host=settings.honeypot.listen_host,
+            port=settings.honeypot.dns_port,
+        )
         dns_hp.set_event_callback(
             lambda event: asyncio.create_task(
                 _emit_aux_honeypot_event(event, pipeline, soar, stream)
             )
         )
         dns_task = asyncio.create_task(dns_hp.start())
-        logger.info("DNS honeypot started on UDP 53")
+        logger.info("DNS honeypot starting on UDP %s", settings.honeypot.dns_port)
+
+    if http_task is not None:
+        http_task.add_done_callback(report_honeypot_failure("HTTP"))
+    if dns_task is not None:
+        dns_task.add_done_callback(report_honeypot_failure("DNS"))
 
     # SSH host key
     host_key_path = Path("var/lib/cloudsentinel/ssh_host_rsa_key")

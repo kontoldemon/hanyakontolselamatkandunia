@@ -48,8 +48,14 @@ def test_exposure_outcomes(monkeypatch) -> None:
     assert already_paused.status_code == 200
     assert already_paused.json()["actions"][0]["action"] == "already_paused"
 
-    runs[:] = [(1, "", "")]
+    runs[:] = [(1, "", "")] * 10
     already_open = client.post("/admin/exposure", headers=headers, json={"enabled": True})
     assert already_open.status_code == 200
     assert already_open.json()["actions"][0]["action"] == "already_open"
+
+    # Rule lives in a different iptables backend than the first path checked.
+    runs[:] = [(1, "", ""), (0, "", ""), (0, "", "")]
+    removed_other_backend = client.post("/admin/exposure", headers=headers, json={"enabled": True})
+    assert removed_other_backend.status_code == 200
+    assert removed_other_backend.json()["actions"][0]["action"] == "removed"
 

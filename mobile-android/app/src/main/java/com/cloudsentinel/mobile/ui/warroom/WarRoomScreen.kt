@@ -97,6 +97,15 @@ fun WarRoomScreen(
     var showKillswitchConfirm by remember { mutableStateOf(false) }
     var showBlockedSheet by remember { mutableStateOf(false) }
     val exposureEnabled = stats?.ingress_exposure?.enabled ?: true
+    val topOrigin = stats?.top_threat_origin
+        ?.takeIf { it.isNotBlank() && it != "Unknown" }
+        ?: sessions
+            .mapNotNull { it.country.takeIf { country -> country.isNotBlank() && country != "Unknown" } }
+            .groupingBy { it }
+            .eachCount()
+            .maxByOrNull { it.value }
+            ?.key
+        ?: "None detected"
     val haptic = LocalHapticFeedback.current
     val clipboard = LocalClipboardManager.current
     val blockedSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -305,7 +314,7 @@ fun WarRoomScreen(
                             ) {
                                 CompactMetricCell(
                                     label = "Events",
-                                    value = "${stats?.connections ?: 0}",
+                                    value = "${stats?.events_total ?: 0}",
                                     modifier = Modifier.weight(1f)
                                 )
                                 VerticalDivider(
@@ -392,7 +401,7 @@ fun WarRoomScreen(
                         )
                         HealthRow(
                             label = "Top Origin",
-                            value = stats?.top_threat_origin ?: "None detected"
+                            value = topOrigin
                         )
                         HorizontalDivider(
                             color = ObsidianBorder,

@@ -16,6 +16,7 @@ SENSOR_USER="cloudsentinel"
 SENSOR_HOME="/opt/cloudsentinel"
 SSH_PORT=2222
 HONEYPOT_PUBLIC_PORT=22
+DNS_PORT=5353
 MGMT_SSH_PORT=22222
 ADMIN_IP="${ADMIN_IP:-$(printf '%s' "${SSH_CONNECTION:-}" | awk '{print $1}')}"
 SOAR_ALLOWLIST="${SOAR_ALLOWLIST:-${ADMIN_IP:+${ADMIN_IP},}127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
@@ -265,6 +266,8 @@ iptables -t nat -C PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT
     || iptables -t nat -A PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
 iptables -t nat -C OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT} 2>/dev/null \
     || iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
+iptables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports ${DNS_PORT} 2>/dev/null \
+    || iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports ${DNS_PORT}
 mkdir -p /etc/iptables
 iptables-save > /etc/iptables/rules.v4 || true
 
@@ -301,6 +304,8 @@ iptables -t nat -C PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT
     || iptables -t nat -A PREROUTING -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
 iptables -t nat -C OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT} 2>/dev/null \
     || iptables -t nat -A OUTPUT -p tcp -d 127.0.0.1 --dport ${HONEYPOT_PUBLIC_PORT} -j REDIRECT --to-ports ${SSH_PORT}
+iptables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports ${DNS_PORT} 2>/dev/null \
+    || iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports ${DNS_PORT}
 iptables -C INPUT -p tcp --dport ${HONEYPOT_PUBLIC_PORT} -m state --state NEW \
     -m hashlimit --hashlimit-name cloudsentinel_conn --hashlimit-above 60/minute \
     --hashlimit-burst 10 --hashlimit-mode srcip -j DROP 2>/dev/null || \
@@ -344,6 +349,9 @@ ufw allow from 127.0.0.1 to any port 8123 comment "ClickHouse HTTP"
 # Public HTTPS proxy for admin API and dashboard feed
 ufw allow 80/tcp comment "Caddy ACME HTTP"
 ufw allow 443/tcp comment "CloudSentinel HTTPS proxy"
+# Public honeypot protocols
+ufw allow 5353/udp comment "CloudSentinel DNS honeypot"
+ufw allow 8081/tcp comment "CloudSentinel HTTP honeypot"
 ufw delete allow 3001/tcp 2>/dev/null || true
 ufw delete allow 8080/tcp 2>/dev/null || true
 ufw --force enable || true
@@ -408,6 +416,10 @@ Environment=STREAM_PORT=3001
 Environment=STREAM_CORS_ORIGIN=${VERCEL_DASHBOARD_ORIGIN}
 Environment=STREAM_AUTH_TOKEN=${STREAM_AUTH_TOKEN}
 Environment=LLM_ENDPOINT=${LLM_ENDPOINT}
+Environment=CLOUDSENTINEL_DNS_ENABLED=true
+Environment=CLOUDSENTINEL_DNS_PORT=5353
+Environment=CLOUDSENTINEL_HTTP_ENABLED=true
+Environment=CLOUDSENTINEL_HTTP_PORT=8081
 Environment=ADMIN_ENABLED=true
 Environment=ADMIN_PORT=8080
 Environment=ADMIN_SERVER=uvicorn
@@ -422,9 +434,10 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/cloudsentinel/var /opt/cloudsentinel/downloads /opt/cloudsentinel/data
-CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
-AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+ReadWritePaths=/opt/cloudsentinel/var /opt/cloudsentinel/downloads /opt/cloudsentinel/data /run
+ExecStartPre=+/usr/bin/install -o cloudsentinel -g cloudsentinel -m 0600 /dev/null /run/xtables.lock
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 LockPersonality=true
 RestrictSUIDSGID=true

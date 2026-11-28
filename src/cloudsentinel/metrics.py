@@ -190,6 +190,17 @@ class Metrics:
         return iptables_blocks_total._value.get()
 
     @property
+    def total_events(self) -> float:
+        if not hasattr(events_total, "collect"):
+            return float(events_total._value.get())
+        return sum(
+            sample.value
+            for family in events_total.collect()
+            for sample in family.samples
+            if sample.name == "cloudsentinel_events_total"
+        )
+
+    @property
     def pipeline_is_connected(self) -> int:
         return int(pipeline_connected._value.get())
 

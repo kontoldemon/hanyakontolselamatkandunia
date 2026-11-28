@@ -38,6 +38,66 @@ class FakeKey:
 
 
 @pytest.mark.asyncio
+async def test_connection_lost_captures_late_hassh(monkeypatch) -> None:
+    settings = load_settings(
+        "src/cloudsentinel/configs/usas-production.yaml",
+        "src/cloudsentinel/.env",
+    )
+    server = CloudSentinelSSHServer(
+        settings,
+        FakePipeline(),  # type: ignore[arg-type]
+        FakeSoar(),  # type: ignore[arg-type]
+        HASSHDNA(),
+        ConnectionLimiter(max_total=2),
+    )
+    server.conn = FakeConn()  # type: ignore[assignment]
+    server.src_ip = "8.8.8.8"
+    emitted: list[dict] = []
+
+    async def fake_emit(eventid: str, extra: dict | None = None) -> None:
+        emitted.append({"eventid": eventid, **(extra or {})})
+
+    monkeypatch.setattr(server, "_emit_event", fake_emit)
+    monkeypatch.setattr(
+        "cloudsentinel.sensor.ssh.extract_hassh",
+        lambda _conn: ("f" * 32, "kex;enc;mac"),
+    )
+    server.connection_lost(None)
+    await asyncio.sleep(0)
+    assert any(
+        event.get("eventid") == "cloudsentinel.client.version"
+        and event.get("hassh_md5") == "f" * 32
+        and event.get("reason") == "hassh_kex_capture"
+        for event in emitted
+    )
+
+
+@pytest.mark.asyncio
+async def test_connection_lost_survives_hassh_extraction_error(monkeypatch) -> None:
+    settings = load_settings(
+        "src/cloudsentinel/configs/usas-production.yaml",
+        "src/cloudsentinel/.env",
+    )
+    server = CloudSentinelSSHServer(
+        settings,
+        FakePipeline(),  # type: ignore[arg-type]
+        FakeSoar(),  # type: ignore[arg-type]
+        HASSHDNA(),
+        ConnectionLimiter(max_total=2),
+    )
+    server.conn = FakeConn()  # type: ignore[assignment]
+    server.src_ip = "8.8.8.8"
+
+    def boom(_conn) -> None:
+        raise RuntimeError("bad kexinit")
+
+    monkeypatch.setattr("cloudsentinel.sensor.ssh.extract_hassh", boom)
+    server.connection_lost(None)
+    await asyncio.sleep(0)
+    assert server.hassh is None
+
+
+@pytest.mark.asyncio
 async def test_server_metric_exception_branches(monkeypatch) -> None:
     settings = load_settings(
         "src/cloudsentinel/configs/usas-production.yaml",

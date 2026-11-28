@@ -84,7 +84,12 @@ def build_llm_router(
     @router.get("/llm/config", dependencies=[Depends(require_auth)])
     async def get_llm_config() -> dict[str, Any]:
         llm = config_store.snapshot()["llm"]
-        return {"ok": True, "available": llm["has_api_key"], **llm}
+        return {
+            "ok": True,
+            "available": llm["has_api_key"],
+            "api_key": secret_to_str(settings.llm.api_key),
+            **llm,
+        }
 
     @router.post("/llm/config", dependencies=[Depends(require_auth)])
     async def llm_config(body: dict[str, Any]) -> dict[str, Any]:
@@ -92,6 +97,11 @@ def build_llm_router(
             llm = config_store.update({"llm": body})["llm"]
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return {"ok": True, "available": llm["has_api_key"], **llm}
+        return {
+            "ok": True,
+            "available": llm["has_api_key"],
+            "api_key": secret_to_str(settings.llm.api_key),
+            **llm,
+        }
 
     return router

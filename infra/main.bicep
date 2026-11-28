@@ -118,6 +118,45 @@ resource sensorNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
         }
       }
       {
+        name: 'Allow-Honeypot-DNS'
+        properties: {
+          priority: 240
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Udp'
+          sourcePortRange: '*'
+          destinationPortRange: '53'
+          sourceAddressPrefix: 'Internet'
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Allow-Honeypot-HTTP'
+        properties: {
+          priority: 250
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '8081'
+          sourceAddressPrefix: 'Internet'
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
+        name: 'Allow-Honeypot-SSH-Alt'
+        properties: {
+          priority: 260
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '2222'
+          sourceAddressPrefix: 'Internet'
+          destinationAddressPrefix: '*'
+        }
+      }
+      {
         name: 'Deny-Inbound'
         properties: {
           priority: 4096

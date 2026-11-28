@@ -86,6 +86,7 @@ export default function SettingsPage() {
 
     const [configLoaded, setConfigLoaded] = useState(false);
     const toastTimer = useRef<number | null>(null);
+    const loadedCopilotKey = useRef("");
 
     const notify = useCallback((message: string) => {
         setSavedToast(message);
@@ -129,6 +130,9 @@ export default function SettingsPage() {
             if (llmPayload?.ok) {
                 if (llmPayload.provider) setCopilotProvider(llmPayload.provider);
                 if (llmPayload.model) setCopilotModel(llmPayload.model);
+                const storedKey = typeof llmPayload.api_key === "string" ? llmPayload.api_key : "";
+                loadedCopilotKey.current = storedKey;
+                if (storedKey) setCopilotApiKey(storedKey);
                 setHasCopilotKey(Boolean(llmPayload.has_api_key));
                 if (Array.isArray(llmPayload.fallback_models)) setFallbackChain(llmPayload.fallback_models.join(", "));
                 if (typeof llmPayload.hourly_limit === "number") setHourlyLimit(llmPayload.hourly_limit);
@@ -172,6 +176,7 @@ export default function SettingsPage() {
         if (!configLoaded) return;
         const timer = window.setTimeout(async () => {
             const submittedCopilotKey = copilotApiKey.trim();
+            const keyChanged = submittedCopilotKey !== loadedCopilotKey.current;
             try {
                 const response = await fetch("/api/cloudsentinel/llm-config", {
                     method: "POST",
@@ -179,7 +184,7 @@ export default function SettingsPage() {
                     body: JSON.stringify({
                         provider: copilotProvider,
                         model: copilotModel,
-                        ...(submittedCopilotKey ? { api_key: submittedCopilotKey } : {}),
+                        ...(keyChanged && submittedCopilotKey ? { api_key: submittedCopilotKey } : {}),
                         fallback_models: fallbackChain.split(",").map((part) => part.trim()).filter(Boolean),
                         hourly_limit: hourlyLimit,
                         prompt_sanitization: promptSanitization,
@@ -188,8 +193,8 @@ export default function SettingsPage() {
                 });
                 const data = await response.json().catch(() => ({}));
                 if (data.ok) {
-                    if (submittedCopilotKey) {
-                        setCopilotApiKey("");
+                    if (keyChanged && submittedCopilotKey) {
+                        loadedCopilotKey.current = submittedCopilotKey;
                         setHasCopilotKey(true);
                     }
                 } else {
