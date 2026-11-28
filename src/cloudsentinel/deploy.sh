@@ -411,8 +411,8 @@ Environment=ADMIN_PORT=8080
 Environment=ADMIN_SERVER=uvicorn
 Environment=ADMIN_TOKEN=${ADMIN_TOKEN}
 
-# Resource limits (2 vCPU, 2 GB RAM)
-MemoryMax=1024M
+# Resource limits (2 vCPU, 4 GB RAM)
+MemoryMax=3072M
 CPUQuota=150%
 
 # Service hardening

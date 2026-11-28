@@ -1,14 +1,20 @@
 # CloudSentinel Agent Handoff
 
-Last updated: 2026-11-26. Read this first in a new session.
+Last updated: 2026-11-28. Read this first in a new session.
 
 ## Repository
 
 - Path: `C:\Users\RADZ\project io\FYP`
 - Branch: `main`
 - Push target: `kontoldemon/hanyakontolselamatkandunia` (personal repo). Use the `kontoldemon` remote / active GitHub account when needed.
-- Latest pushed commit: `de3ddfb` (fail-closed admin login + dashboard security headers).
+- Latest pushed commit: `aa43f71` (staging block truth + stream auth + UI; see `git log` for newer).
 - Detailed docs: `docs/ARCHITECTURE.md` (system), `docs/MOBILE.md` (Android), `docs/DEPLOY.md` (Azure), `docs/INDEX.md` (map).
+
+## FYP report
+
+- Report writing guide: `docs/fyp-report-guide.md`.
+- Project skill: `.opencode/skills/fyp-report/SKILL.md` (reads the guide).
+- Follow the guide when drafting or checking the report. Do not invent citations, data, or results.
 
 ## Current status
 
@@ -28,6 +34,19 @@ Last updated: 2026-11-26. Read this first in a new session.
 - Mobile exposure now uses the shared firewall toggle (`apply_exposure_toggle`), with iptables cooldown/rollback semantics; `/mobile/runtime-controls` and `/mobile/policy` are covered by tests. Mobile exposure still targets host iptables, not the Azure NSG.
 - Dashboard wiring (2026-11-26): settings persist to the sensor via `GET/POST /runtime-config` + `GET /decoys`; LLM config is a real proxy (`GET/POST /llm/config`). VFS depth, canary keys, HASSH drop, SOAR trigger/runtime, and LLM provider/model/limits apply live. Fake MTTB/risk/port values, hardcoded decoy inventory, synthetic anomaly trend, Next.js mobile fallbacks, and dry-run counting as a real block were removed. `GET /anomaly-stats` reports real detector state; `/readiness` exposes real port/deception config. Events cap: `CLOUDSENTINEL_EVENTS_MAX_LIMIT` (default 20000, max 50000). Dashboard polls are deduplicated across hooks. DNS and HTTP honeypot events now reach the pipeline and live stream. The Socket.io stream supports `STREAM_AUTH_TOKEN` (sensor) matched by `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN` (dashboard); an empty token keeps the stream open. Mobile alert state now round-trips camelCase fields (riskScore/mitreId/timestampMs) instead of resetting them on reload. ClickHouse reads now run via `asyncio.to_thread` wrappers so admin handlers no longer block the sensor loop. VFS routes Groq/Anthropic through litellm and no longer reuses the primary key for fallback models. The AI chat approve action no longer depends on `setMessages` side effects. `/docs` + `/openapi.json` are opt-in via `CLOUDSENTINEL_ENABLE_DOCS=1`. HTTP/DNS events are geo-enriched and carry `input`/`reason`; DNS/HTTP now reach ClickHouse with meaningful rows. Prometheus `events_total` and uptime are wired (`EventPipeline.emit` + `_start_metrics`). The mobile pairing panel defaults to the configured sensor URL (`NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_URL` / `CLOUDSENTINEL_ADMIN_API_URL`) instead of the dashboard hostname. Persisted runtime config is re-validated on load; invalid sections fall back to defaults. Changed-file eslint is clean (0 errors/warnings). HASSH DNA had a malformed entry (missing brace after "Ansible SSH") that nested 17 botnet variants under one key, so most critical signatures were unreachable; fixed, `_KNOWN` now has 33 top-level signatures and `mypy hassh.py` is clean. HASSH now has no duplicate keys (guarded by an AST test) and all entries are flat top-level records. Mobile `/runtime-controls` deception level + HASSH action now persist through the runtime config store; `soar_dry_run` still applies in-memory only. Android API models were checked field-by-field against the mobile router responses and match. Deployment remains blocked locally: no Vercel credentials, `az`, `bicep`, or Docker.
 - This Windows machine has no `az`, `bicep`, `func`, `docker`, or `bash`; Bicep, Function, and shell scripts are untested here.
+
+## Staging deployment (2026-11-28)
+
+- Azure: `cloudsentinel-rg` in **eastasia** (the student subscription policy only allows `malaysiawest`, `eastasia`, `indonesiacentral`, `japaneast`, `indiasouthcentral`; Malaysia West B-series are blocked for this subscription).
+- Sensor: `cloudsentinel-4nxdgq72ncekc.eastasia.cloudapp.azure.com` / `20.205.118.45`; **`Standard_B2als_v2` (4 GB)** with `MemoryMax=3072M`. ClickHouse `10.20.2.4` on `B2als_v2`.
+- Dashboard: `https://cloudsentinel.zis3c.dev` (Vercel project `dashboard`, Cloudflare CNAME `cname.vercel-dns.com`, cert valid). Deploy with `vercel --prod --yes --archive=tgz` from the repo root; `.vercelignore` limits the upload to the dashboard.
+- Auth: admin token `/root/cloudsentinel-admin-token`; stream token `/root/cloudsentinel-stream-token`; `STREAM_AUTH_TOKEN` is required and must match Vercel `NEXT_PUBLIC_CLOUDSENTINEL_SOCKET_TOKEN`. `deploy.sh` reuses the saved stream token and generates one only when absent.
+- Azure path verified: Event Grid -> Function -> NSG deny rule (priority 100) + queue unblock; timer cleanup fallback. Manual dashboard/mobile blocks are persisted to ClickHouse (`cloudsentinel.block.manual`), so the truth summary/MTTB reflects them (117.35 ms). Active blocks read `soar:block:*` Redis TTL keys.
+- UI fixes: latency thresholds (green <250 ms), light/dark stream console, block-rate one-decimal formatting, `Port 22/TCP -> 2222` label, modal/panel z-index above sidebar/AI, intelligence event fetch capped at 5,000.
+- Android: pairing default is the staging FQDN; debug APK and **signed** release APK build. Keystore `mobile-android/keystore/cloudsentinel-release.jks` and `keystore.properties` are gitignored; back them up. On-device install is still manual.
+- HASSH: only clients that send an SSH version/KEX produce HASSH. TCP port scans show `TCP probe` and no HASSH by design. A controlled full SSH session captured `b6877c001729f21db804a5f505029b82`.
+- LLM key: the direct DeepSeek key in the OpenCode store is valid for `/models` but returns **402 Payment Required**; the OpenCode Go `botlab` key returns **401** at `https://opencode.ai/inference/go/openai/v1`. Copilot remains offline until a key with credit (free Gemini/Groq or a topped-up DeepSeek key) is set in Settings.
+- Remaining: DNS/HTTP honeypot public exposure, dynamic admin IP for 22222, on-device APK install, Vercel Git auto-deploy vs CLI drift.
 
 ## Outstanding work
 

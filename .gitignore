@@ -47,3 +47,7 @@ src/cloudsentinel/**/__pycache__/
 certs/
 
 .vercel
+
+# Android release signing (never commit the keystore or passwords)
+mobile-android/keystore/
+mobile-android/keystore.properties

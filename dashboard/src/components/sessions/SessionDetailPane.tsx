@@ -143,7 +143,7 @@ export default function SessionDetailPane({
                     <>
                         <div className="px-4 py-2.5 border-b border-slate-200 dark:border-white/5 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-white/[0.02]">
                             <div className="flex items-center gap-2.5 min-w-0">
-                                <button onClick={onClearSelection} className="md:hidden p-1 -ml-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded shrink-0">
+                                <button onClick={onClearSelection} className="md:hidden flex h-9 w-9 items-center justify-center -ml-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded shrink-0">
                                     <ArrowLeft size={16} />
                                 </button>
                                 <h2 className="font-mono text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-none truncate">
@@ -155,11 +155,19 @@ export default function SessionDetailPane({
                                 >
                                     Port 22/TCP <span className="text-slate-400 dark:text-slate-500">→ 2222</span>
                                 </span>
+                                {(!selectedView.client || selectedView.client === "unknown") && !selectedView.fingerprint ? (
+                                    <span
+                                        title="TCP connect only — no SSH identification or KEX, so HASSH cannot be calculated."
+                                        className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0"
+                                    >
+                                        TCP probe
+                                    </span>
+                                ) : null}
                             </div>
                             <button
                                 onClick={() => onRequestBlockIp(selectedView.ip)}
                                 disabled={blockingIp === selectedView.ip}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white disabled:opacity-50 transition-colors shrink-0"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white disabled:opacity-50 transition-colors shrink-0"
                                 title="Block IP at sensor firewall"
                                 aria-label="Block IP"
                             >
@@ -168,7 +176,7 @@ export default function SessionDetailPane({
                         </div>
 
                         <div className="grid grid-cols-1 xl:grid-cols-3 flex-1 min-h-0 overflow-y-auto xl:overflow-hidden">
-                            <div className="xl:col-span-2 border-b xl:border-b-0 xl:border-r border-slate-200 dark:border-white/5 flex flex-col min-h-[260px] max-h-[48vh] xl:max-h-none xl:h-full min-w-0 overflow-hidden">
+                            <div className="xl:col-span-2 border-b xl:border-b-0 xl:border-r border-slate-200 dark:border-white/5 flex flex-col min-h-[260px] max-h-[48dvh] xl:max-h-none xl:h-full min-w-0 overflow-hidden">
                                 <TerminalReplay
                                     lines={selectedView.input ?? []}
                                     replay={selectedView.replay}
@@ -526,7 +534,7 @@ export default function SessionDetailPane({
                         <button
                             type="button"
                             onClick={handleCloseBlockModal}
-                            className="absolute top-4 right-4 rounded-full p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
+                            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition cursor-pointer"
                             aria-label="Close"
                         >
                             <X size={15} />
@@ -550,7 +558,7 @@ export default function SessionDetailPane({
                             <button
                                 type="button"
                                 onClick={handleCloseBlockModal}
-                                className="inline-flex h-9.5 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
+                                className="flex h-11 flex-1 items-center justify-center rounded-full border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition active:scale-95 cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -562,7 +570,7 @@ export default function SessionDetailPane({
                                     handleCloseBlockModal();
                                 }}
                                 disabled={blockingIp === activeBlockIp}
-                                className="inline-flex h-9.5 flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600 hover:bg-rose-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600 hover:bg-rose-500 px-4 text-xs font-semibold text-white shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer"
                             >
                                 <Ban size={12} />
                                 <span>{blockingIp === activeBlockIp ? "Blocking..." : "Confirm"}</span>
