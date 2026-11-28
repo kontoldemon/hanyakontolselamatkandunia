@@ -1,9 +1,12 @@
 param(
-    [ValidateSet("status", "start", "stop")]
+    [ValidateSet("status", "start", "stop", "allocate", "deallocate")]
     [string]$Action = "status",
     [ValidateSet("both", "sensor", "clickhouse")]
     [string]$Target = "both"
 )
+
+if ($Action -eq "allocate") { $Action = "start" }
+if ($Action -eq "deallocate") { $Action = "stop" }
 
 $ErrorActionPreference = "Stop"
 $resourceGroup = "cloudsentinel-rg"
