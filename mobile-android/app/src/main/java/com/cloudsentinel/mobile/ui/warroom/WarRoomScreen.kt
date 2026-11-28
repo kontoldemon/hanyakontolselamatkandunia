@@ -224,7 +224,7 @@ fun WarRoomScreen(
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Honeypot Port 2222",
+                                    text = "Honeypot Port 22 → 2222",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 17.sp
@@ -275,7 +275,7 @@ fun WarRoomScreen(
                                 color = TextMutedDark
                             )
                             Text(
-                                text = "0.0.0.0:2222",
+                                text = "22/TCP → ${stats?.ingress_exposure?.port ?: 2222}",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontFamily = FontFamily.Monospace
                                 ),
@@ -517,7 +517,7 @@ fun WarRoomScreen(
             text = {
                 Text(
                     text = if (exposureEnabled) {
-                        "Incoming traffic on port 2222 will be blocked on the sensor host firewall. The sensor daemon remains running."
+                        "Incoming traffic on port 22 (redirected to ${stats?.ingress_exposure?.port ?: 2222}) will be blocked on the sensor host firewall. The sensor daemon remains running."
                     } else {
                         "Port 2222 will be re-opened to capture incoming threat traffic."
                     },

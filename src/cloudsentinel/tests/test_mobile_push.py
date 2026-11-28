@@ -865,6 +865,61 @@ def test_mobile_dashboard_uses_metrics_mttb_fallback(tmp_path: Path) -> None:
     assert dashboard["mttb_seconds"] == 0.25
 
 
+def test_mobile_state_load_skips_invalid_entries(tmp_path: Path) -> None:
+    store = tmp_path / "bad-state.json"
+    store.write_text(
+        json.dumps(
+            {
+                "devices": [{"device_id": "good", "device_name": "Good"}, {"nope": 1}],
+                "challenges": [{"code": "123456", "token": "t"}, {"token": "no-code"}],
+                "recent_alerts": [{"id": "a1", "ip": "1.2.3.4"}, {"ip": "no-id"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    svc = MobilePushService(storage_path=store)
+    assert [device["deviceId"] for device in svc.list_devices()] == ["good"]
+    assert [alert["id"] for alert in svc.get_recent_alerts()] == ["a1"]
+
+
+def test_mobile_save_survives_chmod_error(tmp_path: Path, monkeypatch) -> None:
+    svc = MobilePushService(storage_path=tmp_path / "save.json")
+
+    def deny_chmod(*_args, **_kwargs) -> None:
+        raise OSError("denied")
+
+    monkeypatch.setattr("pathlib.Path.chmod", deny_chmod)
+    svc.update_policy({"minRiskScore": 42})
+    assert svc.get_policy().min_risk_score == 42
+
+
+def test_mobile_dashboard_events_total_survives_restart(tmp_path: Path, monkeypatch) -> None:
+    settings = Settings()
+    settings.clickhouse.enabled = True
+    svc, headers = _paired_mobile_service(tmp_path)
+    calls: list[int] = []
+
+    async def fake_summary(_settings) -> dict:
+        calls.append(1)
+        return {"total_events": 9001}
+
+    async def block_handler(body: dict) -> dict:
+        return {"blocked": body["ip"]}
+
+    monkeypatch.setattr(
+        "cloudsentinel.api.routers.mobile.load_truth_summary_async",
+        fake_summary,
+    )
+    app = FastAPI()
+    app.include_router(build_mobile_router(settings, lambda: True, svc, block_handler))
+    client = TestClient(app)
+    first = client.get("/mobile/dashboard", headers=headers).json()
+    second = client.get("/mobile/dashboard", headers=headers).json()
+    assert first["events_total"] >= 9001
+    assert second["events_total"] >= 9001
+    assert len(calls) == 1
+
+
 def test_mobile_dashboard_uses_clickhouse_mttb_fallback(tmp_path: Path, monkeypatch) -> None:
     from cloudsentinel.metrics import get_metrics
 

@@ -246,7 +246,7 @@ fun MobileSettingsScreen(
                 SettingsMenuRow(
                     icon = Icons.Default.Link,
                     title = "Gateway & Connection",
-                    subtitle = "$gatewayHost · Port ${stats?.ingress_exposure?.port ?: 2222}",
+                    subtitle = "$gatewayHost · Port 22 → ${stats?.ingress_exposure?.port ?: 2222}",
                     onClick = { activeSheet = SettingsSheet.GATEWAY }
                 )
             }
@@ -604,7 +604,7 @@ fun MobileSettingsScreen(
                         SettingsInfoRow(
                             icon = Icons.Default.PowerSettingsNew,
                             title = "Ingress Control",
-                            subtitle = "Port ${stats?.ingress_exposure?.port ?: 2222} · ${stats?.ingress_exposure?.provider ?: "azure-nsg"}"
+                            subtitle = "Port 22 → ${stats?.ingress_exposure?.port ?: 2222} · ${stats?.ingress_exposure?.provider ?: "azure-nsg"}"
                         )
                     }
                 }

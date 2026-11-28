@@ -15,7 +15,7 @@ from ...config import Settings
 from ...metrics import get_metrics
 from ...mobile_push import MobilePushService, PairedDevice
 from ..block_state import count_active_blocks
-from ..queries import load_latest_mttb_async
+from ..queries import load_latest_mttb_async, load_truth_summary_async
 
 logger = structlog.get_logger("cloudsentinel.api.routers.mobile")
 mobile_security = HTTPBearer(auto_error=False)
@@ -39,6 +39,7 @@ def build_mobile_router(
     pair_attempts: dict[str, deque[float]] = {}
     pair_window_seconds = 60.0
     pair_max_attempts = 10
+    events_cache: dict[str, Any] = {"total": None, "checked_at": 0.0}
 
     async def require_device_auth(
         credentials: HTTPAuthorizationCredentials | None = Depends(mobile_security),
@@ -274,12 +275,26 @@ def build_mobile_router(
         ssh_port = int(settings.honeypot.ssh_port)
         listen_host = str(settings.honeypot.listen_host or "0.0.0.0")
         pipeline_connected = bool(getattr(pipeline, "connected", False)) if pipeline is not None else False
+        now = time.time()
+        events_total = int(getattr(metrics, "total_events", 0))
+        if settings.clickhouse.enabled:
+            checked_at = float(events_cache["checked_at"] or 0.0)
+            if events_cache["total"] is None or now - checked_at >= 60:
+                try:
+                    summary = await load_truth_summary_async(settings)
+                    if summary is not None:
+                        events_cache["total"] = int(summary.get("total_events") or 0)
+                except Exception:
+                    pass
+                events_cache["checked_at"] = now
+            if events_cache["total"] is not None:
+                events_total = max(events_total, int(events_cache["total"]))
 
         return {
             "ok": True,
             "deviceId": device.device_id,
             "connections": int(metrics.active_sessions),
-            "events_total": int(getattr(metrics, "total_events", 0)),
+            "events_total": events_total,
             "mttb_seconds": mttb_seconds,
             "mitre_count": len(mitre_ids),
             "blocked_ips_count": blocked_ips_count,

@@ -9,9 +9,10 @@ import types
 
 import pytest
 
+import cloudsentinel.metrics as metrics_module
 import cloudsentinel.pipeline as pipeline_module
 import cloudsentinel.soar as soar_module
-from cloudsentinel.config import load_settings
+from cloudsentinel.config import RedisSettings, load_settings
 from cloudsentinel.pipeline import EventEnvelope, EventPipeline, LocalWAL
 from cloudsentinel.soar import SOAREngine
 
@@ -60,6 +61,24 @@ def test_local_wal_invalid_lines(tmp_path) -> None:
     events = asyncio.run(wal.read_and_clear())
     assert len(events) == 1
     assert asyncio.run(wal.read_and_clear()) == []
+
+
+@pytest.mark.asyncio
+async def test_pipeline_emit_survives_metrics_failure(monkeypatch) -> None:
+    def broken_metrics() -> None:
+        raise RuntimeError("metrics down")
+
+    monkeypatch.setattr(metrics_module, "get_metrics", broken_metrics)
+    pipe = EventPipeline(RedisSettings())
+    writes: list[EventEnvelope] = []
+
+    async def fake_write(envelope: EventEnvelope) -> None:
+        writes.append(envelope)
+
+    monkeypatch.setattr(pipe._wal, "write", fake_write)
+    await pipe.emit(EventEnvelope("e", "s", "8.8.8.8", 22, 1.0, {"eventid": "e"}))
+    assert len(writes) == 1
+    assert pipe.pending_count == 1
 
 
 @pytest.mark.asyncio

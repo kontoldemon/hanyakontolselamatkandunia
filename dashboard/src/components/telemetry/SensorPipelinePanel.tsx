@@ -70,7 +70,7 @@ export default function SensorPipelinePanel({ operations }: SensorPipelinePanelP
                     </div>
                     <div className="space-y-1 text-[11px] font-mono text-slate-500 dark:text-slate-400">
                         <div className="flex justify-between">
-                            <span>Ingress Port:</span>
+                            <span>Honeypot Port:</span>
                             <span className="text-slate-700 dark:text-slate-300 font-semibold">{sshPort ? `${sshPort} / TCP` : "Unavailable"}</span>
                         </div>
                         <div className="flex justify-between">
@@ -98,7 +98,7 @@ export default function SensorPipelinePanel({ operations }: SensorPipelinePanelP
                     <div className="space-y-1 text-[11px] font-mono text-slate-500 dark:text-slate-400">
                         <div className="flex justify-between">
                             <span>Bus Engine:</span>
-                            <span className="text-slate-700 dark:text-slate-300 font-semibold">{redisConnected ? "Redis / NATS" : "Memory Ring"}</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold">{redisConnected ? "Redis Streams" : "Memory Ring"}</span>
                         </div>
                         <div className="flex justify-between">
                             <span>Pending In Queue:</span>
@@ -133,7 +133,7 @@ export default function SensorPipelinePanel({ operations }: SensorPipelinePanelP
                         </div>
                         <div className="flex justify-between">
                             <span>Deduplication:</span>
-                            <span className="text-slate-700 dark:text-slate-300 font-semibold">Active Hash</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold">ClickHouse Token</span>
                         </div>
                     </div>
                 </div>
