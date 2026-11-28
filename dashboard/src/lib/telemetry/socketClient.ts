@@ -11,6 +11,7 @@ import {
 } from "./types";
 import { toThreatLog } from "./parsers";
 
+// shortcut: live buffers are intentionally unbounded per user request; add virtualization or a cap if memory grows.
 const socketTelemetryState: SocketTelemetrySnapshot = {
   socketUrl: "",
   connected: false,
@@ -27,7 +28,7 @@ function pushSocketTelemetry(
   detail?: string,
 ) {
   const timestamp = new Date().toISOString();
-  socketTelemetryState.recent = [{ timestamp, level, event, detail }, ...socketTelemetryState.recent].slice(0, 120);
+  socketTelemetryState.recent = [{ timestamp, level, event, detail }, ...socketTelemetryState.recent];
 }
 
 function snapshotSocketTelemetry(): SocketTelemetrySnapshot {
@@ -112,7 +113,7 @@ function addLogs(items: ThreatLog[]) {
     seen.add(item.id);
     unique.push(item);
   }
-  globalLogs = unique.sort((a, b) => b.epochMs - a.epochMs).slice(0, 150);
+  globalLogs = unique.sort((a, b) => b.epochMs - a.epochMs);
   subscribers.forEach((sub) => {
     startTransition(() => sub(globalLogs));
   });

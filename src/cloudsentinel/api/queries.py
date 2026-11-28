@@ -268,7 +268,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
             timeline_items = list(row[17] or [])
             techniques = [str(v) for v in (row[18] or []) if str(v).strip()]
             risk = int(row[19] or 0)
-            if hassh_algorithms.startswith("client:"):
+            if hassh_algorithms.startswith(("client:", "unknown-kex")):
                 hassh = ""
                 hassh_algorithms = ""
             if not hassh and hassh_algorithms:

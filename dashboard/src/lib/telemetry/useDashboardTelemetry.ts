@@ -254,9 +254,12 @@ export function useSensorOperations() {
       }
     };
 
+    let inFlight = false;
     async function loadOperations() {
+      if (inFlight) return;
+      inFlight = true;
       try {
-        const response = await sharedGet("/api/cloudsentinel/operations", 8000);
+        const response = await sharedGet("/api/cloudsentinel/operations", 2000);
         if (response.status === 401) {
           handleUnauthorizedApi("operations");
           return;
@@ -281,11 +284,13 @@ export function useSensorOperations() {
       } catch {
         consecutiveFailuresRef.current += 1;
         maybeSetOffline();
+      } finally {
+        inFlight = false;
       }
     }
 
     loadOperations();
-    const interval = window.setInterval(loadOperations, 10000);
+    const interval = window.setInterval(loadOperations, 3000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);

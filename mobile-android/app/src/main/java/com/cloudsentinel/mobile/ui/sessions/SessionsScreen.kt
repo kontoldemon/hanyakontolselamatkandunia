@@ -361,7 +361,7 @@ private fun SessionCard(
                                 "Credential probe"
                             }
                         )
-                        if (session.session_count > 1) {
+                        if (session.session_count > 1 || session.session_count_capped) {
                             val count = "${session.session_count}${if (session.session_count_capped) "+" else ""}"
                             append(" · $count sessions")
                         }

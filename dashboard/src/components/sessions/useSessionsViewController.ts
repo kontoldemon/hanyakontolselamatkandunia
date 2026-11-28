@@ -40,6 +40,8 @@ export function useSessionsViewController() {
     const PAGE_SIZE = 15;
     const lastNonEmptySessionsAtRef = useRef(0);
     const lastSelectedSnapshotRef = useRef<CapturedSession | null>(null);
+    const replayCacheRef = useRef<Map<string, NonNullable<CapturedSession["replay"]>>>(new Map());
+    const inputCacheRef = useRef<Map<string, NonNullable<CapturedSession["input"]>>>(new Map());
 
     const filteredSessions = useMemo(() => {
         const byIp = new Map<string, CapturedSession[]>();
@@ -275,7 +277,26 @@ export function useSessionsViewController() {
         }
     }, [exactMatchDisplayed, exactMatchRaw, selectedSession, selectedSessionId]);
 
-    const selectedView = selectedSessionLive ?? selectedSession;
+    const selectedView = useMemo(() => {
+        const base = selectedSessionLive ?? selectedSession;
+        if (!base) return base;
+        const key = base.ip;
+        const cachedReplay = replayCacheRef.current.get(key) ?? [];
+        const cachedInput = inputCacheRef.current.get(key) ?? [];
+        const seenReplay = new Set<string>();
+        const replay = [...cachedReplay, ...(base.replay ?? [])].filter((entry) => {
+            const entryKey = `${entry.role}|${entry.timestamp ?? ""}|${entry.text}`;
+            if (seenReplay.has(entryKey)) {
+                return false;
+            }
+            seenReplay.add(entryKey);
+            return true;
+        });
+        const input = Array.from(new Set([...cachedInput, ...(base.input ?? [])].filter(Boolean)));
+        replayCacheRef.current.set(key, replay);
+        inputCacheRef.current.set(key, input);
+        return { ...base, replay, input };
+    }, [selectedSessionLive, selectedSession]);
 
     useEffect(() => {
         setReplayMode("both");

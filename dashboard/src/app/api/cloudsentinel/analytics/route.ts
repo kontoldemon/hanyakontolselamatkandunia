@@ -84,14 +84,6 @@ function resolveBucketMs(windowMs: number | null): number {
   return 15 * 60 * 1000;
 }
 
-function resolveEventLimit(windowMs: number | null): number {
-  if (windowMs === null) return 20000;
-  if (windowMs <= 60 * 60 * 1000) return 1200;
-  if (windowMs <= 6 * 60 * 60 * 1000) return 2400;
-  if (windowMs <= 24 * 60 * 60 * 1000) return 4000;
-  return 8000;
-}
-
 export async function GET(request: Request) {
   const configError = adminApiConfigError();
   if (configError) return configError;
@@ -101,7 +93,7 @@ export async function GET(request: Request) {
   const windowMs = resolveWindowMs(window);
 
   try {
-    const limit = resolveEventLimit(windowMs);
+    const limit = 20000;
     const response = await fetch(new URL(`/events?limit=${limit}`, baseUrl), {
       cache: "no-store",
       headers,

@@ -177,8 +177,7 @@ export function useIntelligenceViewData(params: {
     }
     const mitreData = [...mitreCounts.entries()]
         .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 14);
+        .sort((a, b) => b.count - a.count);
 
     const fingerprintsMap = new Map<string, { hash: string; client: string; count: number }>();
     for (const session of filteredSessions) {
@@ -196,7 +195,7 @@ export function useIntelligenceViewData(params: {
         current.count += 1;
         fingerprintsMap.set(hash, current);
     }
-    const fingerprints = [...fingerprintsMap.values()].sort((a, b) => b.count - a.count).slice(0, 20);
+    const fingerprints = [...fingerprintsMap.values()].sort((a, b) => b.count - a.count);
 
     const commandCounts = new Map<string, number>();
     const incrementCommand = (raw: string) => {
@@ -230,8 +229,7 @@ export function useIntelligenceViewData(params: {
     }
     const passwordWords = [...passwordCounts.entries()]
         .map(([word, count]) => ({ word, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 60);
+        .sort((a, b) => b.count - a.count);
     const maxPasswordCount = Math.max(1, ...passwordWords.map((item) => item.count));
 
     const sourceCommands = commandMode === "most" ? topCommands : leastCommands;

@@ -119,7 +119,19 @@ async def test_begin_auth_branches(monkeypatch) -> None:
     server.settings.fingerprinting.enable_hassh = False
     server.conn = FakeConn("SSH-2.0-client")  # type: ignore[assignment]
     assert server.begin_auth("root") is True
-    assert server.hassh
+    assert server.hassh is None
+    assert server.client_version == "SSH-2.0-client"
+    await asyncio.sleep(0)
+
+    server = _server()
+    server._accepted = True
+    server.conn = FakeConn("SSH-2.0-client")  # type: ignore[assignment]
+    monkeypatch.setattr(
+        "cloudsentinel.sensor.ssh.extract_hassh",
+        lambda _conn: ("f" * 32, "client:SSH-2.0-client;server:unit;unknown;none"),
+    )
+    assert server.begin_auth("root") is True
+    assert server.hassh is None
     await asyncio.sleep(0)
 
 

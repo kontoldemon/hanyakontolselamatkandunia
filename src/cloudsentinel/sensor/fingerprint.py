@@ -51,6 +51,8 @@ def extract_hassh(conn: asyncssh.SSHServerConnection) -> tuple[str | None, str |
             from asyncssh.packet import SSHPacket
 
             pkt = SSHPacket(raw)
+            if raw[0] == 20:  # SSH_MSG_KEXINIT
+                pkt.get_byte()
             _ = pkt.get_bytes(16)  # cookie
             client_kex = _decode_alg_list(pkt.get_namelist())
             _ = pkt.get_namelist()  # host key algs

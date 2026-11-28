@@ -41,7 +41,7 @@ export default function CanaryDecoysInventory() {
         }
 
         void loadDecoys();
-        const timer = window.setInterval(() => void loadDecoys(), 15000);
+        const timer = window.setInterval(() => void loadDecoys(), 5000);
         return () => {
             cancelled = true;
             window.clearInterval(timer);

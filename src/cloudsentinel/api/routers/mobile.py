@@ -372,8 +372,10 @@ def build_mobile_router(
                 from .. import queries
 
                 session_limit = 50
+                rows = await queries.load_recent_sessions_async(settings, limit=session_limit)
+                fetch_capped = len(rows) >= session_limit
                 grouped: dict[str, list[dict[str, Any]]] = {}
-                for row in await queries.load_recent_sessions_async(settings, limit=session_limit):
+                for row in rows:
                     ip = str(row.get("ip") or "").strip()
                     if ip:
                         grouped.setdefault(ip, []).append(row)
@@ -406,7 +408,7 @@ def build_mobile_router(
                             latest.get("lastSeenEpochMs") or latest.get("startedAtEpochMs") or 0
                         ),
                         "session_count": len(group),
-                        "session_count_capped": len(group) >= session_limit,
+                        "session_count_capped": fetch_capped,
                     })
                 sessions = sorted(
                     collapsed,

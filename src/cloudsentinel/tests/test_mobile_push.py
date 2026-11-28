@@ -723,6 +723,37 @@ def test_mobile_sessions_group_by_ip(tmp_path: Path, monkeypatch) -> None:
     assert sessions[0]["hassh"] == "b" * 32
 
 
+def test_mobile_sessions_marks_capped_fetch(tmp_path: Path, monkeypatch) -> None:
+    import cloudsentinel.api.queries as queries
+
+    settings = Settings()
+    settings.clickhouse.enabled = True
+    svc, headers = _paired_mobile_service(tmp_path)
+    rows = [
+        {
+            "id": f"s{index}",
+            "ip": f"10.0.0.{index}",
+            "riskScore": 10,
+            "lastSeenEpochMs": index,
+        }
+        for index in range(50)
+    ]
+    monkeypatch.setattr(
+        queries,
+        "_load_recent_sessions_from_clickhouse",
+        lambda _settings, limit=50: rows,
+    )
+
+    async def block_handler(body: dict) -> dict:
+        return {"blocked": body["ip"]}
+
+    app = FastAPI()
+    app.include_router(build_mobile_router(settings, lambda: True, svc, block_handler))
+    sessions = TestClient(app).get("/mobile/sessions", headers=headers).json()["sessions"]
+    assert len(sessions) == 50
+    assert all(item["session_count_capped"] is True for item in sessions)
+
+
 def test_mobile_copilot_success_error_and_failure(tmp_path: Path, monkeypatch) -> None:
     import cloudsentinel.threat_reporter as threat_reporter
 

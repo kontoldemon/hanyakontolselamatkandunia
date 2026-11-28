@@ -56,30 +56,12 @@ function payloadFor(event: CloudSentinelEvent) {
   return event.eventid ?? "cloudsentinel.event";
 }
 
-function deriveFallbackFingerprint(hasshAlgorithms?: string): string {
-  const input = (hasshAlgorithms ?? "").trim();
-  if (!input) {
+function resolveFingerprint(event: CloudSentinelEvent): string {
+  const algorithms = event.hassh_algorithms ?? "";
+  if (algorithms.startsWith("client:") || algorithms.startsWith("unknown-kex")) {
     return "";
   }
-  let a = 0x811c9dc5;
-  let b = 0x01000193;
-  for (let i = 0; i < input.length; i += 1) {
-    const code = input.charCodeAt(i);
-    a ^= code;
-    a = Math.imul(a, 16777619);
-    b ^= code;
-    b = Math.imul(b, 1099511627);
-  }
-  const hex = `${(a >>> 0).toString(16).padStart(8, "0")}${(b >>> 0).toString(16).padStart(8, "0")}`;
-  return `${hex}${hex}`;
-}
-
-function resolveFingerprint(event: CloudSentinelEvent): string {
-  const direct = (event.hassh_md5 ?? event.hassh ?? "").trim();
-  if (direct) {
-    return direct;
-  }
-  return deriveFallbackFingerprint(event.hassh_algorithms);
+  return (event.hassh_md5 ?? event.hassh ?? "").trim();
 }
 
 function resolveClientLabel(event: CloudSentinelEvent, fingerprint: string): string {
@@ -218,5 +200,8 @@ export function toThreatLog(event: CloudSentinelEvent): ThreatLog {
     mitreTechniques: event.cloudsentinel_mitre_techniques ?? [],
     role: event.eventid?.includes("command.output") ? "honeypot" : "attacker",
     responseMode: event.response_mode,
+    riskScore:
+      typeof event.cloudsentinel_risk_score === "number" ? event.cloudsentinel_risk_score : 0,
+    soarAction: event.cloudsentinel_soar_action ?? "",
   };
 }

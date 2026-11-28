@@ -117,8 +117,12 @@ export function useCapturedSessions() {
         (effectiveLastSeen === 0 || effectiveLastSeen < activeCutoffMs);
 
       const syntheticId = `sess-live-${session.ip}`;
-      if (grouped.has(syntheticId) && session.id !== syntheticId) {
-        grouped.delete(syntheticId);
+      if (session.id !== syntheticId) {
+        for (const key of Array.from(grouped.keys())) {
+          if (key === syntheticId || key.startsWith(`${syntheticId}-`)) {
+            grouped.delete(key);
+          }
+        }
       }
       const key = session.id || `sess-${session.ip}-${session.startedAtEpochMs ?? session.startTime}`;
       grouped.set(key, {
@@ -150,9 +154,16 @@ export function useCapturedSessions() {
         continue;
       }
       const targetId = latestSessionByIp.get(log.ip);
-      const existing = targetId ? grouped.get(targetId) : undefined;
+      let existing = targetId ? grouped.get(targetId) : undefined;
+      if (
+        existing
+        && (existing.status || "").toLowerCase() !== "active"
+        && log.epochMs > (existing.lastSeenEpochMs ?? 0) + SESSION_ACTIVE_WINDOW_MS
+      ) {
+        existing = undefined;
+      }
       if (!existing) {
-        const syntheticId = `sess-live-${log.ip}`;
+        const syntheticId = `sess-live-${log.ip}-${log.epochMs}`;
         grouped.set(syntheticId, {
           id: syntheticId,
           ip: log.ip,

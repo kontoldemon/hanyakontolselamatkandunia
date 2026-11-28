@@ -13,7 +13,7 @@ import structlog
 from ..anomaly import CommandAnomalyDetector
 from ..config import Settings
 from ..geoip import enrich as geo_enrich
-from ..hassh import HASSHDNA, fallback_hassh_from_version, hassh_action_applies, infer_client_software
+from ..hassh import HASSHDNA, hassh_action_applies, infer_client_software
 from ..mobile_push import MobilePushService
 from ..pipeline import EventPipeline
 from ..soar import ENFORCED_BLOCK_ACTIONS, NEW_BLOCK_ACTIONS, SOAREngine
@@ -108,7 +108,11 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
 
     def connection_lost(self, exc: Exception | None) -> None:
         duration = time.time() - self.started_at
-        if self.hassh is None and self.conn is not None:
+        if (
+            self.hassh is None
+            and self.conn is not None
+            and self.settings.fingerprinting.enable_hassh
+        ):
             try:
                 version = str(self.conn.get_extra_info("client_version", "") or "")
                 if version and not self.client_version:
@@ -116,6 +120,9 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
                 self.hassh, self.hassh_algorithms = extract_hassh(self.conn)
             except Exception:
                 self.hassh = None
+            if self.hassh_algorithms and self.hassh_algorithms.startswith(("client:", "unknown-kex")):
+                self.hassh = None
+                self.hassh_algorithms = None
             if self.hassh:
                 self.hassh_dna.record_sighting(self.hassh, self.src_ip)
                 asyncio.create_task(self._emit_event("cloudsentinel.client.version", {
@@ -173,6 +180,9 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
             and self.settings.fingerprinting.enable_hassh
         ):
             self.hassh, self.hassh_algorithms = extract_hassh(self.conn)
+            if self.hassh_algorithms and self.hassh_algorithms.startswith(("client:", "unknown-kex")):
+                self.hassh = None
+                self.hassh_algorithms = None
 
             if self.hassh:
                 logger.info("HASSH: %s from %s", self.hassh, self.src_ip)
@@ -207,12 +217,6 @@ class CloudSentinelSSHServer(asyncssh.SSHServer):
             try:
                 self.client_version = str(self.conn.get_extra_info("client_version", ""))
                 if self.client_version:
-                    if not self.hassh:
-                        self.hassh, self.hassh_algorithms = fallback_hassh_from_version(
-                            self.client_version,
-                            self.settings.honeypot.server_version,
-                        )
-                        self.hassh_dna.record_sighting(self.hassh, self.src_ip)
                     asyncio.create_task(self._emit_event("cloudsentinel.client.version", {
                         "version": self.client_version,
                         "hassh_md5": self.hassh or "",

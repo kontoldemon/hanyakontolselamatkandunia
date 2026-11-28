@@ -118,3 +118,61 @@ async def test_server_metric_exception_branches(monkeypatch) -> None:
     await asyncio.sleep(0)
 
 
+
+
+@pytest.mark.asyncio
+async def test_connection_lost_ignores_synthetic_hassh(monkeypatch) -> None:
+    settings = load_settings(
+        'src/cloudsentinel/configs/usas-production.yaml',
+        'src/cloudsentinel/.env',
+    )
+    server = CloudSentinelSSHServer(
+        settings,
+        FakePipeline(),  # type: ignore[arg-type]
+        FakeSoar(),  # type: ignore[arg-type]
+        HASSHDNA(),
+        ConnectionLimiter(max_total=2),
+    )
+    server.conn = FakeConn()  # type: ignore[assignment]
+    server.src_ip = '8.8.8.8'
+    emitted: list[dict] = []
+
+    async def fake_emit(eventid: str, extra: dict | None = None) -> None:
+        emitted.append({'eventid': eventid, **(extra or {})})
+
+    monkeypatch.setattr(server, '_emit_event', fake_emit)
+    monkeypatch.setattr(
+        'cloudsentinel.sensor.ssh.extract_hassh',
+        lambda _conn: ('f' * 32, 'client:SSH-2.0-unit;server:unit;unknown;none'),
+    )
+    server.connection_lost(None)
+    await asyncio.sleep(0)
+    assert server.hassh is None
+    assert not any(event['eventid'] == 'cloudsentinel.client.version' for event in emitted)
+
+
+@pytest.mark.asyncio
+async def test_connection_lost_skips_hassh_when_disabled(monkeypatch) -> None:
+    settings = load_settings(
+        'src/cloudsentinel/configs/usas-production.yaml',
+        'src/cloudsentinel/.env',
+    )
+    settings.fingerprinting.enable_hassh = False
+    server = CloudSentinelSSHServer(
+        settings,
+        FakePipeline(),  # type: ignore[arg-type]
+        FakeSoar(),  # type: ignore[arg-type]
+        HASSHDNA(),
+        ConnectionLimiter(max_total=2),
+    )
+    server.conn = FakeConn()  # type: ignore[assignment]
+    server.src_ip = '8.8.8.8'
+    called: list[bool] = []
+    monkeypatch.setattr(
+        'cloudsentinel.sensor.ssh.extract_hassh',
+        lambda _conn: called.append(True) or ('f' * 32, 'kex;enc;mac'),
+    )
+    server.connection_lost(None)
+    await asyncio.sleep(0)
+    assert not called
+    assert server.hassh is None

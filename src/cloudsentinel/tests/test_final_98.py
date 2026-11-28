@@ -114,16 +114,13 @@ def test_session_hassh_failures(monkeypatch) -> None:
     assert len(_load_recent_sessions_from_clickhouse(settings)) == 1
 
     fallback_row = list(row)
-    fallback_row[12] = ""
-    fallback_row[13] = ""
+    fallback_row[12] = "f" * 32
+    fallback_row[13] = "client:SSH-2.0-test;server:unit;unknown;none"
     fallback_row[14] = "SSH-2.0-test"
-    monkeypatch.setattr(
-        queries_module,
-        "fallback_hassh_from_version",
-        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("fallback")),
-    )
     settings = _settings(monkeypatch, [tuple(fallback_row)])
-    assert len(_load_recent_sessions_from_clickhouse(settings)) == 1
+    sessions = _load_recent_sessions_from_clickhouse(settings)
+    assert len(sessions) == 1
+    assert sessions[0]["fingerprint"] == ""
 
 
 def test_unknown_client_with_known_hassh(monkeypatch) -> None:
