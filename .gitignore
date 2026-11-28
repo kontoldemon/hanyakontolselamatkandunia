@@ -26,6 +26,7 @@ dashboard/artifacts/
 
 # Test and coverage artifacts
 .coverage
+.coverage.*
 coverage.xml
 
 # CloudSentinel runtime artifacts
