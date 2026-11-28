@@ -15,6 +15,7 @@ const TARGET = {
 };
 
 const ACTIVE_ATTACK_WINDOW_MS = 45_000;
+const BEAM_FRESH_WINDOW_MS = 3_000;
 
 interface ThreatMapProps {
     onRegionClick?: (region: string | null) => void;
@@ -238,9 +239,10 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
             const distance = Math.hypot(targetPoint.x - start.x, targetPoint.y - start.y);
             const arcPath = `M ${start.x},${start.y} Q ${midX},${midY - distance * 0.2} ${targetPoint.x},${targetPoint.y}`;
             const isActive = underAttack && (nowMs - source.latestEpochMs <= ACTIVE_ATTACK_WINDOW_MS);
+            const isBeaming = isActive && (nowMs - source.latestEpochMs <= BEAM_FRESH_WINDOW_MS);
             const velocityScore = Math.min(6, Math.max(1, source.recentCount || Math.ceil(source.count / 3)));
             const durationSec = Number(Math.max(0.85, 2.7 - velocityScore * 0.3).toFixed(2));
-            return { ...source, point: start, path: arcPath, isActive, durationSec };
+            return { ...source, point: start, path: arcPath, isActive, isBeaming, durationSec };
         });
     }, [mapData, project, targetPoint, underAttack, nowMs]);
 
@@ -253,6 +255,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     }, [sources]);
 
     const hasAnyActiveArc = useMemo(() => sources.some((s) => s.isActive), [sources]);
+    const hasFreshBeam = useMemo(() => sources.some((s) => s.isBeaming), [sources]);
     const latestSourceEventMs = useMemo(
         () => sources.reduce((latest, source) => Math.max(latest, source.latestEpochMs || 0), 0),
         [sources],
@@ -299,8 +302,8 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         strokeLinecap="round"
                     />
 
-                    {/* FortiGuard-style animated laser/comet beam, one pulse per new event */}
-                    {source.isActive && (
+                    {/* FortiGuard-style animated laser/comet beam, one pulse per fresh event */}
+                    {source.isBeaming && (
                         <g key={`${source.countryCode}-${source.latestEpochMs}`}>
                             <path
                                 d={source.path}
@@ -501,7 +504,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                             onClick={() => setTooltipContent(null)}
                             className="cursor-pointer outline-none focus:outline-none"
                         >
-                            {hasAnyActiveArc && (
+                            {hasFreshBeam && (
                                 <circle
                                     key={latestSourceEventMs}
                                     cx={targetPoint.x}

@@ -28,6 +28,7 @@ export type RowData = {
     onBlock: (ip: string) => void;
     onOpenSession: (ip: string) => void;
     nowMs?: number;
+    brandNewAfterMs?: number;
 };
 
 export const COUNTRY_MAP: Record<string, string> = {
@@ -71,12 +72,12 @@ function normalizePreview(payload: string, type: string) {
     return { text: original, tag: "" };
 }
 
-export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, onBlock, onOpenSession, nowMs }: RowComponentProps<RowData>) {
+export function AttackLogRow({ index, style, logs, selectedRegion, blockingIp, onBlock, onOpenSession, nowMs, brandNewAfterMs }: RowComponentProps<RowData>) {
     const log = logs[index];
     const target = selectedRegion ? (COUNTRY_MAP[selectedRegion] || selectedRegion) : null;
     const isSelected = !!target && (log.country === target || log.ip === target);
     const isDimmed = !!target && log.country !== target && log.ip !== target;
-    const isBrandNew = Boolean(nowMs && nowMs > 0 && log.latestEpochMs && (nowMs - log.latestEpochMs < 3500));
+    const isBrandNew = Boolean(nowMs && nowMs > 0 && log.latestEpochMs && log.latestEpochMs >= (brandNewAfterMs ?? 0) && (nowMs - log.latestEpochMs < 3500));
     const preview = normalizePreview(log.latestPayload, log.latestType);
     const compactPreviewText = (preview.text || "").replace(/\s+/g, " ").trim();
 

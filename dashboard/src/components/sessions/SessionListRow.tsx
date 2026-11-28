@@ -103,22 +103,24 @@ export type SessionRowData = {
     nowMs: number;
     searchQuery: string;
     onSelect: (session: CapturedSession) => void;
+    mountedAtMs?: number;
 };
 
 export const SESSION_ROW_HEIGHT = 90;
 export const SESSION_ROW_GAP = 6;
 
-export function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs, searchQuery, onSelect }: RowComponentProps<SessionRowData>) {
+export function SessionRow({ index, style, sessions, selectedSessionId, focusIp, nowMs, searchQuery, onSelect, mountedAtMs }: RowComponentProps<SessionRowData>) {
     const session = sessions[index];
     const isSelected = selectedSessionId === session.id;
     const isFocused = !!focusIp && session.ip === focusIp;
+    const createdMs = session.startedAtEpochMs ?? session.firstSeenEpochMs;
     const isBrandNew = Boolean(
         nowMs &&
         nowMs > 0 &&
-        (
-            (session.startedAtEpochMs && nowMs - session.startedAtEpochMs < 3500) ||
-            (session.firstSeenEpochMs && nowMs - session.firstSeenEpochMs < 3500)
-        )
+        mountedAtMs &&
+        createdMs &&
+        createdMs >= mountedAtMs &&
+        nowMs - createdMs < 3500
     );
     const attackCount = session.input?.length ?? 0;
 

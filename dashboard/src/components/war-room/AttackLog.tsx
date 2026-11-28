@@ -35,6 +35,7 @@ export default function AttackLog({ selectedRegion, threatLogs: externalLogs }: 
     const [isClosingBlock, setIsClosingBlock] = useState(false);
     const [activeBlockIp, setActiveBlockIp] = useState<string | null>(null);
     const [nowMs, setNowMs] = useState(0);
+    const brandNewAfterMsRef = useRef(Date.now());
 
     useEffect(() => {
         if (confirmBlockIp) {
@@ -184,6 +185,7 @@ export default function AttackLog({ selectedRegion, threatLogs: externalLogs }: 
         onBlock: setConfirmBlockIp,
         onOpenSession: (ip: string) => router.push(`/sessions?focusIp=${encodeURIComponent(ip)}`),
         nowMs,
+        brandNewAfterMs: brandNewAfterMsRef.current,
     };
 
     return (

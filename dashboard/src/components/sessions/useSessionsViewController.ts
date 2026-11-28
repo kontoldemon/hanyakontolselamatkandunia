@@ -40,6 +40,7 @@ export function useSessionsViewController() {
     const PAGE_SIZE = 15;
     const lastNonEmptySessionsAtRef = useRef(0);
     const lastSelectedSnapshotRef = useRef<CapturedSession | null>(null);
+    const mountedAtMsRef = useRef(Date.now());
     const replayCacheRef = useRef<Map<string, NonNullable<CapturedSession["replay"]>>>(new Map());
     const inputCacheRef = useRef<Map<string, NonNullable<CapturedSession["input"]>>>(new Map());
 
@@ -387,6 +388,7 @@ export function useSessionsViewController() {
         nowMs,
         searchQuery,
         onSelect: selectSession,
+        mountedAtMs: mountedAtMsRef.current,
     };
 
     const clearSelection = useCallback(() => {
