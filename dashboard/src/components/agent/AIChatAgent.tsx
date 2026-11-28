@@ -346,7 +346,7 @@ export default function AIChatAgent() {
                                 placeholder={isExecuting ? "Agent is working..." : "Ask or command the agent..."}
                                 disabled={isExecuting}
                                 className="w-full flex-1 min-w-0 bg-white/40 dark:bg-black/30 border border-white/40 dark:border-white/20 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-blue-500/60 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 disabled:opacity-50 resize-none overflow-hidden block transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] text-left backdrop-blur-sm"
-                                style={{ minHeight: "36px" }}
+                                style={{ minHeight: "40px" }}
                             />
                             <button
                                 type="button"
