@@ -12,7 +12,7 @@ import structlog
 
 from ..config import Settings, secret_to_str
 from ..geoip import enrich as geo_enrich
-from ..hassh import HASSHDNA, fallback_hassh_from_version, infer_client_software
+from ..hassh import HASSHDNA, infer_client_software
 from ..soar import ENFORCED_BLOCK_ACTIONS, NEW_BLOCK_ACTIONS
 
 logger = structlog.get_logger("cloudsentinel.api.queries")
@@ -136,7 +136,7 @@ def _state_to_public(value: str) -> str:
 
 
 def _trim_replay_entries(entries: list[dict[str, str]], limit: int = 400) -> list[dict[str, str]]:
-    if len(entries) <= limit:
+    if limit <= 0 or len(entries) <= limit:
         return entries
     info_entries: list[dict[str, str]] = []
     stream_entries: list[dict[str, str]] = []
@@ -246,6 +246,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
         rows: list[dict[str, Any]] = []
         now = time.time()
         hassh_db = HASSHDNA()
+        replay_limit = _replay_max_limit()
         for row in result.result_rows:
             session_id = str(row[0] or "")
             src_ip = str(row[1] or "")
@@ -267,19 +268,14 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
             timeline_items = list(row[17] or [])
             techniques = [str(v) for v in (row[18] or []) if str(v).strip()]
             risk = int(row[19] or 0)
+            if hassh_algorithms.startswith("client:"):
+                hassh = ""
+                hassh_algorithms = ""
             if not hassh and hassh_algorithms:
                 try:
                     import hashlib
 
                     hassh = hashlib.md5(hassh_algorithms.encode("utf-8"), usedforsecurity=False).hexdigest()
-                except Exception:
-                    pass
-            if not hassh and client_version:
-                try:
-                    hassh, hassh_algorithms = fallback_hassh_from_version(
-                        client_version,
-                        settings.honeypot.server_version,
-                    )
                 except Exception:
                     pass
             first_ts = first_seen.timestamp() if hasattr(first_seen, "timestamp") else now
@@ -483,7 +479,7 @@ def _load_recent_sessions_from_clickhouse(settings: Settings, limit: int = 50) -
                     "mttbMs": max_mttb_ms,
                     "blockEffective": last_soar_action in {"iptables_block", "already_blocked"},
                     "mitreTechniques": techniques[:20],
-                    "replay": _trim_replay_entries(replay, limit=400),
+                    "replay": _trim_replay_entries(replay, limit=replay_limit),
                     "source": "clickhouse",
                 }
             )
@@ -499,6 +495,14 @@ def _events_max_limit() -> int:
     except ValueError:
         configured = 20000
     return max(1, min(configured, 50000))
+
+
+def _replay_max_limit() -> int:
+    raw = os.getenv("CLOUDSENTINEL_REPLAY_MAX_ENTRIES", "0").strip()
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
 
 
 def _action_in(column: str, actions: frozenset[str]) -> str:

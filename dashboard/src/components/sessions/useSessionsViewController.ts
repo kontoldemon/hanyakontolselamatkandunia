@@ -92,8 +92,7 @@ export function useSessionsViewController() {
                     }
                     replaySeen.add(key);
                     return true;
-                })
-                .slice(-800);
+                });
 
             const mergedInput = Array.from(
                 new Set(
@@ -104,7 +103,7 @@ export function useSessionsViewController() {
                         .map((value) => value.trim())
                         .filter(Boolean),
                 ),
-            ).slice(-400);
+            );
 
             const replaySource = sorted.find(hasReplay);
             selected.push({
@@ -258,8 +257,8 @@ export function useSessionsViewController() {
             merged.lastSeenEpochMs = liveLastSeen;
             merged.status = "Active";
         }
-        merged.replay = (merged.replay ?? []).slice(-600);
-        merged.input = Array.from(new Set((merged.input ?? []).filter(Boolean))).slice(-300);
+        merged.replay = merged.replay ?? [];
+        merged.input = Array.from(new Set((merged.input ?? []).filter(Boolean)));
         return merged;
     }, [selectedSession, liveLogs]);
 

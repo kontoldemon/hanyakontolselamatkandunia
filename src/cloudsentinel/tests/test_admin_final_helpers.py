@@ -23,6 +23,20 @@ def test_as_int_and_replay_trim() -> None:
     ]
     trimmed = _trim_replay_entries(entries, limit=2)
     assert trimmed
+    assert _trim_replay_entries(entries, limit=0) == entries
+
+
+def test_replay_max_limit(monkeypatch) -> None:
+    from cloudsentinel.api.queries import _replay_max_limit
+
+    monkeypatch.delenv("CLOUDSENTINEL_REPLAY_MAX_ENTRIES", raising=False)
+    assert _replay_max_limit() == 0
+    monkeypatch.setenv("CLOUDSENTINEL_REPLAY_MAX_ENTRIES", "250")
+    assert _replay_max_limit() == 250
+    monkeypatch.setenv("CLOUDSENTINEL_REPLAY_MAX_ENTRIES", "-5")
+    assert _replay_max_limit() == 0
+    monkeypatch.setenv("CLOUDSENTINEL_REPLAY_MAX_ENTRIES", "bad")
+    assert _replay_max_limit() == 0
 
 
 def test_require_auth_jwt_branches(monkeypatch) -> None:

@@ -70,7 +70,7 @@ function normalizeReplay(session: CapturedSession): void {
     cleaned.push({ role: entry.role, text, timestamp: entry.timestamp });
   }
 
-  session.replay = cleaned.slice(-600);
+  session.replay = cleaned;
 }
 
 export function useCapturedSessions() {
@@ -124,8 +124,8 @@ export function useCapturedSessions() {
       grouped.set(key, {
         ...session,
         status: forceClosed ? "Closed" : session.status,
-        input: [...(session.input ?? [])].slice(-300),
-        replay: [...(session.replay ?? [])].slice(-600),
+        input: [...(session.input ?? [])],
+        replay: [...(session.replay ?? [])],
         lastSeenEpochMs: effectiveLastSeen || session.lastSeenEpochMs,
       });
       const prepared = grouped.get(key);
@@ -178,8 +178,8 @@ export function useCapturedSessions() {
           input: [],
           status: "Active",
           sessionCount: 1,
-          riskScore: 0,
-          soarAction: log.action === "Blocked" ? "detect_only" : "none",
+          riskScore: log.riskScore ?? 0,
+          soarAction: log.soarAction || "none",
           mttbMs: 0,
           blockEffective: log.action === "Blocked",
           mitreTechniques: log.mitreTechniques ?? [],
@@ -240,9 +240,11 @@ export function useCapturedSessions() {
       current.country = current.country || log.country;
       current.countryCode = current.countryCode || log.country;
       current.countryName = current.countryName || log.countryName || log.country;
-      current.riskScore = current.riskScore ?? 0;
-      if (!current.soarAction || current.soarAction === "none") {
-        current.soarAction = log.action === "Blocked" ? "detect_only" : "none";
+      current.riskScore = Math.max(current.riskScore ?? 0, log.riskScore ?? 0);
+      if (log.soarAction) {
+        current.soarAction = log.soarAction;
+      } else if (!current.soarAction) {
+        current.soarAction = "none";
       }
       if (log.action === "Blocked") current.blockEffective = true;
       if (current.blockEffective !== true && current.soarAction === "iptables_block") {
@@ -273,10 +275,9 @@ export function useCapturedSessions() {
           }
           replaySeen.add(key);
           return true;
-        })
-        .slice(-600);
+        });
       normalizeReplay(current);
-      current.input = Array.from(new Set(current.input)).slice(-300);
+      current.input = Array.from(new Set(current.input));
     }
 
     return [...grouped.values()]
