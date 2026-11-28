@@ -27,6 +27,33 @@ PAIRING_TTL_SECONDS = 300
 MAX_PAIRED_DEVICES = 20
 MAX_RECENT_ALERTS = 100
 
+_fcm_credentials: Any = None
+
+
+def _fcm_bearer() -> str:
+    static = os.getenv("CLOUDSENTINEL_FCM_ACCESS_TOKEN", "").strip()
+    if static:
+        return static
+    path = os.getenv("CLOUDSENTINEL_FCM_SERVICE_ACCOUNT", "").strip()
+    if not path:
+        return ""
+    global _fcm_credentials
+    try:
+        from google.auth.transport.requests import Request
+        from google.oauth2 import service_account
+
+        if _fcm_credentials is None:
+            _fcm_credentials = service_account.Credentials.from_service_account_file(
+                path,
+                scopes=["https://www.googleapis.com/auth/firebase.messaging"],
+            )
+        if not _fcm_credentials.valid:
+            _fcm_credentials.refresh(Request())
+        return str(_fcm_credentials.token or "")
+    except Exception as exc:
+        logger.warning("fcm_service_account_failed", error=str(exc))
+        return ""
+
 
 def _hash_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
@@ -414,7 +441,7 @@ class MobilePushService:
             return {"ok": True, "dispatched": 0, "alert": record.to_dict(), "mode": "no_devices"}
 
         fcm_project = os.getenv("CLOUDSENTINEL_FCM_PROJECT_ID", "").strip()
-        fcm_bearer = os.getenv("CLOUDSENTINEL_FCM_ACCESS_TOKEN", "").strip()
+        fcm_bearer = _fcm_bearer()
 
         if not fcm_project or not fcm_bearer:
             logger.info(

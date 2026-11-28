@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
+import types
 from pathlib import Path
 
 import httpx
@@ -798,6 +800,51 @@ def test_mobile_sessions_fall_back_to_alerts_on_clickhouse_error(tmp_path: Path,
     body = TestClient(app).get("/mobile/sessions", headers=headers).json()
     assert body["sessions"][0]["ip"] == "1.2.3.4"
     assert body["sessions"][0]["risk_score"] == 88
+
+
+def test_fcm_service_account_bearer(monkeypatch) -> None:
+    import cloudsentinel.mobile_push as mp
+
+    class Credentials:
+        valid = False
+        token = ""
+
+        @classmethod
+        def from_service_account_file(cls, _path: str, scopes: list[str]) -> "Credentials":
+            assert scopes == ["https://www.googleapis.com/auth/firebase.messaging"]
+            return cls()
+
+        def refresh(self, _request: object) -> None:
+            self.valid = True
+            self.token = "service-account-token"
+
+    requests_module = types.ModuleType("google.auth.transport.requests")
+    requests_module.Request = lambda: object()
+    service_account_module = types.ModuleType("google.oauth2.service_account")
+    service_account_module.Credentials = Credentials
+    monkeypatch.setitem(sys.modules, "google", types.ModuleType("google"))
+    monkeypatch.setitem(sys.modules, "google.auth", types.ModuleType("google.auth"))
+    monkeypatch.setitem(
+        sys.modules, "google.auth.transport", types.ModuleType("google.auth.transport")
+    )
+    monkeypatch.setitem(sys.modules, "google.auth.transport.requests", requests_module)
+    monkeypatch.setitem(sys.modules, "google.oauth2", types.ModuleType("google.oauth2"))
+    monkeypatch.setitem(sys.modules, "google.oauth2.service_account", service_account_module)
+    monkeypatch.setenv("CLOUDSENTINEL_FCM_SERVICE_ACCOUNT", "sa.json")
+    monkeypatch.delenv("CLOUDSENTINEL_FCM_ACCESS_TOKEN", raising=False)
+    monkeypatch.setattr(mp, "_fcm_credentials", None)
+
+    assert mp._fcm_bearer() == "service-account-token"
+    assert mp._fcm_bearer() == "service-account-token"
+
+
+def test_fcm_service_account_failure(monkeypatch) -> None:
+    import cloudsentinel.mobile_push as mp
+
+    monkeypatch.setenv("CLOUDSENTINEL_FCM_SERVICE_ACCOUNT", "missing.json")
+    monkeypatch.delenv("CLOUDSENTINEL_FCM_ACCESS_TOKEN", raising=False)
+    monkeypatch.setattr(mp, "_fcm_credentials", None)
+    assert mp._fcm_bearer() == ""
 
 
 def test_mobile_alert_state_round_trip_preserves_details(tmp_path: Path) -> None:
