@@ -280,7 +280,7 @@ export function useSessionsViewController() {
     const selectedView = useMemo(() => {
         const base = selectedSessionLive ?? selectedSession;
         if (!base) return base;
-        const key = base.ip;
+        const key = base.id;
         const cachedReplay = replayCacheRef.current.get(key) ?? [];
         const cachedInput = inputCacheRef.current.get(key) ?? [];
         const seenReplay = new Set<string>();
@@ -300,6 +300,8 @@ export function useSessionsViewController() {
 
     useEffect(() => {
         setReplayMode("both");
+        replayCacheRef.current.clear();
+        inputCacheRef.current.clear();
     }, [selectedSessionId]);
 
     useEffect(() => {

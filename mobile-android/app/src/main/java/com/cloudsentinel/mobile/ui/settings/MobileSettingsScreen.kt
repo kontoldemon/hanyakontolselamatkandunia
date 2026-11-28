@@ -7,23 +7,34 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -35,6 +46,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -100,6 +113,15 @@ private enum class SettingsSheet {
     ALERT_POLICY,
     SENSOR_DEFENSE,
     GATEWAY
+}
+
+private fun Context.findActivity(): Activity? {
+    var current: Context = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -257,35 +279,66 @@ fun MobileSettingsScreen(
 
             // 3. Appearance
             SettingsGroup(title = "Appearance") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemeMode.entries.forEach { mode ->
-                        val selected = themeMode == mode
-                        OutlinedButton(
-                            onClick = {
+                var showThemeMenu by remember { mutableStateOf(false) }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onThemeModeChange(mode)
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (selected) ElectricBlue else ObsidianBorder
-                            ),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (selected) ElectricBlue.copy(alpha = 0.14f) else ObsidianCard
-                            ),
-                            contentPadding = PaddingValues(vertical = 10.dp)
-                        ) {
+                                showThemeMenu = true
+                            }
+                            .padding(horizontal = 16.dp, vertical = 15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = mode.label,
-                                color = if (selected) ElectricBlueSoft else TextMutedDark,
-                                fontSize = 12.sp,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                text = "Theme",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                color = TextPrimaryDark,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = themeMode.label,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMutedDark,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Select theme",
+                            tint = TextMutedDark
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showThemeMenu,
+                        onDismissRequest = { showThemeMenu = false }
+                    ) {
+                        ThemeMode.entries.forEach { mode ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = mode.label,
+                                        color = if (themeMode == mode) ElectricBlueSoft else TextPrimaryDark
+                                    )
+                                },
+                                onClick = {
+                                    showThemeMenu = false
+                                    onThemeModeChange(mode)
+                                },
+                                trailingIcon = {
+                                    if (themeMode == mode) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = ElectricBlueSoft
+                                        )
+                                    }
+                                }
                             )
                         }
                     }
@@ -329,12 +382,25 @@ fun MobileSettingsScreen(
             onDismissRequest = { activeSheet = null },
             sheetState = sheetState,
             containerColor = ObsidianCard,
+            contentWindowInsets = { WindowInsets(0) },
             dragHandle = null
         ) {
+            val context = LocalContext.current
+            DisposableEffect(Unit) {
+                val window = context.findActivity()?.window
+                val controller = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+                controller?.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller?.hide(WindowInsetsCompat.Type.navigationBars())
+                onDispose {
+                    controller?.show(WindowInsetsCompat.Type.navigationBars())
+                }
+            }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 val sheetTitle = when (sheet) {

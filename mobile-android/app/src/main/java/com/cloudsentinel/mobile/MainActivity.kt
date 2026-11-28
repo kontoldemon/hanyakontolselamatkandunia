@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,6 +82,8 @@ import com.cloudsentinel.mobile.ui.settings.MobileSettingsScreen
 import com.cloudsentinel.mobile.ui.warroom.WarRoomScreen
 import androidx.core.view.WindowCompat
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -127,7 +130,7 @@ class MainActivity : ComponentActivity() {
                 val isSensorReachable by repo.isSensorReachable.collectAsState()
 
                 var session by remember { mutableStateOf(repo.getActiveSession()) }
-                var selectedTab by remember { mutableIntStateOf(0) } // 0: WarRoom, 1: Sessions, 2: Alerts, 3: Copilot, 4: Settings
+                var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0: WarRoom, 1: Sessions, 2: Alerts, 3: Copilot, 4: Settings
                 var isPairing by remember { mutableStateOf(false) }
                 var pairError by remember { mutableStateOf<String?>(null) }
                 var fcmToken by remember { mutableStateOf("") }
@@ -184,10 +187,12 @@ class MainActivity : ComponentActivity() {
                 // Periodic telemetry sync loop
                 LaunchedEffect(session) {
                     while (session != null) {
-                        repo.syncAlerts()
-                        repo.syncDashboardStats()
-                        repo.syncSessions()
-                        delay(5000)
+                        awaitAll(
+                            async { repo.syncAlerts() },
+                            async { repo.syncDashboardStats() },
+                            async { repo.syncSessions() }
+                        )
+                        delay(3000)
                     }
                 }
 

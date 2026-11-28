@@ -694,9 +694,9 @@ def test_mobile_sessions_group_by_ip(tmp_path: Path, monkeypatch) -> None:
                 "country": "NL",
                 "riskScore": 80,
                 "mitreTechniques": ["T1083"],
-                "input": ["whoami"],
+                "input": [],
                 "lastSeenEpochMs": 2000,
-                "fingerprint": "b" * 32,
+                "fingerprint": "",
             },
             {
                 "id": "s3",
@@ -718,9 +718,9 @@ def test_mobile_sessions_group_by_ip(tmp_path: Path, monkeypatch) -> None:
     assert sessions[0]["ip"] == "9.9.9.9"
     assert sessions[0]["session_count"] == 2
     assert sessions[0]["risk_score"] == 80
-    assert sessions[0]["commands"] == ["whoami"]
+    assert sessions[0]["commands"] == ["id"]
     assert sessions[0]["mitre_techniques"] == ["T1083", "T1110"]
-    assert sessions[0]["hassh"] == "b" * 32
+    assert sessions[0]["hassh"] == "a" * 32
 
 
 def test_mobile_sessions_marks_capped_fetch(tmp_path: Path, monkeypatch) -> None:

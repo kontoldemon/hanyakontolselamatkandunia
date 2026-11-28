@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,8 +61,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -84,7 +88,7 @@ fun AiCopilotScreen(
     messages: List<CopilotMessage>,
     onSendMessage: (String) -> Unit
 ) {
-    var inputText by remember { mutableStateOf("") }
+    var inputText by rememberSaveable { mutableStateOf("") }
     var isSending by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
@@ -96,14 +100,19 @@ fun AiCopilotScreen(
         keyboardController?.hide()
     }
 
-    fun submitMessage() {
-        val toSend = inputText.trim()
+    fun sendMessage(raw: String) {
+        val toSend = raw.trim()
         if (toSend.isNotBlank() && !isSending) {
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             inputText = ""
             dismissInputFocus()
+            isSending = true
             onSendMessage(toSend)
         }
+    }
+
+    fun submitMessage() {
+        sendMessage(inputText)
     }
 
     val quickPrompts = listOf(
@@ -114,8 +123,14 @@ fun AiCopilotScreen(
     )
 
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+        if (isSending && messages.isNotEmpty() && messages.last().sender == CopilotSender.COPILOT) {
+            isSending = false
+        }
+    }
+
+    LaunchedEffect(messages.size, isSending) {
+        if (messages.isNotEmpty() || isSending) {
+            listState.animateScrollToItem(if (isSending) messages.size else messages.lastIndex)
         }
     }
 
@@ -167,8 +182,7 @@ fun AiCopilotScreen(
                             .background(ObsidianCard)
                             .border(1.dp, ObsidianBorder, RoundedCornerShape(10.dp))
                             .clickable {
-                                dismissInputFocus()
-                                onSendMessage(prompt)
+                                sendMessage(prompt)
                             }
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
@@ -196,6 +210,9 @@ fun AiCopilotScreen(
             ) {
                 items(messages) { msg ->
                     ChatBubble(message = msg)
+                }
+                if (isSending) {
+                    item { ThinkingBubble() }
                 }
             }
 
@@ -305,7 +322,7 @@ private fun ChatBubble(message: CopilotMessage) {
                 .padding(horizontal = 15.dp, vertical = 11.dp)
         ) {
             Text(
-                text = message.text,
+                text = remember(message.text) { markdownText(message.text) },
                 style = if (isUser) {
                     MaterialTheme.typography.bodyMedium.copy(
                         color = Color.White,
@@ -314,11 +331,86 @@ private fun ChatBubble(message: CopilotMessage) {
                 } else {
                     MaterialTheme.typography.bodyMedium.copy(
                         color = TextPrimaryDark,
-                        fontFamily = if (message.text.contains("`") || message.text.contains("[")) FontFamily.Monospace else FontFamily.Default,
                         lineHeight = 21.sp
                     )
                 }
             )
         }
     }
+}
+
+@Composable
+private fun ThinkingBubble() {
+    val bubbleShape = RoundedCornerShape(
+        topStart = 18.dp,
+        topEnd = 18.dp,
+        bottomStart = 4.dp,
+        bottomEnd = 18.dp
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .widthIn(min = 44.dp, max = 285.dp)
+                .clip(bubbleShape)
+                .background(ObsidianCard)
+                .border(1.dp, ObsidianBorder, bubbleShape)
+                .padding(horizontal = 15.dp, vertical = 12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = ElectricBlueSoft
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "CloudSentinel is thinking…",
+                    color = TextMutedDark,
+                    fontSize = 13.sp
+                )
+            }
+        }
+    }
+}
+
+private fun markdownText(text: String): AnnotatedString {
+    val cleaned = text.replace(Regex("(?m)^#{1,6}\\s+"), "")
+    val builder = AnnotatedString.Builder()
+    var index = 0
+    while (index < cleaned.length) {
+        when {
+            cleaned.startsWith("**", index) -> {
+                val end = cleaned.indexOf("**", index + 2)
+                if (end > index + 2) {
+                    builder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(cleaned.substring(index + 2, end))
+                    }
+                    index = end + 2
+                } else {
+                    builder.append("**")
+                    index += 2
+                }
+            }
+            cleaned[index] == '`' -> {
+                val end = cleaned.indexOf('`', index + 1)
+                if (end > index + 1) {
+                    builder.withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
+                        append(cleaned.substring(index + 1, end))
+                    }
+                    index = end + 1
+                } else {
+                    builder.append('`')
+                    index++
+                }
+            }
+            else -> {
+                builder.append(cleaned[index])
+                index++
+            }
+        }
+    }
+    return builder.toAnnotatedString()
 }

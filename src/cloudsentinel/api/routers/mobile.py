@@ -394,7 +394,14 @@ def build_mobile_router(
                         "country": latest.get("country", "Unknown"),
                         "city": latest.get("city", "Unknown"),
                         "isp": latest.get("isp", ""),
-                        "hassh": str(latest.get("fingerprint") or ""),
+                        "hassh": next(
+                            (
+                                str(item.get("fingerprint"))
+                                for item in group
+                                if item.get("fingerprint")
+                            ),
+                            "",
+                        ),
                         "risk_score": max(int(item.get("riskScore") or 0) for item in group),
                         "duration": latest.get("duration", ""),
                         "mitre_techniques": sorted({
@@ -402,7 +409,10 @@ def build_mobile_router(
                             for item in group
                             for technique in (item.get("mitreTechniques") or [])
                         }),
-                        "commands": list(latest.get("input") or [])[:10],
+                        "commands": next(
+                            (list(item.get("input") or [])[:10] for item in group if item.get("input")),
+                            [],
+                        ),
                         "blocked": any(bool(item.get("blockEffective", False)) for item in group),
                         "timestamp_ms": int(
                             latest.get("lastSeenEpochMs") or latest.get("startedAtEpochMs") or 0
