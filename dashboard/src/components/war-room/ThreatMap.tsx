@@ -253,6 +253,10 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     }, [sources]);
 
     const hasAnyActiveArc = useMemo(() => sources.some((s) => s.isActive), [sources]);
+    const latestSourceEventMs = useMemo(
+        () => sources.reduce((latest, source) => Math.max(latest, source.latestEpochMs || 0), 0),
+        [sources],
+    );
 
     const selectedCC = useMemo(() => {
         if (!selectedRegion) return null;
@@ -280,10 +284,9 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
     }, []);
 
     const renderSources = useMemo(() => {
-        return sources.map((source, index) => {
+        return sources.map((source) => {
             const isDimmed = selectedRegion && selectedRegion !== source.name && selectedRegion !== source.topIp && selectedCC !== source.countryCode;
             const isLeftOfTarget = source.point.x < targetPoint.x;
-            const delaySec = ((index * 0.27) % 1.2).toFixed(2);
             return (
                 <g key={source.countryCode} opacity={isDimmed ? 0.2 : 1}>
                     {/* Subtle trajectory guide */}
@@ -296,9 +299,9 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         strokeLinecap="round"
                     />
 
-                    {/* FortiGuard-style animated laser/comet beam when actively attacking */}
+                    {/* FortiGuard-style animated laser/comet beam, one pulse per new event */}
                     {source.isActive && (
-                        <>
+                        <g key={`${source.countryCode}-${source.latestEpochMs}`}>
                             <path
                                 d={source.path}
                                 fill="none"
@@ -309,18 +312,18 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                 strokeDasharray="22 118"
                                 filter="url(#attack-glow)"
                                 style={{
-                                    animation: `attackBeamFlow ${source.durationSec}s cubic-bezier(0.25, 0.1, 0.25, 1) ${delaySec}s infinite`,
+                                    animation: `attackBeamFlow ${source.durationSec}s cubic-bezier(0.25, 0.1, 0.25, 1) 0s 1 forwards`,
                                 }}
                             />
-                            <circle r={theme === "dark" ? "2.6" : "3"} fill={theme === "dark" ? "#ffffff" : source.color} filter="url(#attack-glow)">
+                            <circle r={theme === "dark" ? "2.6" : "3"} fill={theme === "dark" ? "#ffffff" : source.color} filter="url(#attack-glow)" style={{ animation: `attackBeamFlow ${source.durationSec}s cubic-bezier(0.25, 0.1, 0.25, 1) 0s 1 forwards` }}>
                                 <animateMotion
                                     dur={`${source.durationSec}s`}
-                                    begin={`${delaySec}s`}
-                                    repeatCount="indefinite"
+                                    begin="0s"
+                                    repeatCount="1"
                                     path={source.path}
                                 />
                             </circle>
-                        </>
+                        </g>
                     )}
 
                     <text
@@ -361,7 +364,6 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                 cy={source.point.y}
                                 r="4.5"
                                 fill={source.color}
-                                className="animate-pulse"
                             />
                         )}
                         <circle cx={source.point.x} cy={source.point.y} r="2.8" fill={source.color} />
@@ -501,6 +503,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                         >
                             {hasAnyActiveArc && (
                                 <circle
+                                    key={latestSourceEventMs}
                                     cx={targetPoint.x}
                                     cy={targetPoint.y}
                                     r="9"
@@ -509,7 +512,7 @@ export default function ThreatMap({ onRegionClick, selectedRegion, underAttack =
                                     strokeWidth="1.5"
                                     style={{
                                         transformOrigin: `${targetPoint.x}px ${targetPoint.y}px`,
-                                        animation: "targetImpactRipple 1.6s cubic-bezier(0, 0.2, 0.8, 1) infinite",
+                                        animation: "targetImpactRipple 1.6s cubic-bezier(0, 0.2, 0.8, 1) 1 forwards",
                                     }}
                                 />
                             )}

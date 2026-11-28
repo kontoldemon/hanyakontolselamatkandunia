@@ -236,6 +236,12 @@ export function useCapturedSessions() {
           text: replayInfoLabel ?? log.payload,
           timestamp: log.timestamp,
         });
+        if (role === "attacker" && log.payload) {
+          current.input = current.input ?? [];
+          if (!current.input.includes(log.payload)) {
+            current.input.push(log.payload);
+          }
+        }
       }
 
       if (log.mitreTechniques?.length) {

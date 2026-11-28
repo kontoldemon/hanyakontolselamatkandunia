@@ -11,7 +11,16 @@ export default function EngineDiagnosticsCard({ operations }: EngineDiagnosticsC
     const metrics = (operations?.sensor?.metrics?.data ?? {}) as Record<string, unknown>;
 
     const mttbMs = typeof metrics.mttb_ms === "number" ? metrics.mttb_ms : 0;
-    const activeSessions = typeof metrics.active_sessions === "number" ? metrics.active_sessions : 0;
+    const sessionRows = operations?.sensor?.sessions?.data?.sessions ?? [];
+    const sessionsOk = operations?.sensor?.sessions?.ok === true;
+    const activeIntrusions = sessionsOk
+        ? new Set(
+            sessionRows
+                .filter((session) => (session.status || "").toLowerCase() === "active")
+                .map((session) => session.ip),
+        ).size
+        : (typeof metrics.active_sessions === "number" ? metrics.active_sessions : 0);
+    const activeSessions = activeIntrusions;
     const totalConnections = typeof metrics.total_connections === "number" ? metrics.total_connections : 0;
     const totalAuthFailures = typeof metrics.total_auth_failures === "number" ? metrics.total_auth_failures : 0;
     const totalAuthSuccesses = typeof metrics.total_auth_successes === "number" ? metrics.total_auth_successes : 0;
